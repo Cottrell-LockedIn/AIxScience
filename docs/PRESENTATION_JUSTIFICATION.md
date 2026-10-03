@@ -41,7 +41,7 @@ All from `python -m qc validate` (PR #2 harness) on the 11 pre-registered featur
 | Batch effects after BH correction (median shift / Batch_3 MAD) | none with q < 0.05; best is F04 p90 Si diameter, Batch_2 vs Batch_3, -1.17 MAD after residualising on covariates, q = 0.15 | `batch_tests.csv` |
 | Old KPI table (8 columns) for comparison | 8 investigate; LOIO 0.58 / LOGO 0.45 without covariates, 0.61 / 0.58 with | `results/validate/kpi_per_image/` |
 | Threshold sensitivity (+/-10 %) on class fractions | moves them by 1.2-1.7 Batch_3 MAD, i.e. more than any batch gap; no sensitivity row exists yet for F03-F11 (NEXT_STEPS item 2) | `stability.csv` |
-| Reference LOO | the same 3 Batch_3 images flagged (`vc2whyaq`, `ufdvpb81`, `hzumfsms`) | `reference_loo.csv` |
+| Reference LOO (robust z > 3 vs the other 16) | old KPIs: 5 of 17 Batch_3 images flagged — `vc2whyaq` (+10.8, Si diameter), `ufdvpb81` (+6.7), `hzumfsms` (+3.7, void fraction), `cfe5vt7s` (+3.3), `0grcilhi` (+3.0); F01-F11 table: 7 of 17 (`0grcilhi`, `hzumfsms`, `mgxahqnk`, `tuy3zymq`, `vc2whyaq`, `x77cy643`, `xgj4xftb`). The reference is not clean; every bound is reported with and without the flagged images | `reference_loo.csv` |
 | Multi-Otsu failure tiles | 31/1443 tiles with t1 < 60 carry class-2 fraction 0.29 vs ~0.08; image-level rho(mean t1, F02) = -0.59 | `docs/FEATURE_DOSSIER.md` |
 
 Honest one-liner for the deck: "We pre-registered 11 consultant-approved measurements, built the validation harness first, and found that none separates the batches once acquisition is controlled; what does separate them is the microscope session. The next lever is segmentation stability, not more features."

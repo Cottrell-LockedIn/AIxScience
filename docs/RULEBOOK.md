@@ -23,7 +23,7 @@ Verdict vocabulary (AGENTS.md / FRAMEWORK §00): **`within bounds` / `investigat
 | G4 reference integrity | Removing the five abs(z) > 3 Batch_3 images does not flip the verdict; classical and MCD distances agree. | PR #5 S2 (Vargas 2003, Rousseeuw & Van Driessen 1999, grade C) | at most `investigate` |
 | G5 observability | The failure mode served is `directly observable` or `proxy only` in `docs/FAILURE_MODE_MAP.md`. | map | rule is out of scope |
 
-PR #2 result for the current KPIs: all 8 are `investigate` (frac_c0 fails G3 at 1.24 × MAD; c2 count density, c2 eqdiam median/p90 and c0 region area fail G2). No rule below is currently past its gates.
+PR #2 harness on the 11 pre-registered features alone (`results/validate/features_f01_f11/`, config `de199d6c8d69`): all 11 `investigate` (F05, F06 confounded; F09 borderline; rank stability < 0.7 for all but F06; no sensitivity rows yet). PR #2 result for the current KPIs: all 8 are `investigate` (frac_c0 fails G3 at 1.24 × MAD; c2 count density, c2 eqdiam median/p90 and c0 region area fail G2). No rule below is currently past its gates.
 
 ## 2. Escalation: two independent lines of evidence
 
