@@ -3,8 +3,7 @@
 Reads:  data/tiles/index.parquet, BSE tiles, data/masks/**, results/thresholds_per_tile.parquet
 Writes: results/kpi_per_tile.parquet        (one row per BSE tile)
         results/kpi_per_image.parquet       (mean and sd over tiles per image, n_tiles)
-        results/kpi_sensitivity.parquet     (class fractions per tile with thresholds scaled by 1 +/- segmentation.sens_pct,
-                                             plus the per-image aggregate; `scale` column = 0.9 / 1.0 / 1.1)
+        results/kpi_sensitivity.parquet     (all KPI columns per tile and image at scales 0.9 / 1.0 / 1.1)
         results/audit/overlays/*.png        (6 example tiles, 2 per batch, class 0 and class 2 outlined)
 
 KPIs per tile (pixel units; pixel size is unconfirmed, see docs/DATA_AUDIT.md):
@@ -12,8 +11,11 @@ KPIs per tile (pixel units; pixel size is unconfirmed, see docs/DATA_AUDIT.md):
 - c2_count_density_per_Mpx             : class-2 connected components per 1e6 px
 - c2_eqdiam_median_px, c2_eqdiam_p90_px: equivalent circular diameter of class-2 components
 - c0_region_eqdiam_median_px, c0_region_area_mean_px: size of class-0 connected regions
+- c0_region_eqdiam_median_px remains the pore-size KPI
+- class-1 flake size/aspect/percolation, class-0 crack-like fraction, and class-2 TPC length
 Per-image KPI = mean over the image's tiles (tiles overlap 50 %, so interior pixels are weighted ~uniformly);
 _sd columns give the between-tile spread, n_tiles the tile count. Tiles are not independent samples.
+Phase identity is stated by Polaron, not image-verified.
 
 Contract: image id (8-char sample id) is the independent unit. This module must never mix tiles
 from one image across folds, splits or permutations. See docs/FRAMEWORK.md Section 00 hard rules.
@@ -38,8 +40,11 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
 KPI_COLS = ["frac_c0", "frac_c1", "frac_c2", "c2_count_density_per_Mpx", "c2_eqdiam_median_px",
-            "c2_eqdiam_p90_px", "c0_region_eqdiam_median_px", "c0_region_area_mean_px"]
+            "c2_eqdiam_p90_px", "c0_region_eqdiam_median_px", "c0_region_area_mean_px",
+            "c1_flake_eqdiam_median_px", "c1_flake_aspect_median", "c1_largest_component_frac",
+            "c0_cracklike_frac", "c2_tpc_length_px"]
 FRAC_COLS = ["frac_c0", "frac_c1", "frac_c2"]
+PHASE_IDENTITY = "stated by Polaron, not image-verified"
 
 
 def fractions(lab: np.ndarray) -> dict[str, float]:
@@ -54,7 +59,47 @@ def _eqdiams(mask: np.ndarray) -> np.ndarray:
     return props["equivalent_diameter_area"], props["area"]
 
 
-def kpis(lab: np.ndarray) -> dict[str, float]:
+def tpc_length(mask: np.ndarray, max_r_px: int = 256) -> float:
+    indicator = np.asarray(mask, dtype=np.float64)
+    phi = float(indicator.mean())
+    if phi == 0.0 or phi == 1.0:
+        return float("nan")
+
+    h, w = indicator.shape
+    max_r_px = min(int(max_r_px), h - 1, w - 1)
+    if max_r_px < 1:
+        return float("nan")
+    fft_shape = (2 * h - 1, 2 * w - 1)
+    spectrum = np.fft.rfftn(indicator, s=fft_shape)
+    autocorrelation = np.fft.irfftn(spectrum * spectrum.conj(), s=fft_shape).real
+
+    dy = np.arange(-max_r_px, max_r_px + 1)
+    dx = np.arange(-max_r_px, max_r_px + 1)
+    bins = np.floor(np.hypot(dy[:, None], dx[None, :]) + 0.5).astype(np.int16)
+    valid = bins <= max_r_px
+    yidx = np.mod(dy, fft_shape[0])
+    xidx = np.mod(dx, fft_shape[1])
+    pairs = autocorrelation[np.ix_(yidx, xidx)]
+    overlap = (h - np.abs(dy))[:, None] * (w - np.abs(dx))[None, :]
+    s2 = pairs / overlap
+    sums = np.bincount(bins[valid], weights=s2[valid], minlength=max_r_px + 1)
+    counts = np.bincount(bins[valid], minlength=max_r_px + 1)
+    radial_s2 = np.divide(sums, counts, out=np.full(max_r_px + 1, np.nan), where=counts > 0)
+    corr = (radial_s2 - phi * phi) / (phi - phi * phi)
+    target = 1.0 / np.e
+    for radius in range(1, max_r_px + 1):
+        if np.isfinite(corr[radius]) and corr[radius] <= target:
+            previous = radius - 1
+            if not np.isfinite(corr[previous]) or corr[previous] == corr[radius]:
+                return float(radius)
+            fraction = (target - corr[previous]) / (corr[radius] - corr[previous])
+            return float(previous + fraction)
+    return float("nan")
+
+
+def kpis(
+    lab: np.ndarray, crack_aspect_min: float = 5.0, tpc_max_r_px: int = 256
+) -> dict[str, float]:
     out = fractions(lab)
     d2 = _eqdiams(lab == 2)
     if len(d2):
@@ -69,6 +114,44 @@ def kpis(lab: np.ndarray) -> dict[str, float]:
         out.update(c0_region_eqdiam_median_px=float(np.median(eq0)), c0_region_area_mean_px=float(area0.mean()))
     else:
         out.update(c0_region_eqdiam_median_px=np.nan, c0_region_area_mean_px=np.nan)
+
+    props1 = regionprops_table(
+        label(lab == 1, connectivity=1),
+        properties=("area", "equivalent_diameter_area", "major_axis_length", "minor_axis_length"),
+    )
+    if len(props1["area"]):
+        out["c1_flake_eqdiam_median_px"] = float(np.median(props1["equivalent_diameter_area"]))
+        minor = props1["minor_axis_length"]
+        valid_aspect = minor > 0
+        out["c1_flake_aspect_median"] = (
+            float(np.median(props1["major_axis_length"][valid_aspect] / minor[valid_aspect]))
+            if valid_aspect.any() else float("nan")
+        )
+        out["c1_largest_component_frac"] = float(props1["area"].max() / props1["area"].sum())
+    else:
+        out.update(
+            c1_flake_eqdiam_median_px=float("nan"),
+            c1_flake_aspect_median=float("nan"),
+            c1_largest_component_frac=0.0,
+        )
+
+    props0 = regionprops_table(
+        label(lab == 0, connectivity=1),
+        properties=("area", "major_axis_length", "minor_axis_length"),
+    )
+    total0 = float(props0["area"].sum()) if len(props0["area"]) else 0.0
+    if total0 == 0:
+        out["c0_cracklike_frac"] = 0.0
+    else:
+        minor0 = props0["minor_axis_length"]
+        aspect0 = np.divide(
+            props0["major_axis_length"], minor0,
+            out=np.full_like(minor0, np.inf, dtype=np.float64), where=minor0 > 0,
+        )
+        out["c0_cracklike_frac"] = float(
+            props0["area"][aspect0 >= crack_aspect_min].sum() / total0
+        )
+    out["c2_tpc_length_px"] = tpc_length(lab == 2, tpc_max_r_px)
     return out
 
 
@@ -76,7 +159,7 @@ def _work(args) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     row, tiles_dir, masks_dir, cfg_s = args
     keys = {k: row[k] for k in ("tile_id", "sample_id", "batch", "y", "x")}
     lab = np.asarray(Image.open(Path(masks_dir) / row["mask_path"]))
-    rec = {**keys, **kpis(lab)}
+    rec = {**keys, **kpis(lab, cfg_s["crack_aspect_min"], cfg_s["tpc_max_r_px"])}
     th = (row["t0"], row["t1"])
     fallback = bool(row.get("threshold_fallback", False)) or any(np.isnan(t) for t in th)
     den = None if fallback else _segment.denoise(np.load(Path(tiles_dir) / row["path"]), int(cfg_s["median_px"]))
@@ -85,8 +168,21 @@ def _work(args) -> tuple[dict[str, Any], list[dict[str, Any]]]:
         # fallback tiles have no thresholds to perturb: their label image is reported unchanged at every scale
         lab_s = lab if (scale == 1.0 or fallback) else _segment.label_from_thresholds(
             den, tuple(t * scale for t in th), int(cfg_s["min_obj_px"]))
-        sens.append({**keys, "scale": round(scale, 3), **fractions(lab_s)})
+        sens.append({
+            **keys, "scale": round(scale, 3),
+            **kpis(lab_s, cfg_s["crack_aspect_min"], cfg_s["tpc_max_r_px"]),
+        })
     return rec, sens
+
+
+def _base_work(args) -> dict[str, Any]:
+    row, masks_dir, cfg_s = args
+    keys = {k: row[k] for k in ("tile_id", "sample_id", "batch", "y", "x")}
+    lab = np.asarray(Image.open(Path(masks_dir) / row["mask_path"]))
+    return {
+        **keys,
+        **kpis(lab, cfg_s["crack_aspect_min"], cfg_s["tpc_max_r_px"]),
+    }
 
 
 def join_thresholds(th: pd.DataFrame, index: pd.DataFrame, cfg: dict[str, Any]) -> pd.DataFrame:
@@ -147,10 +243,75 @@ def make_overlays(th: pd.DataFrame, tiles_dir: Path, masks_dir: Path, out_dir: P
             lab = np.asarray(Image.open(masks_dir / row["mask_path"]))
             fr = fractions(lab)
             title = (f"{batch} / {sample_id} / {row['tile_id']}  thresholds=({row['t0']:.0f}, {row['t1']:.0f})  "
-                     f"fractions c0={fr['frac_c0']:.2f} c1={fr['frac_c1']:.2f} c2={fr['frac_c2']:.2f}")
+                     f"fractions c0={fr['frac_c0']:.2f} c1={fr['frac_c1']:.2f} c2={fr['frac_c2']:.2f}\n"
+                     f"phase_identity: {PHASE_IDENTITY}")
             p = out_dir / f"{batch}_{sample_id}_{row['tile_id']}.png"
             overlay(tile, lab, title, p)
             written.append(p)
+    return written
+
+
+def make_inspection_panels(
+    th: pd.DataFrame, per_tile: pd.DataFrame, tiles_dir: Path, masks_dir: Path, out_dir: Path,
+    cfg: dict[str, Any],
+) -> list[Path]:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    rng = np.random.default_rng(0)
+    images = th[["batch", "sample_id"]].drop_duplicates().sort_values(["batch", "sample_id"]).reset_index(drop=True)
+    selected = []
+    for _, group in images.groupby("batch", sort=True):
+        selected.append(group.iloc[int(rng.integers(len(group)))])
+    used = {row["sample_id"] for row in selected}
+    remaining = images.loc[~images["sample_id"].isin(used)].reset_index(drop=True)
+    selected.extend(remaining.iloc[i] for i in rng.choice(len(remaining), 2, replace=False))
+
+    metrics = per_tile.set_index("tile_id")
+    provenance = _config.provenance(cfg)
+    written = []
+    for image in selected:
+        choices = th[(th["batch"] == image["batch"]) & (th["sample_id"] == image["sample_id"])]
+        choices = choices.sort_values(["y", "x"]).reset_index(drop=True)
+        row = choices.iloc[int(rng.integers(len(choices)))]
+        tile = np.load(tiles_dir / row["path"])
+        lab = np.asarray(Image.open(masks_dir / row["mask_path"]))
+        gray = tile.astype(np.float32) / 255.0
+        color = np.stack([gray, gray, gray], axis=-1)
+        palette = {0: np.array([0.10, 0.40, 1.00]), 1: np.array([1.00, 0.82, 0.08]), 2: np.array([1.00, 0.12, 0.08])}
+        overlay_img = color.copy()
+        for class_id, rgb in palette.items():
+            selected_pixels = lab == class_id
+            overlay_img[selected_pixels] = 0.45 * color[selected_pixels] + 0.55 * rgb
+
+        values = []
+        for name in KPI_COLS:
+            value = metrics.at[row["tile_id"], name]
+            values.append(f"{name}={value:.3g}" if np.isfinite(value) else f"{name}=NaN")
+        metrics_text = "\n".join("  ".join(values[i:i + 4]) for i in range(0, len(values), 4))
+        fig, axes = plt.subplots(1, 5, figsize=(25, 6.5))
+        axes[0].imshow(tile, cmap="gray", vmin=0, vmax=255)
+        axes[1].imshow(overlay_img)
+        for ax, class_id in zip(axes[2:], range(3)):
+            ax.imshow(lab == class_id, cmap="gray", vmin=0, vmax=1)
+            ax.set_title(f"class {class_id}")
+        axes[0].set_title("raw BSE")
+        axes[1].set_title("three-class overlay")
+        for ax in axes:
+            ax.axis("off")
+        fig.suptitle(
+            f"{row['tile_id']} | {row['batch']} | phase_identity: {PHASE_IDENTITY}\n{metrics_text}",
+            fontsize=8.5, y=0.99,
+        )
+        fig.tight_layout(rect=[0, 0, 1, 0.88])
+        out = out_dir / f"b1_tile_{row['tile_id']}.png"
+        fig.savefig(
+            out, dpi=120,
+            metadata={
+                "Description": f"config_hash={provenance['config_hash']}; git_sha={provenance['git_sha']}; "
+                               f"phase_identity: {PHASE_IDENTITY}",
+            },
+        )
+        plt.close(fig)
+        written.append(out)
     return written
 
 
@@ -161,19 +322,26 @@ def run(cfg: dict[str, Any]) -> None:
     index = pd.read_parquet(tiles_dir / "index.parquet")
     th = pd.read_parquet(res / "thresholds_per_tile.parquet")
     th = join_thresholds(th, index, cfg)
-    cfg_s = _segment.params(cfg["segmentation"])
+    cfg_s = {
+        **_segment.params(cfg["segmentation"]),
+        "crack_aspect_min": float(cfg["kpi_extra"]["crack_aspect_min"]),
+        "tpc_max_r_px": int(cfg["kpi_extra"]["tpc_max_r_px"]),
+    }
     with ProcessPoolExecutor() as ex:
-        results = list(ex.map(_work, [(r, str(tiles_dir), str(masks_dir), cfg_s) for r in th.to_dict("records")],
-                              chunksize=8))
-    per_tile = _config.stamp(pd.DataFrame([r for r, _ in results]), cfg)
-    sens_tile = pd.DataFrame([s for _, ss in results for s in ss])
-    sens_img = per_image(sens_tile, FRAC_COLS, ["scale"])
-    sens = _config.stamp(pd.concat([sens_tile.assign(level="tile"), sens_img.assign(level="image")],
-                                   ignore_index=True), cfg)
-    img = _config.stamp(per_image(per_tile, KPI_COLS), cfg)
+        results = list(ex.map(
+            _base_work, [(r, str(masks_dir), cfg_s) for r in th.to_dict("records")],
+            chunksize=8,
+        ))
+    per_tile = pd.DataFrame(results)
+    per_tile["phase_identity"] = PHASE_IDENTITY
+    per_tile = _config.stamp(per_tile, cfg)
+    img = per_image(per_tile, KPI_COLS)
+    img["phase_identity"] = PHASE_IDENTITY
+    img = _config.stamp(img, cfg)
     per_tile.to_parquet(res / "kpi_per_tile.parquet", index=False)
     img.to_parquet(res / "kpi_per_image.parquet", index=False)
-    sens.to_parquet(res / "kpi_sensitivity.parquet", index=False)
     paths = make_overlays(th, tiles_dir, masks_dir, res / "audit" / "overlays")
-    print(f"kpi: {len(per_tile)} tiles, {len(img)} images -> results/kpi_per_*.parquet, kpi_sensitivity.parquet, "
-          f"{len(paths)} overlays")
+    inspection = make_inspection_panels(th, per_tile, tiles_dir, masks_dir, res / "inspection", cfg)
+    print(f"kpi: {len(per_tile)} tiles, {len(img)} images -> results/kpi_per_*.parquet; "
+          f"run `modal run modal_app.py --task kpi` for sensitivity; "
+          f"{len(paths)} overlays, {len(inspection)} inspection panels")
