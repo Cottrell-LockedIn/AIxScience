@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "verdict.schema.json",
+  "title": "QC verdict (Feature 3 traceability + Feature 4 explanation)",
+  "type": "object",
+  "required": ["subject", "verdict", "pipeline", "acquisition", "evidence", "uncertainty", "routing", "next_action"],
+  "properties": {
+    "subject": {
+      "type": "object",
+      "required": ["kind", "id", "n_images"],
+      "properties": {
+        "kind": {"enum": ["batch", "image"]},
+        "id": {"type": "string"},
+        "batch": {"type": ["string", "null"]},
+        "n_images": {"type": "integer", "minimum": 0},
+        "n_tiles": {"type": "integer", "minimum": 0},
+        "file_hashes": {"type": "object", "additionalProperties": {"type": "string"}}
+      }
+    },
+    "verdict": {
+      "type": "object",
+      "required": ["label", "rule"],
+      "properties": {
+        "label": {"enum": ["within_bounds", "investigate", "outside_bounds"]},
+        "rule": {"type": "string", "description": "the decision rule that produced the label, verbatim"},
+        "closed_set": {
+          "type": "object",
+          "properties": {
+            "predicted_batch": {"type": "string"},
+            "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+            "note": {"type": "string", "default": "assumes the image is from one of the known batches"}
+          }
+        },
+        "open_set": {
+          "type": "object",
+          "properties": {
+            "nearest_batch": {"type": "string"},
+            "distance_to_each_batch": {"type": "object", "additionalProperties": {"type": "number"}},
+            "null_band_95": {"type": "number"},
+            "null_band_99": {"type": "number"},
+            "matches_known_batch": {"type": "boolean"}
+          }
+        }
+      }
+    },
+    "pipeline": {
+      "type": "object",
+      "required": ["git_sha", "config_path", "config_hash", "timestamp_utc", "frozen"],
+      "properties": {
+        "git_sha": {"type": "string"},
+        "git_tag": {"type": ["string", "null"]},
+        "config_path": {"type": "string"},
+        "config_hash": {"type": "string"},
+        "lock_hash": {"type": ["string", "null"]},
+        "timestamp_utc": {"type": "string"},
+        "frozen": {"type": "boolean"},
+        "exploratory": {"type": "boolean", "default": false},
+        "model_revisions": {"type": "object", "additionalProperties": {"type": "string"}}
+      }
+    },
+    "acquisition": {
+      "type": "object",
+      "description": "artefact and acquisition covariates for the subject vs the training range",
+      "properties": {
+        "detectors_present": {"type": "array", "items": {"type": "string"}},
+        "pixel_size_nm": {"type": ["number", "null"]},
+        "pixel_size_confirmed": {"type": "boolean"},
+        "covariates": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "value": {"type": "number"},
+              "training_p05": {"type": "number"},
+              "training_p95": {"type": "number"},
+              "flag": {"type": "boolean"}
+            }
+          }
+        },
+        "acquisition_drift_suspected": {"type": "boolean"}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "required": ["drivers"],
+      "properties": {
+        "drivers": {
+          "type": "array",
+          "maxItems": 5,
+          "items": {
+            "type": "object",
+            "required": ["name", "effect_size", "direction"],
+            "properties": {
+              "name": {"type": "string"},
+              "units": {"type": "string"},
+              "value": {"type": "number"},
+              "reference_median": {"type": "number"},
+              "effect_size": {"type": "number"},
+              "direction": {"enum": ["higher", "lower"]},
+              "prevalence_images_outside_band": {"type": "string", "description": "e.g. 5/7"},
+              "threshold_sensitivity": {"type": "number"}
+            }
+          }
+        },
+        "embedding": {
+          "type": "object",
+          "properties": {
+            "backbone": {"type": "string"},
+            "energy_distance": {"type": "number"},
+            "mmd": {"type": "number"},
+            "permutation_p": {"type": "number"},
+            "n_permutations": {"type": "integer"}
+          }
+        },
+        "artefact_ablation": {
+          "type": "object",
+          "properties": {
+            "loio_accuracy_with_artefacts": {"type": "number"},
+            "loio_accuracy_without_artefacts": {"type": "number"},
+            "interpretation": {"type": "string"}
+          }
+        },
+        "representative_tiles": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "uncertainty": {
+      "type": "object",
+      "required": ["sampling", "segmentation", "decision_margin"],
+      "properties": {
+        "sampling": {"type": "string", "description": "e.g. n=7 images; hierarchical bootstrap 95% CI"},
+        "segmentation": {"type": "string", "description": "KPI change under +/-10% threshold"},
+        "decision_margin": {"type": "string", "description": "distance to the nearest band edge"},
+        "robustness": {"type": "string", "description": "verdict stable under N of M perturbations"}
+      }
+    },
+    "routing": {
+      "type": "object",
+      "required": ["stakeholder"],
+      "properties": {
+        "stakeholder": {"enum": ["powder_supplier", "cell_manufacturer", "microscopy_team", "materials_expert_review", "none"]},
+        "reason": {"type": "string"}
+      }
+    },
+    "next_action": {"type": "string"},
+    "caveats": {"type": "array", "items": {"type": "string"}}
+  }
+}

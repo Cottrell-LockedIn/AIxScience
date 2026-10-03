@@ -1,0 +1,36 @@
+# data: never commit raw images or tiles
+data/
+!data/**/.gitkeep
+*.tif
+*.tiff
+
+# secrets and local config
+.env
+.env.*
+.modal.toml
+*.pem
+.devin/mcp_config.local.json
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# large artefacts
+*.pt
+*.pth
+*.ckpt
+*.npy
+*.npz
+*.parquet
+!results/**/*.parquet
+weights/
+
+# os / editors
+.DS_Store
+.vscode/
+.idea/

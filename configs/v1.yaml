@@ -1,0 +1,61 @@
+# v1 baseline configuration. Frozen by `git tag v1-frozen`; do not edit after that tag.
+version: v1
+seed: 0
+
+data:
+  raw_dir: data/raw
+  tiles_dir: data/tiles
+  heldout_dir: data/heldout
+  channels: [BSE, Inlens, ETD, SE]      # SE is treated as the ETD slot when ETD is absent
+  border_crop_px: 8                     # one image has a 2 px coloured line at the right edge
+  read_channel: 0                       # TIFFs are RGB with identical channels
+
+tiling:
+  tile_px: 1024
+  stride_px: 512
+  min_fill: 1.0                         # drop partial tiles at borders
+  preview_downscale: 4
+
+artefacts:
+  curtaining_band_px: 3                 # half-width around the vertical frequency axis
+  curtaining_min_freq: 0.02             # cycles/px, ignore DC and very low frequencies
+  edge_band_pct: 0.05
+  sharpness: laplacian_var
+
+segmentation:
+  channel: BSE
+  denoise: {method: median, size: 5}
+  classes: 3                            # pore / graphite / high-Z particle phase (names unconfirmed)
+  per_tile_thresholds: true
+  min_object_px: 20
+  threshold_perturbation: 0.10          # +/-10 % sensitivity check
+
+kpis:
+  - phase_fraction
+  - highz_particle_size
+  - highz_count_density
+  - pore_size
+  - tpc_length
+
+embeddings:
+  backbone: dinov2_vits14
+  hub_repo: facebookresearch/dinov2
+  input_px: 518
+  pooling: mean_patch
+  device: auto
+
+stats:
+  reference_batch: auto                 # auto = batch with most images; override when Polaron names one
+  null_splits: 200
+  permutations: 2000
+  bands: {within: 0.95, outside: 0.99}
+  unit: image                           # never tile
+
+classifier:
+  model: logistic_regression
+  cv: leave_one_image_out
+  artefact_ablation: true
+
+verdict:
+  labels: [within_bounds, investigate, outside_bounds]
+  schema: schema/verdict.schema.json

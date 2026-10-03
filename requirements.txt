@@ -1,0 +1,23 @@
+# Pin exact versions with `uv pip compile` once the environment is confirmed; these are the intended packages.
+numpy>=1.26,<3
+scipy>=1.13
+pandas>=2.2
+pyarrow>=16
+scikit-image>=0.24
+scikit-learn>=1.5
+opencv-python-headless>=4.10
+tifffile>=2024.7
+imagecodecs>=2024.6
+PyWavelets>=1.6
+matplotlib>=3.9
+pyyaml>=6
+jsonschema>=4.22
+typer>=0.12
+tqdm>=4.66
+requests>=2.32
+torch>=2.3
+torchvision>=0.18
+modal>=1.0
+streamlit>=1.36
+plotly>=5.22
+pytest>=8

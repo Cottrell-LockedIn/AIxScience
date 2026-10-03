@@ -55,3 +55,22 @@ Conditional or failed work is not presented as validated.
 - Flag results that hide uncertainty, overstate conclusions or force a binary decision when `investigate` or abstention is appropriate.
 - Flag exposed credentials, private links, confidential datasets, sensitive samples or generated artefacts that should not be committed.
 - Require changed scientific or data-processing behaviour to have an appropriate test or documented verification, and state what remains unverified.
+
+## Implementation guide (read before working on any stage)
+
+- `docs/FRAMEWORK.md` Section 00 is the entry point: plain-words workflow, hard rules, models and tools, differentiators.
+- `docs/FRAMEWORK.md` Section 2b is the stage table (S1 to S11): what each stage reads and writes, who owns it, train vs inference.
+- `docs/FRAMEWORK.md` Section 12 is the parallel-agent plan (experiment registry, leaderboard, selection rule). Section 13 is the generalisation and robustness protocol.
+- `docs/READ/Dataset First Look.md` describes the data. `docs/Log/assets/drive_file_listing.json` has the download IDs.
+- `docs/READ/Method Evidence for Layers.md` lists the citation for each method; cite it in the README when you use one.
+- `docs/READ/Questions for Polaron.md` lists open facts (pixel size, phase identity, reference batch). Treat them as unconfirmed until `docs/DATA_AUDIT.md` says otherwise.
+
+## Working conventions
+
+- Python 3.11, `uv`, pinned `requirements.txt`. Run `python -m qc --help` to see stages.
+- Stages hand off files with fixed names under `results/`; never pass data between stages in memory across owners.
+- One experiment = one YAML in `experiments/<swarm>/` = one folder in `results/experiments/<id>/` with `metrics.json`, `config.yaml`, `git_sha.txt`, `notes.md`.
+- Do not edit `src/qc/` core modules from an experiment agent; wrap or configure instead. Core changes go through the owning human on a branch.
+- Raw data (`data/`) is never committed. Derived JSON/CSV/PNG under `results/` may be.
+- Held-back images go to `data/heldout/` and are processed once with the frozen config after `git tag v1-frozen`.
+- Agent skills live in `.agents/skills/` (Modal official skill plus K-Dense scientific skills). Use them.

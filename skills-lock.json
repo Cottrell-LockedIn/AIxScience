@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "skills": {
+    "optimize-for-gpu": {
+      "source": "k-dense-ai/scientific-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/optimize-for-gpu/SKILL.md",
+      "computedHash": "88fe01ff17768037809470e94fbe74950ef067f35b42e3fb46f8cf9ae75f23de"
+    },
+    "peer-review": {
+      "source": "k-dense-ai/scientific-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/peer-review/SKILL.md",
+      "computedHash": "863fe9750bb5cc92accf44cece3a935b84cb182f5d38408baf9bcc53ec340e4f"
+    },
+    "pytorch-lightning": {
+      "source": "k-dense-ai/scientific-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/pytorch-lightning/SKILL.md",
+      "computedHash": "c34df430e06a072ada5ab9db3a09e8fb6f1c630a2405b4f041405cc715f4733e"
+    },
+    "scientific-critical-thinking": {
+      "source": "k-dense-ai/scientific-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/scientific-critical-thinking/SKILL.md",
+      "computedHash": "5f432576778e12aa04e722fa56c7c801cd644beed162d1c516b43721e5469d69"
+    },
+    "scientific-visualization": {
+      "source": "k-dense-ai/scientific-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/scientific-visualization/SKILL.md",
+      "computedHash": "5477b78120e75a65aed0f6e15dbf71b8669cca9160c2036847fd7bb45a3344c1"
+    },
+    "scikit-learn": {
+      "source": "k-dense-ai/scientific-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/scikit-learn/SKILL.md",
+      "computedHash": "124b80e65a64ec6b763d0dcf469b8314c3f06ef3065e0b488707f8978085ef25"
+    },
+    "statistical-analysis": {
+      "source": "k-dense-ai/scientific-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/statistical-analysis/SKILL.md",
+      "computedHash": "58fe533547c45096fe784f043609fe07742b5390f056ce850ab9ecb239f04c73"
+    }
+  }
+}
