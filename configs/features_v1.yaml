@@ -1,0 +1,112 @@
+# Tier-1 image-level feature registry (consultant-approved, pre-registered). Read by `python -m qc features`.
+# Data paths, tiling and segmentation parameters come from configs/v1.yaml (not duplicated here); this file only
+# fixes feature definitions and the few parameters the feature stage adds. Its sha256 is stamped on every output row
+# as `features_config_hash` next to the v1 `config_hash`.
+version: features_v1
+
+phase_identity: "stated by Polaron, not image-verified"   # class 2 bright = silicon, class 1 mid = graphite, class 0 dark = void/pore
+phase_caveats:
+  - "Si vs SiOx indistinguishable in BSE"
+  - "binder / conductive additive lumped into class 0 or 1"
+  - "no chemistry claims beyond the three stated identities"
+pixel_size_nm_if_true: 25        # unconfirmed; *_nm_if25 columns are px * 25 and are only meaningful if 25 nm/px is true
+
+stitch:
+  rule: later_tile_wins          # tiles pasted in (y, x) row-major order; where they overlap the later tile overwrites
+  unanalysed_value: 255          # canvas value for pixels no tile covers (none expected: tile grid is edge-anchored)
+
+particles:                       # class-2 (silicon) connected components
+  connectivity: 8
+  min_object_px: from_v1_segmentation    # configs/v1.yaml segmentation.min_object_px (20), re-applied after stitching
+  size_stats_exclude_border_touching: true     # F03, F04, F07: particles touching the analysed-area border are dropped (ASTM E1245 style)
+  count_rule: unbiased_counting_frame          # F05: particles touching the left or bottom border are not counted (Gundersen frame)
+
+clark_evans:
+  edge_correction: donnelly      # Donnelly (1978) correction of the CSR expectation for a rectangular window
+
+local_thickness:
+  method: hildebrand_rueegsegger_2d     # thickness(p) = diameter of the largest inscribed disc that contains p
+  exact_radius_max_px: 16        # every integer radius up to here is evaluated exactly
+  radius_growth: 1.2             # above that, radii grow geometrically (binned; bias <= 20 % only for pores thicker than 32 px)
+
+heterogeneity:
+  window_px: 512                 # non-overlapping windows anchored at the top-left of the analysed area
+
+features:
+  - id: F01
+    column: F01_c0_area_fraction
+    name: void area fraction
+    class: 0
+    definition: class-0 pixels / analysed pixels of the stitched per-image mask
+    unit: fraction
+    provenance: stereological area fraction (Delesse); class identity stated by Polaron, not image-verified
+  - id: F02
+    column: F02_c2_area_fraction
+    name: silicon area fraction
+    class: 2
+    definition: class-2 pixels / analysed pixels of the stitched per-image mask (before min-size re-filtering, same as kpi frac_c2)
+    unit: fraction
+    provenance: stereological area fraction (Delesse); class identity stated by Polaron, not image-verified
+  - id: F03
+    column: F03_c2_eqdiam_median_px
+    name: silicon particle equivalent diameter, median
+    class: 2
+    definition: median over interior class-2 particles (8-connected, >= min_object_px, not touching the border) of sqrt(4 A / pi)
+    unit: px
+    provenance: ASTM E1245 border exclusion; equivalent circular diameter
+  - id: F04
+    column: F04_c2_eqdiam_p90_px
+    name: silicon particle equivalent diameter, 90th percentile
+    class: 2
+    definition: 90th percentile of the same particle set as F03
+    unit: px
+    provenance: ASTM E1245 border exclusion; equivalent circular diameter
+  - id: F05
+    column: F05_c2_count_density_per_Mpx
+    name: silicon particle count density
+    class: 2
+    definition: class-2 particles (8-connected, >= min_object_px) counted with an unbiased counting frame (particles touching the left or bottom border excluded) per 1e6 analysed px
+    unit: 1/Mpx
+    provenance: Gundersen (1977) unbiased counting frame
+  - id: F06
+    column: F06_c2_clark_evans_R
+    name: silicon Clark-Evans nearest-neighbour ratio
+    class: 2
+    definition: mean nearest-neighbour distance between class-2 particle centroids / CSR expectation with Donnelly edge correction for the rectangular analysed area (R < 1 clustered, R = 1 random, R > 1 regular)
+    unit: ratio
+    provenance: Clark & Evans (1954); Donnelly (1978) edge correction
+  - id: F07
+    column: F07_c2_solidity_area_weighted_median
+    name: silicon particle solidity, area-weighted median
+    class: 2
+    definition: area-weighted median over interior class-2 particles of particle area / convex hull area
+    unit: ratio
+    provenance: skimage regionprops solidity; ASTM E1245 border exclusion
+  - id: F08
+    column: F08_c0_local_thickness_median_px
+    name: void local thickness, median
+    class: 0
+    definition: median over class-0 pixels of the Hildebrand-Rueegsegger local thickness (diameter of the largest inscribed disc containing the pixel), computed via the Euclidean distance transform
+    unit: px
+    provenance: Hildebrand & Rueegsegger (1997), 2D implementation
+  - id: F09
+    column: F09_c0_chord_anisotropy_h_over_v
+    name: void chord-length anisotropy
+    class: 0
+    definition: mean horizontal chord length / mean vertical chord length through class 0; chords touching the analysed-area border are excluded as censored
+    unit: ratio
+    provenance: stereological chord-length (intercept) analysis
+  - id: F10
+    column: F10_c0_fraction_iqr_512px
+    name: void fraction heterogeneity
+    class: 0
+    definition: interquartile range of the class-0 area fraction over non-overlapping 512 px windows fully inside the analysed area
+    unit: fraction
+    provenance: within-image heterogeneity, pre-registered
+  - id: F11
+    column: F11_c2_perimeter_fraction_adjacent_c0
+    name: silicon perimeter fraction adjacent to void
+    class: 2
+    definition: among class-2 boundary pixels (at least one 4-neighbour not class 2), the fraction with at least one class-0 4-neighbour
+    unit: fraction
+    provenance: pixel-boundary contact fraction, pre-registered
