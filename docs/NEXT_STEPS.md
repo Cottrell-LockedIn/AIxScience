@@ -8,7 +8,7 @@ Batch_3 = supplier's promised baseline; Batch_1/2 = subsequent deliveries that a
 
 ## Item 0 (from the independent audit): `qc classify` — DONE (commit after 370d083)
 
-Implemented as `src/qc/classify.py` / `python -m qc classify`; results in `results/classify/features_f01_f11/` and `results/classify/kpi_per_image/`. Observed (LOIO, logreg, 200-draw image-level permutation null): material F01-F11 0.45 (null p95 0.52, p 0.19); acquisition covariates 0.71 (p 0.005); both 0.65 (p 0.015), LOGO 0.68; old KPIs 0.58 (p 0.045). OOD screen flags no image `matches none` at alpha 0.05 on any family. Still to do on this item: embeddings as a family (`--extra`), a stricter OOD statistic (per-feature max |z| or MCD once n allows), and scoring the three held-back images with `--heldout` after `v1-frozen`.
+Implemented as `src/qc/classify.py` / `python -m qc classify`; results in `results/classify/features_f01_f11/` and `results/classify/kpi_per_image/`. Observed (LOIO, logreg, 200-draw image-level permutation null): material F01-F11 0.45 (null p95 0.52, p 0.19); acquisition covariates 0.71 (p 0.005); both 0.65 (p 0.015), LOGO 0.68; old KPIs 0.58 (p 0.045). OOD: no F01-F11 material-only image is `matches_none`; one image matches none with material+acquisition. On the KPI table, 1 material-only, 0 acquisition-only, and 1 material+acquisition image is `matches_none`. Still to do on this item: embeddings as a family (`--extra`), a stricter OOD statistic (per-feature max |z| or MCD once n allows), and scoring the three held-back images with `--heldout` after `v1-frozen`.
 
 Original specification:
 

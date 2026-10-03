@@ -121,7 +121,7 @@ Say what we screen, what we cannot, and why — one sentence each.
 **We can honestly claim to screen (as `investigate`/`within bounds` on relative, image-level evidence):**
 
 - **FM13/FM14 compaction and 2D pore architecture** — F01/F08/F09/F10 compare each batch's class-0 geometry to Batch_3 with image-level permutation tests; relative only, because the absolute class-0 level is a measurement definition and 3D transport is not measured.
-- **FM08 dispersion/agglomeration** — F06 Clark–Evans R and F05 are computed per image, but on current data they track acquisition group (p = 0.0077 / 0.0002) more than batch, so the honest statement is "measured, confounded, `investigate`".
+- **FM08 dispersion/agglomeration** — F06 Clark–Evans R and F05 are computed per image, but on current data they track acquisition group (p = 0.008 / 0.0002) more than batch, so the honest statement is "measured, confounded, `investigate`".
 - **FM04 foreign high-Z particle candidates** — a bright-object screen can nominate candidates for EDS; it cannot identify a contaminant and never yields `outside bounds`.
 - **FM10 composition proxy** — class-2 (stated Si) area fraction is tracked relative to Batch_3; it is not a wt% and depends on an unverified phase identity.
 - **FM02/FM21 particle–matrix gaps** — F11/F07 are tracked but sit at the resolution floor (median 0.001), so only a large shift would register, and it would still be `investigate`.
