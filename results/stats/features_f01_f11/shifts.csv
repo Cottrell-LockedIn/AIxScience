@@ -1,0 +1,12 @@
+feature,reference_scale,standardized_shift_Batch_1_vs_Batch_3,standardized_shift_Batch_2_vs_Batch_3,config_hash,git_sha,phase_identity
+F01_c0_area_fraction,0.008876017146631388,-1.2357914586814216,-0.06251247816809448,de199d6c8d69,bf71ff6,"stated by Polaron, not image-verified"
+F02_c2_area_fraction,0.03310496357886897,-0.3475987057098171,-0.10582154308766242,de199d6c8d69,bf71ff6,"stated by Polaron, not image-verified"
+F03_c2_eqdiam_median_px,0.11656027466714451,0.0,-1.3556272295944092,de199d6c8d69,bf71ff6,"stated by Polaron, not image-verified"
+F04_c2_eqdiam_p90_px,3.9473527411949787,-0.6757821096755332,-0.4867359310502966,de199d6c8d69,bf71ff6,"stated by Polaron, not image-verified"
+F05_c2_count_density_per_Mpx,83.55594131842098,-0.17266202545731546,-0.25591667446102606,de199d6c8d69,bf71ff6,"stated by Polaron, not image-verified"
+F06_c2_clark_evans_R,0.062092165851717014,0.15844105457996446,-0.739842898768565,de199d6c8d69,bf71ff6,"stated by Polaron, not image-verified"
+F07_c2_solidity_area_weighted_median,0.06359441083628918,0.7062900185295652,0.714224213737675,de199d6c8d69,bf71ff6,"stated by Polaron, not image-verified"
+F08_c0_local_thickness_median_px,2.9652,0.0,0.0,de199d6c8d69,bf71ff6,"stated by Polaron, not image-verified"
+F09_c0_chord_anisotropy_h_over_v,0.029880179216666657,-0.21292226492006636,-0.6803593335044291,de199d6c8d69,bf71ff6,"stated by Polaron, not image-verified"
+F10_c0_fraction_iqr_512px,0.006970613479614258,-1.0479917277060282,0.1597982164439479,de199d6c8d69,bf71ff6,"stated by Polaron, not image-verified"
+F11_c2_perimeter_fraction_adjacent_c0,0.0005552958146562716,0.24998514389007073,0.7586835577936342,de199d6c8d69,bf71ff6,"stated by Polaron, not image-verified"

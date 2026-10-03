@@ -23,6 +23,9 @@ def _run(stage: str, cfg_path: str) -> None:
 
 
 for _s in STAGES:
+    if _s == "stats":
+        continue
+
     def _make(stage: str):
         def cmd(config: str = typer.Option("configs/v1.yaml", "--config", "-c")) -> None:
             _run(stage, config)
@@ -30,6 +33,24 @@ for _s in STAGES:
         cmd.__doc__ = importlib.import_module(f"qc.{stage}").__doc__.splitlines()[0]
         return cmd
     app.command(name=_s)(_make(_s))
+
+
+@app.command()
+def stats(all_tables: bool = typer.Option(False, "--all", help="run all five default image-level tables"),
+          table: str | None = typer.Option(None, "--table", help="one of the default table names"),
+          seed: int = typer.Option(0, "--seed"), n_perm: int = typer.Option(1000, "--n-perm"),
+          n_null_splits: int = typer.Option(1000, "--n-null-splits"),
+          n_jobs: int = typer.Option(-1, "--n-jobs", help="parallel worker processes"),
+          config: str = typer.Option("configs/v1.yaml", "--config", "-c")) -> None:
+    """Image-level robust batch distances, permutation tests, null bands and consistency ranking."""
+    if all_tables == (table is not None):
+        raise typer.BadParameter("choose exactly one of --all or --table")
+    cfg = _config.load(config)
+    typer.echo(f"[qc] stats  config={cfg['_path']}@{cfg['_hash']}  git={_config.git_sha()}")
+    importlib.import_module("qc.stats").run(
+        cfg, all_tables=all_tables, table=table, seed=seed, n_perm=n_perm,
+        n_null_splits=n_null_splits, n_jobs=n_jobs,
+    )
 
 
 @app.command()

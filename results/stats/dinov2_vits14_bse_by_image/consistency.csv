@@ -1,0 +1,4 @@
+batch,n_images,mean_pairwise_euclidean,jackknife_se,rank,rank_separable,config_hash,git_sha,phase_identity
+Batch_2,7,25.114350722237678,2.4160502393496652,1,False,de199d6c8d69,bf71ff6,"stated by Polaron, not image-verified"
+Batch_3,17,26.354960513489832,0.8503139239542027,2,True,de199d6c8d69,bf71ff6,"stated by Polaron, not image-verified"
+Batch_1,7,36.04255554302754,2.7123907348565366,3,False,de199d6c8d69,bf71ff6,"stated by Polaron, not image-verified"

@@ -1,0 +1,4 @@
+metric,n_splits,split_n_a,split_n_b,null_p95,null_p99,config_hash,git_sha,phase_identity
+median_shift,1000,7,10,0.9102452614482637,1.031302472027525,de199d6c8d69,bf71ff6,"stated by Polaron, not image-verified"
+energy_distance,1000,7,10,1.7288031275961862,2.207715557877451,de199d6c8d69,bf71ff6,"stated by Polaron, not image-verified"
+mmd2_unbiased,1000,7,10,0.08633885018987453,0.14221994951985764,de199d6c8d69,bf71ff6,"stated by Polaron, not image-verified"

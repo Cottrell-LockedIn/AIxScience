@@ -1,0 +1,9 @@
+feature,reference_scale,standardized_shift_Batch_1_vs_Batch_3,standardized_shift_Batch_2_vs_Batch_3,config_hash,git_sha,phase_identity
+frac_c0,0.01180047422922573,-0.5786075510418154,-0.3659189573334988,de199d6c8d69,bf71ff6,"stated by Polaron, not image-verified"
+frac_c1,0.019800664395552402,1.2681855877157306,0.3749430877485111,de199d6c8d69,bf71ff6,"stated by Polaron, not image-verified"
+frac_c2,0.02685720055653498,-0.2993121287932813,-0.19373272654106033,de199d6c8d69,bf71ff6,"stated by Polaron, not image-verified"
+c2_count_density_per_Mpx,81.01022426898665,-0.22518241511279485,-0.3029850525059891,de199d6c8d69,bf71ff6,"stated by Polaron, not image-verified"
+c2_eqdiam_median_px,0.20214111860795786,0.6474718655606959,0.8019972060309772,de199d6c8d69,bf71ff6,"stated by Polaron, not image-verified"
+c2_eqdiam_p90_px,18.39702796011746,-0.4568053978348694,-0.11322121224628322,de199d6c8d69,bf71ff6,"stated by Polaron, not image-verified"
+c0_region_eqdiam_median_px,0.2809788621051455,-1.96338622826847,-0.5847091907477145,de199d6c8d69,bf71ff6,"stated by Polaron, not image-verified"
+c0_region_area_mean_px,182.0415733973613,-0.6023250816494271,0.653008153907857,de199d6c8d69,bf71ff6,"stated by Polaron, not image-verified"
