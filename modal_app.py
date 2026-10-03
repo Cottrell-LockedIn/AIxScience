@@ -15,19 +15,20 @@ import modal
 
 app = modal.App("aixscience-qc")
 
+# versions pinned to the local .venv so Modal and local runs give identical numbers
 classify_image = (
     modal.Image.debian_slim(python_version="3.11")
     .pip_install(
-        "numpy",
-        "pandas",
-        "pyarrow",
-        "scikit-learn",
-        "scipy",
-        "pyyaml",
-        "typer",
-        "tabulate",
-        "joblib",
-        "threadpoolctl",
+        "numpy==2.4.6",
+        "pandas==3.0.6",
+        "pyarrow==25.0.1",
+        "scikit-learn==1.9.1",
+        "scipy==1.17.1",
+        "pyyaml==6.0.3",
+        "typer==0.27.2",
+        "tabulate==0.10.0",
+        "joblib==1.6.0",
+        "threadpoolctl==3.7.0",
     )
     .add_local_dir("src", remote_path="/root/src")
     .add_local_dir("configs", remote_path="/root/configs")
