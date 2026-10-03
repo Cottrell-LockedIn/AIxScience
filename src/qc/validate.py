@@ -57,7 +57,6 @@ COVARIATES = {  # output name: (channel, source column) in results/artefacts_per
     "mean_grey": ("BSE", "mean"),
 }
 REFERENCE_BATCH = "Batch_3"
-LOO_FLAGGED = ("vc2whyaq", "ufdvpb81", "hzumfsms")  # Batch_3 images flagged by the C4 leave-one-out check
 MAD_SCALE = 1.4826
 RULE = {"rank_stability_min": 0.7, "sens_to_mad_max": 0.5, "alpha": 0.05, "loo_z": 3.0, "rho_covariate": 0.5}
 
@@ -313,7 +312,8 @@ def _two_sample_perm(x: np.ndarray, y: np.ndarray, rng: np.random.Generator, n_p
 
 
 def batch_tests(df: pd.DataFrame, feats: list[str], rng: np.random.Generator, n_perm: int,
-                reference: str = REFERENCE_BATCH, exclude: Iterable[str] = LOO_FLAGGED) -> pd.DataFrame:
+                reference: str = REFERENCE_BATCH, exclude: Iterable[str] = ()) -> pd.DataFrame:
+    """Batch vs reference tests; `exclude` = reference images flagged by reference_loo on *this* table (never a fixed list)."""
     exclude = set(exclude)
     tables = {"raw": df, "residualised": residualise(df, feats)}
     rows = []
@@ -339,6 +339,11 @@ def batch_tests(df: pd.DataFrame, feats: list[str], rng: np.random.Generator, n_
                 fam_df["q_bh"] = bh_q(fam_df["p_perm"].to_numpy())
                 rows.append(fam_df)
     return pd.concat(rows, ignore_index=True)
+
+
+def loo_flagged_ids(loo: pd.DataFrame) -> list[str]:
+    """Reference images with |robust z| > RULE['loo_z'] on any feature of the table being validated."""
+    return sorted(loo.loc[loo["flag"], "sample_id"].unique().tolist()) if len(loo) else []
 
 
 def reference_loo(df: pd.DataFrame, feats: list[str], reference: str = REFERENCE_BATCH) -> pd.DataFrame:
@@ -475,6 +480,8 @@ def _md(df: pd.DataFrame, floatfmt: str = ".3g") -> str:
 
 def write_report(out: Path, name: str, df: pd.DataFrame, feats: list[str], stab: pd.DataFrame, conf: pd.DataFrame,
                  bt: pd.DataFrame, ll: pd.DataFrame, loo: pd.DataFrame, dec: pd.DataFrame, prov: dict[str, Any]) -> None:
+    loo_ids = loo_flagged_ids(loo)
+    loo_txt = ", ".join(loo_ids) if loo_ids else "no image"
     n_b = df.groupby("batch").size()
     gaps = leakage_gaps(ll)
     flagged = (loo[loo["flag"]].groupby("sample_id")
@@ -527,7 +534,7 @@ def write_report(out: Path, name: str, df: pd.DataFrame, feats: list[str], stab:
         "- Phase identities (class 2 bright = silicon, class 1 mid = graphite, class 0 dark = void/pore) are stated by Polaron, "
         "not image-verified; Si vs SiOx is indistinguishable in BSE; binder/additive is lumped into class 0/1. No further chemistry claims.",
         "- Units are pixels. nm values would hold only if 25 nm/px is true (tag written by software, unconfirmed).",
-        f"- {REFERENCE_BATCH} is the reference batch but not error-free: the leave-one-out check flags {', '.join(LOO_FLAGGED)}; "
+        f"- {REFERENCE_BATCH} is the reference batch but not error-free: the leave-one-out check on this table flags {loo_txt}; "
         "batch tests are reported with and without them.",
         "- Acquisition covariates (noise, sharpness, curtaining, stripe, edge charging, mean grey) are measured and kept as "
         "covariates; images are never altered.",
@@ -577,7 +584,7 @@ def write_report(out: Path, name: str, df: pd.DataFrame, feats: list[str], stab:
         "",
         _md(bt_raw[["feature", "comparison", "n_test", "n_ref", "effect_shift_over_mad", "p_perm", "q_bh"]]),
         "",
-        f"Raw features, {REFERENCE_BATCH} without {', '.join(LOO_FLAGGED)}:",
+        f"Raw features, {REFERENCE_BATCH} without {loo_txt}:",
         "",
         _md(bt_ex[["feature", "comparison", "n_test", "n_ref", "effect_shift_over_mad", "p_perm", "q_bh"]]),
         "",
@@ -603,7 +610,7 @@ def write_report(out: Path, name: str, df: pd.DataFrame, feats: list[str], stab:
         "",
         _md(flagged) if len(flagged) else "No image flagged.",
         "",
-        f"Expected from the C4 check: {', '.join(LOO_FLAGGED)}.",
+        f"Flagged on this table (excluded in the `excl_loo_flagged` rows of batch_tests.csv): {loo_txt}.",
         "",
     ]
     (out / "VALIDATION.md").write_text("\n".join(lines))
@@ -621,9 +628,9 @@ def run_tables(features: pd.DataFrame, artefacts: pd.DataFrame, images: pd.DataF
     df, feats = assemble(features, artefacts, images)
     stab = stability(df, feats, sens, sensitivity_tables, rng, n_boot)
     conf = confound(df, feats, rng, n_perm)
-    bt = batch_tests(df, feats, rng, n_perm)
-    ll = loio_logo(df, feats, seed, models)
     loo = reference_loo(df, feats)
+    bt = batch_tests(df, feats, rng, n_perm, exclude=loo_flagged_ids(loo))
+    ll = loio_logo(df, feats, seed, models)
     dec = decide(stab, conf, feats)
     return {"assembled": df, "stability": stab, "confound": conf, "batch_tests": bt, "loio_logo": ll,
             "reference_loo": loo, "decisions": dec, "_feats": feats}

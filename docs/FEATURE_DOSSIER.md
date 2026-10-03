@@ -1,6 +1,6 @@
 # Feature dossier: the 10 pre-registered measurements
 
-Status: 2026-10-03, written against PR #1 (`stage/s1-s5-reality-check`, config `1bec114301c3`, 31 images: Batch_1 7, Batch_2 7, Batch_3 17 = reference). Docs only; no code changed.
+Status: 2026-10-03, written against PR #1 (`stage/s1-s5-reality-check`, config `1bec114301c3` at writing time; all tables now carry `de199d6c8d69` after the `main` phase-name merge, feature values unchanged, 31 images: Batch_1 7, Batch_2 7, Batch_3 17 = reference). Docs only; no code changed.
 Scope: for each pre-registered measurement, (a) does it make physical and measurement sense on a single 2D BSE cross-section at ~25 nm/px (if that pixel size is true), (b) can it contribute to the project goal (separate batches, explain why, separate acquisition from material), and (c) what pre-declared test keeps or drops it.
 Companion documents (not duplicated here): `docs/EVIDENCE_BASE.md` (general evidence base, separate session), the validation harness (separate session; this dossier only declares the criteria it applies), `docs/READ/Method Evidence for Layers.md` (method citations), `results/audit/REALITY_CHECK.md` and PR #1 (the v1 numbers quoted below). References with DOIs: `docs/evidence/feature_refs.bib`; every DOI was resolved through `https://api.crossref.org/works/<DOI>` on 2026-10-03.
 

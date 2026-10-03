@@ -1,6 +1,6 @@
 # Presentation justification note
 
-Status: working note (T+1 day). Every methodological choice we will be asked to defend on stage, with the one-line justification and the evidence that backs it. Numbers are from PR #1 outputs (31 images, 93 TIFFs, config hash `1bec114301c3`) unless marked TODO.
+Status: working note (T+1 day). Every methodological choice we will be asked to defend on stage, with the one-line justification and the evidence that backs it. Numbers are from PR #1 outputs (31 images, 93 TIFFs, config hash `de199d6c8d69`; earlier `1bec114301c3` numbers were regenerated and unchanged) unless marked TODO.
 
 | # | Choice to justify | One-line justification | Evidence / where |
 |---|---|---|---|
@@ -39,7 +39,7 @@ All from `python -m qc validate` (PR #2 harness) on the 11 pre-registered featur
 | Same, with the 6 acquisition covariates added | 0.65 (LOIO) vs 0.68 (LOGO) | `loio_logo.csv` |
 | Reading | material features alone do not predict batch; the only predictive signal is acquisition (noise, sharpness, mean grey). This is the artefact-ablation result the brief asked for | |
 | Keep / drop / investigate under the pre-declared rule | 0 keep, 0 drop, 11 investigate | `decisions.csv` |
-| Acquisition-confounded (group association stronger than batch, p_group < 0.05) | F05 count density (p 0.0003), F06 Clark-Evans R (p 0.007, rho +0.53 with mean grey); F09 anisotropy borderline (p ~0.05, rho +0.55 with horizontal-stripe score) | `confound.csv` |
+| Acquisition-confounded (group association stronger than batch, p_group < 0.05) | F05 count density (p 0.0002), F06 Clark-Evans R (p 0.007, rho +0.53 with mean grey); F09 anisotropy borderline (p ~0.05, rho +0.55 with horizontal-stripe score) | `confound.csv` |
 | Bootstrap rank stability (>= 0.7 required) | F06 0.75; F01 0.69; F03 0.63; F07 0.56; F02 0.54; F05 0.44; F04 0.43; F11 0.39; F10 0.24; F09 0.22; F08 undefined (median pinned at 26 px in all batches) | `stability.csv` |
 | Degenerate | F11 Si-void interface fraction ~0.001 (max 0.004); F03 Si median diameter 7.6-8.5 px, set by the 20 px min-object floor | PR #3 report |
 | Batch effects after BH correction (median shift / Batch_3 MAD) | none with q < 0.05; best is F04 p90 Si diameter, Batch_2 vs Batch_3, -1.17 MAD after residualising on covariates, q = 0.15 | `batch_tests.csv` |

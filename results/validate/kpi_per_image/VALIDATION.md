@@ -1,6 +1,6 @@
 # Validation of `kpi_per_image`
 
-Inputs: results/kpi_per_image.parquet (sha256 e377d9950dea), covariates from results/artefacts_per_image.parquet, acquisition groups from results/audit/images.csv, threshold sensitivity from results/kpi_sensitivity.parquet. Config de199d6c8d69, git f1ea178, seed 0, 1000 bootstrap resamples, 10000 permutations.
+Inputs: results/kpi_per_image.parquet (sha256 e377d9950dea), covariates from results/artefacts_per_image.parquet, acquisition groups from results/audit/images.csv, threshold sensitivity from results/kpi_sensitivity.parquet. Config de199d6c8d69, git eca6fa7, seed 0, 1000 bootstrap resamples, 10000 permutations.
 
 ## Headline
 
@@ -16,7 +16,7 @@ Inputs: results/kpi_per_image.parquet (sha256 e377d9950dea), covariates from res
 - Scaling, imputation and the classifier are fitted inside each fold only.
 - Phase identities (class 2 bright = silicon, class 1 mid = graphite, class 0 dark = void/pore) are stated by Polaron, not image-verified; Si vs SiOx is indistinguishable in BSE; binder/additive is lumped into class 0/1. No further chemistry claims.
 - Units are pixels. nm values would hold only if 25 nm/px is true (tag written by software, unconfirmed).
-- Batch_3 is the reference batch but not error-free: the leave-one-out check flags vc2whyaq, ufdvpb81, hzumfsms; batch tests are reported with and without them.
+- Batch_3 is the reference batch but not error-free: the leave-one-out check on this table flags 0grcilhi, cfe5vt7s, hzumfsms, ufdvpb81, vc2whyaq; batch tests are reported with and without them.
 - Acquisition covariates (noise, sharpness, curtaining, stripe, edge charging, mean grey) are measured and kept as covariates; images are never altered.
 - p-values are image-level permutation p with the effect size next to them; `investigate` is a first-class outcome.
 
@@ -94,47 +94,47 @@ Raw features, all Batch_3 images:
 | c0_region_eqdiam_median_px | Batch_2_vs_Batch_3 |        7 |      17 |                  -0.585 |   0.259  |  0.721 |
 | c0_region_area_mean_px     | Batch_2_vs_Batch_3 |        7 |      17 |                   0.653 |   0.311  |  0.721 |
 
-Raw features, Batch_3 without vc2whyaq, ufdvpb81, hzumfsms:
+Raw features, Batch_3 without 0grcilhi, cfe5vt7s, hzumfsms, ufdvpb81, vc2whyaq:
 
 | feature                    | comparison         |   n_test |   n_ref |   effect_shift_over_mad |   p_perm |   q_bh |
 |:---------------------------|:-------------------|---------:|--------:|------------------------:|---------:|-------:|
-| frac_c0                    | Batch_1_vs_Batch_3 |        7 |      14 |                  -0.517 |   0.207  | 0.553  |
-| frac_c1                    | Batch_1_vs_Batch_3 |        7 |      14 |                   1.38  |   0.0627 | 0.251  |
-| frac_c2                    | Batch_1_vs_Batch_3 |        7 |      14 |                  -0.375 |   0.643  | 0.734  |
-| c2_count_density_per_Mpx   | Batch_1_vs_Batch_3 |        7 |      14 |                  -0.384 |   0.339  | 0.646  |
-| c2_eqdiam_median_px        | Batch_1_vs_Batch_3 |        7 |      14 |                   0.775 |   0.403  | 0.646  |
-| c2_eqdiam_p90_px           | Batch_1_vs_Batch_3 |        7 |      14 |                  -0.276 |   0.963  | 0.963  |
-| c0_region_eqdiam_median_px | Batch_1_vs_Batch_3 |        7 |      14 |                  -2.27  |   0.0062 | 0.0496 |
-| c0_region_area_mean_px     | Batch_1_vs_Batch_3 |        7 |      14 |                  -0.496 |   0.568  | 0.734  |
-| frac_c0                    | Batch_2_vs_Batch_3 |        7 |      14 |                  -0.299 |   0.661  | 0.661  |
-| frac_c1                    | Batch_2_vs_Batch_3 |        7 |      14 |                   0.396 |   0.334  | 0.547  |
-| frac_c2                    | Batch_2_vs_Batch_3 |        7 |      14 |                  -0.271 |   0.53   | 0.607  |
-| c2_count_density_per_Mpx   | Batch_2_vs_Batch_3 |        7 |      14 |                  -0.478 |   0.202  | 0.538  |
-| c2_eqdiam_median_px        | Batch_2_vs_Batch_3 |        7 |      14 |                   0.96  |   0.342  | 0.547  |
-| c2_eqdiam_p90_px           | Batch_2_vs_Batch_3 |        7 |      14 |                   0.261 |   0.531  | 0.607  |
-| c0_region_eqdiam_median_px | Batch_2_vs_Batch_3 |        7 |      14 |                  -0.86  |   0.183  | 0.538  |
-| c0_region_area_mean_px     | Batch_2_vs_Batch_3 |        7 |      14 |                   1.18  |   0.0971 | 0.538  |
+| frac_c0                    | Batch_1_vs_Batch_3 |        7 |      12 |                  -0.352 |   0.477  | 0.764  |
+| frac_c1                    | Batch_1_vs_Batch_3 |        7 |      12 |                   1.38  |   0.106  | 0.423  |
+| frac_c2                    | Batch_1_vs_Batch_3 |        7 |      12 |                  -0.433 |   0.605  | 0.807  |
+| c2_count_density_per_Mpx   | Batch_1_vs_Batch_3 |        7 |      12 |                  -0.425 |   0.285  | 0.723  |
+| c2_eqdiam_median_px        | Batch_1_vs_Batch_3 |        7 |      12 |                   0.836 |   0.362  | 0.723  |
+| c2_eqdiam_p90_px           | Batch_1_vs_Batch_3 |        7 |      12 |                  -0.298 |   0.953  | 0.953  |
+| c0_region_eqdiam_median_px | Batch_1_vs_Batch_3 |        7 |      12 |                  -4.07  |   0.0058 | 0.0464 |
+| c0_region_area_mean_px     | Batch_1_vs_Batch_3 |        7 |      12 |                  -0.296 |   0.796  | 0.91   |
+| frac_c0                    | Batch_2_vs_Batch_3 |        7 |      12 |                  -0.127 |   0.897  | 0.897  |
+| frac_c1                    | Batch_2_vs_Batch_3 |        7 |      12 |                   0.396 |   0.32   | 0.512  |
+| frac_c2                    | Batch_2_vs_Batch_3 |        7 |      12 |                  -0.313 |   0.497  | 0.568  |
+| c2_count_density_per_Mpx   | Batch_2_vs_Batch_3 |        7 |      12 |                  -0.529 |   0.17   | 0.454  |
+| c2_eqdiam_median_px        | Batch_2_vs_Batch_3 |        7 |      12 |                   1.04  |   0.294  | 0.512  |
+| c2_eqdiam_p90_px           | Batch_2_vs_Batch_3 |        7 |      12 |                   0.282 |   0.495  | 0.568  |
+| c0_region_eqdiam_median_px | Batch_2_vs_Batch_3 |        7 |      12 |                  -1.54  |   0.133  | 0.454  |
+| c0_region_area_mean_px     | Batch_2_vs_Batch_3 |        7 |      12 |                   1.5   |   0.0497 | 0.398  |
 
 Residualised on the acquisition covariates, all Batch_3 images:
 
 | feature                    | comparison         |   n_test |   n_ref |   effect_shift_over_mad |   p_perm |   q_bh |
 |:---------------------------|:-------------------|---------:|--------:|------------------------:|---------:|-------:|
-| frac_c0                    | Batch_1_vs_Batch_3 |        7 |      17 |                  0.259  |   0.845  |  0.966 |
-| frac_c1                    | Batch_1_vs_Batch_3 |        7 |      17 |                  0.673  |   0.298  |  0.487 |
-| frac_c2                    | Batch_1_vs_Batch_3 |        7 |      17 |                 -0.672  |   0.33   |  0.487 |
-| c2_count_density_per_Mpx   | Batch_1_vs_Batch_3 |        7 |      17 |                 -0.808  |   0.365  |  0.487 |
+| frac_c0                    | Batch_1_vs_Batch_3 |        7 |      17 |                  0.259  |   0.844  |  0.965 |
+| frac_c1                    | Batch_1_vs_Batch_3 |        7 |      17 |                  0.673  |   0.287  |  0.49  |
+| frac_c2                    | Batch_1_vs_Batch_3 |        7 |      17 |                 -0.672  |   0.331  |  0.49  |
+| c2_count_density_per_Mpx   | Batch_1_vs_Batch_3 |        7 |      17 |                 -0.808  |   0.368  |  0.49  |
 | c2_eqdiam_median_px        | Batch_1_vs_Batch_3 |        7 |      17 |                  0.0715 |   1      |  1     |
-| c2_eqdiam_p90_px           | Batch_1_vs_Batch_3 |        7 |      17 |                  0.874  |   0.203  |  0.487 |
-| c0_region_eqdiam_median_px | Batch_1_vs_Batch_3 |        7 |      17 |                 -0.942  |   0.333  |  0.487 |
-| c0_region_area_mean_px     | Batch_1_vs_Batch_3 |        7 |      17 |                 -1.43   |   0.0784 |  0.487 |
-| frac_c0                    | Batch_2_vs_Batch_3 |        7 |      17 |                 -0.278  |   0.557  |  1     |
-| frac_c1                    | Batch_2_vs_Batch_3 |        7 |      17 |                  0.454  |   0.314  |  1     |
-| frac_c2                    | Batch_2_vs_Batch_3 |        7 |      17 |                 -0.459  |   0.463  |  1     |
+| c2_eqdiam_p90_px           | Batch_1_vs_Batch_3 |        7 |      17 |                  0.874  |   0.211  |  0.49  |
+| c0_region_eqdiam_median_px | Batch_1_vs_Batch_3 |        7 |      17 |                 -0.942  |   0.335  |  0.49  |
+| c0_region_area_mean_px     | Batch_1_vs_Batch_3 |        7 |      17 |                 -1.43   |   0.0766 |  0.49  |
+| frac_c0                    | Batch_2_vs_Batch_3 |        7 |      17 |                 -0.278  |   0.553  |  1     |
+| frac_c1                    | Batch_2_vs_Batch_3 |        7 |      17 |                  0.454  |   0.325  |  1     |
+| frac_c2                    | Batch_2_vs_Batch_3 |        7 |      17 |                 -0.459  |   0.466  |  1     |
 | c2_count_density_per_Mpx   | Batch_2_vs_Batch_3 |        7 |      17 |                 -0.0153 |   1      |  1     |
 | c2_eqdiam_median_px        | Batch_2_vs_Batch_3 |        7 |      17 |                 -0.112  |   1      |  1     |
-| c2_eqdiam_p90_px           | Batch_2_vs_Batch_3 |        7 |      17 |                 -0.12   |   0.684  |  1     |
+| c2_eqdiam_p90_px           | Batch_2_vs_Batch_3 |        7 |      17 |                 -0.12   |   0.686  |  1     |
 | c0_region_eqdiam_median_px | Batch_2_vs_Batch_3 |        7 |      17 |                 -0.0416 |   1      |  1     |
-| c0_region_area_mean_px     | Batch_2_vs_Batch_3 |        7 |      17 |                 -0.757  |   0.273  |  1     |
+| c0_region_area_mean_px     | Batch_2_vs_Batch_3 |        7 |      17 |                 -0.757  |   0.267  |  1     |
 
 ## Session-leakage evidence: LOIO vs LOGO (loio_logo.csv)
 
@@ -161,4 +161,4 @@ Reading: a positive LOIO - LOGO gap means part of the LOIO accuracy comes from i
 | ufdvpb81    | c2_eqdiam_median_px z=+6.7  |
 | vc2whyaq    | c2_eqdiam_median_px z=+10.8 |
 
-Expected from the C4 check: vc2whyaq, ufdvpb81, hzumfsms.
+Flagged on this table (excluded in the `excl_loo_flagged` rows of batch_tests.csv): 0grcilhi, cfe5vt7s, hzumfsms, ufdvpb81, vc2whyaq.

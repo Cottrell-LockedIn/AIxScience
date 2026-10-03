@@ -1,12 +1,12 @@
 feature,decision,rank_stability,acquisition_confounded,threshold_sensitivity,mad_Batch_3,sens_over_mad,reasons,notes,config_hash,git_sha
-F01_c0_area_fraction,investigate,0.6905,False,,0.008876017146631388,,rank-stability 0.69 < 0.7; no threshold-sensitivity measurement for this feature,,de199d6c8d69,9ae402e
-F02_c2_area_fraction,investigate,0.539,False,,0.03310496357886897,,rank-stability 0.54 < 0.7; no threshold-sensitivity measurement for this feature,,de199d6c8d69,9ae402e
-F03_c2_eqdiam_median_px,investigate,0.6282473300878597,False,,0.11656027466714451,,rank-stability 0.63 < 0.7; no threshold-sensitivity measurement for this feature,,de199d6c8d69,9ae402e
-F04_c2_eqdiam_p90_px,investigate,0.4275,False,,3.9473527411949787,,rank-stability 0.43 < 0.7; no threshold-sensitivity measurement for this feature,,de199d6c8d69,9ae402e
-F05_c2_count_density_per_Mpx,investigate,0.437,True,,83.55594131842098,,"rank-stability 0.44 < 0.7; acquisition_confounded (z_group 3.5 > z_batch -0.7, p_group 0.0002); no threshold-sensitivity measurement for this feature",,de199d6c8d69,9ae402e
-F06_c2_clark_evans_R,investigate,0.746,True,,0.062092165851717014,,"acquisition_confounded (z_group 2.5 > z_batch 1.8, p_group 0.0080); no threshold-sensitivity measurement for this feature",abs(rho) >= 0.5 with mean_grey (rho +0.53); compare raw vs residualised batch tests,de199d6c8d69,9ae402e
-F07_c2_solidity_area_weighted_median,investigate,0.5615,False,,0.06359441083628918,,rank-stability 0.56 < 0.7; no threshold-sensitivity measurement for this feature,,de199d6c8d69,9ae402e
-F08_c0_local_thickness_median_px,investigate,,False,,2.9652,,rank-stability nan < 0.7; no threshold-sensitivity measurement for this feature,,de199d6c8d69,9ae402e
-F09_c0_chord_anisotropy_h_over_v,investigate,0.2245,False,,0.029880179216666657,,rank-stability 0.22 < 0.7; no threshold-sensitivity measurement for this feature,abs(rho) >= 0.5 with hstripe_score (rho +0.55); compare raw vs residualised batch tests,de199d6c8d69,9ae402e
-F10_c0_fraction_iqr_512px,investigate,0.2445,False,,0.006970613479614258,,rank-stability 0.24 < 0.7; no threshold-sensitivity measurement for this feature,,de199d6c8d69,9ae402e
-F11_c2_perimeter_fraction_adjacent_c0,investigate,0.39,False,,0.0005552958146562716,,rank-stability 0.39 < 0.7; no threshold-sensitivity measurement for this feature,,de199d6c8d69,9ae402e
+F01_c0_area_fraction,investigate,0.6905,False,,0.008876017146631388,,rank-stability 0.69 < 0.7; no threshold-sensitivity measurement for this feature,,de199d6c8d69,eca6fa7
+F02_c2_area_fraction,investigate,0.539,False,,0.03310496357886897,,rank-stability 0.54 < 0.7; no threshold-sensitivity measurement for this feature,,de199d6c8d69,eca6fa7
+F03_c2_eqdiam_median_px,investigate,0.6282473300878597,False,,0.11656027466714451,,rank-stability 0.63 < 0.7; no threshold-sensitivity measurement for this feature,,de199d6c8d69,eca6fa7
+F04_c2_eqdiam_p90_px,investigate,0.4275,False,,3.9473527411949787,,rank-stability 0.43 < 0.7; no threshold-sensitivity measurement for this feature,,de199d6c8d69,eca6fa7
+F05_c2_count_density_per_Mpx,investigate,0.437,True,,83.55594131842098,,"rank-stability 0.44 < 0.7; acquisition_confounded (z_group 3.5 > z_batch -0.7, p_group 0.0002); no threshold-sensitivity measurement for this feature",,de199d6c8d69,eca6fa7
+F06_c2_clark_evans_R,investigate,0.746,True,,0.062092165851717014,,"acquisition_confounded (z_group 2.5 > z_batch 1.8, p_group 0.0080); no threshold-sensitivity measurement for this feature",abs(rho) >= 0.5 with mean_grey (rho +0.53); compare raw vs residualised batch tests,de199d6c8d69,eca6fa7
+F07_c2_solidity_area_weighted_median,investigate,0.5615,False,,0.06359441083628918,,rank-stability 0.56 < 0.7; no threshold-sensitivity measurement for this feature,,de199d6c8d69,eca6fa7
+F08_c0_local_thickness_median_px,investigate,,False,,2.9652,,rank-stability nan < 0.7; no threshold-sensitivity measurement for this feature,,de199d6c8d69,eca6fa7
+F09_c0_chord_anisotropy_h_over_v,investigate,0.2245,False,,0.029880179216666657,,rank-stability 0.22 < 0.7; no threshold-sensitivity measurement for this feature,abs(rho) >= 0.5 with hstripe_score (rho +0.55); compare raw vs residualised batch tests,de199d6c8d69,eca6fa7
+F10_c0_fraction_iqr_512px,investigate,0.2445,False,,0.006970613479614258,,rank-stability 0.24 < 0.7; no threshold-sensitivity measurement for this feature,,de199d6c8d69,eca6fa7
+F11_c2_perimeter_fraction_adjacent_c0,investigate,0.39,False,,0.0005552958146562716,,rank-stability 0.39 < 0.7; no threshold-sensitivity measurement for this feature,,de199d6c8d69,eca6fa7

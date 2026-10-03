@@ -1,6 +1,6 @@
 # Validation of `features_f01_f11`
 
-Inputs: results/features/features_f01_f11.parquet (sha256 bfe253c224c0), covariates from results/artefacts_per_image.parquet, acquisition groups from results/audit/images.csv, threshold sensitivity from results/kpi_sensitivity.parquet. Config de199d6c8d69, git 9ae402e, seed 0, 1000 bootstrap resamples, 10000 permutations.
+Inputs: results/features/features_f01_f11.parquet (sha256 bfe253c224c0), covariates from results/artefacts_per_image.parquet, acquisition groups from results/audit/images.csv, threshold sensitivity from results/kpi_sensitivity.parquet. Config de199d6c8d69, git eca6fa7, seed 0, 1000 bootstrap resamples, 10000 permutations.
 
 ## Headline
 
@@ -16,7 +16,7 @@ Inputs: results/features/features_f01_f11.parquet (sha256 bfe253c224c0), covaria
 - Scaling, imputation and the classifier are fitted inside each fold only.
 - Phase identities (class 2 bright = silicon, class 1 mid = graphite, class 0 dark = void/pore) are stated by Polaron, not image-verified; Si vs SiOx is indistinguishable in BSE; binder/additive is lumped into class 0/1. No further chemistry claims.
 - Units are pixels. nm values would hold only if 25 nm/px is true (tag written by software, unconfirmed).
-- Batch_3 is the reference batch but not error-free: the leave-one-out check flags vc2whyaq, ufdvpb81, hzumfsms; batch tests are reported with and without them.
+- Batch_3 is the reference batch but not error-free: the leave-one-out check on this table flags 0grcilhi, hzumfsms, mgxahqnk, tuy3zymq, vc2whyaq, x77cy643, xgj4xftb; batch tests are reported with and without them.
 - Acquisition covariates (noise, sharpness, curtaining, stripe, edge charging, mean grey) are measured and kept as covariates; images are never altered.
 - p-values are image-level permutation p with the effect size next to them; `investigate` is a first-class outcome.
 
@@ -109,59 +109,59 @@ Raw features, all Batch_3 images:
 | F10_c0_fraction_iqr_512px             | Batch_2_vs_Batch_3 |        7 |      17 |                  0.16   |    1     |  1     |
 | F11_c2_perimeter_fraction_adjacent_c0 | Batch_2_vs_Batch_3 |        7 |      17 |                  0.759  |    0.321 |  0.732 |
 
-Raw features, Batch_3 without vc2whyaq, ufdvpb81, hzumfsms:
+Raw features, Batch_3 without 0grcilhi, hzumfsms, mgxahqnk, tuy3zymq, vc2whyaq, x77cy643, xgj4xftb:
 
 | feature                               | comparison         |   n_test |   n_ref |   effect_shift_over_mad |   p_perm |   q_bh |
 |:--------------------------------------|:-------------------|---------:|--------:|------------------------:|---------:|-------:|
-| F01_c0_area_fraction                  | Batch_1_vs_Batch_3 |        7 |      14 |                 -0.958  |   0.105  |  0.882 |
-| F02_c2_area_fraction                  | Batch_1_vs_Batch_3 |        7 |      14 |                 -0.363  |   0.619  |  0.972 |
-| F03_c2_eqdiam_median_px               | Batch_1_vs_Batch_3 |        7 |      14 |                 -0.336  |   0.992  |  1     |
-| F04_c2_eqdiam_p90_px                  | Batch_1_vs_Batch_3 |        7 |      14 |                 -0.985  |   0.166  |  0.882 |
-| F05_c2_count_density_per_Mpx          | Batch_1_vs_Batch_3 |        7 |      14 |                 -0.406  |   0.401  |  0.882 |
-| F06_c2_clark_evans_R                  | Batch_1_vs_Batch_3 |        7 |      14 |                 -0.0954 |   0.788  |  1     |
-| F07_c2_solidity_area_weighted_median  | Batch_1_vs_Batch_3 |        7 |      14 |                  0.725  |   0.261  |  0.882 |
-| F08_c0_local_thickness_median_px      | Batch_1_vs_Batch_3 |        7 |      14 |                  0      |   1      |  1     |
-| F09_c0_chord_anisotropy_h_over_v      | Batch_1_vs_Batch_3 |        7 |      14 |                 -0.0841 |   0.893  |  1     |
-| F10_c0_fraction_iqr_512px             | Batch_1_vs_Batch_3 |        7 |      14 |                 -0.738  |   0.368  |  0.882 |
-| F11_c2_perimeter_fraction_adjacent_c0 | Batch_1_vs_Batch_3 |        7 |      14 |                  0.583  |   0.588  |  0.972 |
-| F01_c0_area_fraction                  | Batch_2_vs_Batch_3 |        7 |      14 |                  0.159  |   0.827  |  0.909 |
-| F02_c2_area_fraction                  | Batch_2_vs_Batch_3 |        7 |      14 |                 -0.127  |   0.706  |  0.909 |
-| F03_c2_eqdiam_median_px               | Batch_2_vs_Batch_3 |        7 |      14 |                 -1.7    |   0.327  |  0.599 |
-| F04_c2_eqdiam_p90_px                  | Batch_2_vs_Batch_3 |        7 |      14 |                 -0.659  |   0.273  |  0.599 |
-| F05_c2_count_density_per_Mpx          | Batch_2_vs_Batch_3 |        7 |      14 |                 -0.51   |   0.14   |  0.533 |
-| F06_c2_clark_evans_R                  | Batch_2_vs_Batch_3 |        7 |      14 |                 -1.43   |   0.0261 |  0.287 |
-| F07_c2_solidity_area_weighted_median  | Batch_2_vs_Batch_3 |        7 |      14 |                  0.732  |   0.153  |  0.533 |
-| F08_c0_local_thickness_median_px      | Batch_2_vs_Batch_3 |        7 |      14 |                  0      |   1      |  1     |
-| F09_c0_chord_anisotropy_h_over_v      | Batch_2_vs_Batch_3 |        7 |      14 |                 -0.572  |   0.481  |  0.757 |
-| F10_c0_fraction_iqr_512px             | Batch_2_vs_Batch_3 |        7 |      14 |                  0.138  |   0.804  |  0.909 |
-| F11_c2_perimeter_fraction_adjacent_c0 | Batch_2_vs_Batch_3 |        7 |      14 |                  1.25   |   0.194  |  0.533 |
+| F01_c0_area_fraction                  | Batch_1_vs_Batch_3 |        7 |      10 |                 -0.795  |    0.238 |  1     |
+| F02_c2_area_fraction                  | Batch_1_vs_Batch_3 |        7 |      10 |                 -0.236  |    0.735 |  1     |
+| F03_c2_eqdiam_median_px               | Batch_1_vs_Batch_3 |        7 |      10 |                  0      |    1     |  1     |
+| F04_c2_eqdiam_p90_px                  | Batch_1_vs_Batch_3 |        7 |      10 |                 -0.768  |    0.424 |  1     |
+| F05_c2_count_density_per_Mpx          | Batch_1_vs_Batch_3 |        7 |      10 |                 -0.206  |    0.668 |  1     |
+| F06_c2_clark_evans_R                  | Batch_1_vs_Batch_3 |        7 |      10 |                  0.335  |    0.836 |  1     |
+| F07_c2_solidity_area_weighted_median  | Batch_1_vs_Batch_3 |        7 |      10 |                  0.281  |    0.772 |  1     |
+| F08_c0_local_thickness_median_px      | Batch_1_vs_Batch_3 |        7 |      10 |                  0      |    1     |  1     |
+| F09_c0_chord_anisotropy_h_over_v      | Batch_1_vs_Batch_3 |        7 |      10 |                 -0.15   |    0.857 |  1     |
+| F10_c0_fraction_iqr_512px             | Batch_1_vs_Batch_3 |        7 |      10 |                 -0.585  |    0.532 |  1     |
+| F11_c2_perimeter_fraction_adjacent_c0 | Batch_1_vs_Batch_3 |        7 |      10 |                  0.716  |    0.502 |  1     |
+| F01_c0_area_fraction                  | Batch_2_vs_Batch_3 |        7 |      10 |                 -0.0153 |    0.988 |  1     |
+| F02_c2_area_fraction                  | Batch_2_vs_Batch_3 |        7 |      10 |                  0.0932 |    0.991 |  1     |
+| F03_c2_eqdiam_median_px               | Batch_2_vs_Batch_3 |        7 |      10 |                 -1.37   |    0.526 |  0.826 |
+| F04_c2_eqdiam_p90_px                  | Batch_2_vs_Batch_3 |        7 |      10 |                 -0.501  |    0.451 |  0.826 |
+| F05_c2_count_density_per_Mpx          | Batch_2_vs_Batch_3 |        7 |      10 |                 -0.314  |    0.378 |  0.826 |
+| F06_c2_clark_evans_R                  | Batch_2_vs_Batch_3 |        7 |      10 |                 -0.755  |    0.102 |  0.826 |
+| F07_c2_solidity_area_weighted_median  | Batch_2_vs_Batch_3 |        7 |      10 |                  0.289  |    0.723 |  0.994 |
+| F08_c0_local_thickness_median_px      | Batch_2_vs_Batch_3 |        7 |      10 |                  0      |    1     |  1     |
+| F09_c0_chord_anisotropy_h_over_v      | Batch_2_vs_Batch_3 |        7 |      10 |                 -1.02   |    0.35  |  0.826 |
+| F10_c0_fraction_iqr_512px             | Batch_2_vs_Batch_3 |        7 |      10 |                  0.303  |    0.519 |  0.826 |
+| F11_c2_perimeter_fraction_adjacent_c0 | Batch_2_vs_Batch_3 |        7 |      10 |                  1.54   |    0.304 |  0.826 |
 
 Residualised on the acquisition covariates, all Batch_3 images:
 
 | feature                               | comparison         |   n_test |   n_ref |   effect_shift_over_mad |   p_perm |   q_bh |
 |:--------------------------------------|:-------------------|---------:|--------:|------------------------:|---------:|-------:|
 | F01_c0_area_fraction                  | Batch_1_vs_Batch_3 |        7 |      17 |                  0.0671 |   1      |  1     |
-| F02_c2_area_fraction                  | Batch_1_vs_Batch_3 |        7 |      17 |                 -0.39   |   0.466  |  0.79  |
-| F03_c2_eqdiam_median_px               | Batch_1_vs_Batch_3 |        7 |      17 |                 -0.0958 |   0.841  |  1     |
-| F04_c2_eqdiam_p90_px                  | Batch_1_vs_Batch_3 |        7 |      17 |                  0.424  |   0.429  |  0.79  |
-| F05_c2_count_density_per_Mpx          | Batch_1_vs_Batch_3 |        7 |      17 |                 -0.795  |   0.31   |  0.79  |
+| F02_c2_area_fraction                  | Batch_1_vs_Batch_3 |        7 |      17 |                 -0.39   |   0.471  |  0.799 |
+| F03_c2_eqdiam_median_px               | Batch_1_vs_Batch_3 |        7 |      17 |                 -0.0958 |   0.835  |  1     |
+| F04_c2_eqdiam_p90_px                  | Batch_1_vs_Batch_3 |        7 |      17 |                  0.424  |   0.439  |  0.799 |
+| F05_c2_count_density_per_Mpx          | Batch_1_vs_Batch_3 |        7 |      17 |                 -0.795  |   0.299  |  0.799 |
 | F06_c2_clark_evans_R                  | Batch_1_vs_Batch_3 |        7 |      17 |                  0.042  |   1      |  1     |
-| F07_c2_solidity_area_weighted_median  | Batch_1_vs_Batch_3 |        7 |      17 |                  0.434  |   0.572  |  0.79  |
-| F08_c0_local_thickness_median_px      | Batch_1_vs_Batch_3 |        7 |      17 |                  0.511  |   0.349  |  0.79  |
-| F09_c0_chord_anisotropy_h_over_v      | Batch_1_vs_Batch_3 |        7 |      17 |                  1.03   |   0.209  |  0.79  |
-| F10_c0_fraction_iqr_512px             | Batch_1_vs_Batch_3 |        7 |      17 |                 -0.266  |   0.574  |  0.79  |
-| F11_c2_perimeter_fraction_adjacent_c0 | Batch_1_vs_Batch_3 |        7 |      17 |                 -0.71   |   0.469  |  0.79  |
-| F01_c0_area_fraction                  | Batch_2_vs_Batch_3 |        7 |      17 |                 -0.221  |   0.841  |  1     |
-| F02_c2_area_fraction                  | Batch_2_vs_Batch_3 |        7 |      17 |                 -0.4    |   0.462  |  1     |
-| F03_c2_eqdiam_median_px               | Batch_2_vs_Batch_3 |        7 |      17 |                 -0.164  |   0.768  |  1     |
-| F04_c2_eqdiam_p90_px                  | Batch_2_vs_Batch_3 |        7 |      17 |                 -1.13   |   0.0167 |  0.184 |
+| F07_c2_solidity_area_weighted_median  | Batch_1_vs_Batch_3 |        7 |      17 |                  0.434  |   0.58   |  0.799 |
+| F08_c0_local_thickness_median_px      | Batch_1_vs_Batch_3 |        7 |      17 |                  0.511  |   0.357  |  0.799 |
+| F09_c0_chord_anisotropy_h_over_v      | Batch_1_vs_Batch_3 |        7 |      17 |                  1.03   |   0.208  |  0.799 |
+| F10_c0_fraction_iqr_512px             | Batch_1_vs_Batch_3 |        7 |      17 |                 -0.266  |   0.581  |  0.799 |
+| F11_c2_perimeter_fraction_adjacent_c0 | Batch_1_vs_Batch_3 |        7 |      17 |                 -0.71   |   0.46   |  0.799 |
+| F01_c0_area_fraction                  | Batch_2_vs_Batch_3 |        7 |      17 |                 -0.221  |   0.84   |  1     |
+| F02_c2_area_fraction                  | Batch_2_vs_Batch_3 |        7 |      17 |                 -0.4    |   0.463  |  1     |
+| F03_c2_eqdiam_median_px               | Batch_2_vs_Batch_3 |        7 |      17 |                 -0.164  |   0.764  |  1     |
+| F04_c2_eqdiam_p90_px                  | Batch_2_vs_Batch_3 |        7 |      17 |                 -1.13   |   0.0188 |  0.207 |
 | F05_c2_count_density_per_Mpx          | Batch_2_vs_Batch_3 |        7 |      17 |                 -0.0327 |   1      |  1     |
-| F06_c2_clark_evans_R                  | Batch_2_vs_Batch_3 |        7 |      17 |                 -0.378  |   0.239  |  1     |
-| F07_c2_solidity_area_weighted_median  | Batch_2_vs_Batch_3 |        7 |      17 |                  0.569  |   0.365  |  1     |
-| F08_c0_local_thickness_median_px      | Batch_2_vs_Batch_3 |        7 |      17 |                  0.542  |   0.714  |  1     |
+| F06_c2_clark_evans_R                  | Batch_2_vs_Batch_3 |        7 |      17 |                 -0.378  |   0.241  |  1     |
+| F07_c2_solidity_area_weighted_median  | Batch_2_vs_Batch_3 |        7 |      17 |                  0.569  |   0.369  |  1     |
+| F08_c0_local_thickness_median_px      | Batch_2_vs_Batch_3 |        7 |      17 |                  0.542  |   0.717  |  1     |
 | F09_c0_chord_anisotropy_h_over_v      | Batch_2_vs_Batch_3 |        7 |      17 |                  0.0127 |   1      |  1     |
-| F10_c0_fraction_iqr_512px             | Batch_2_vs_Batch_3 |        7 |      17 |                 -0.246  |   0.477  |  1     |
-| F11_c2_perimeter_fraction_adjacent_c0 | Batch_2_vs_Batch_3 |        7 |      17 |                 -0.393  |   0.616  |  1     |
+| F10_c0_fraction_iqr_512px             | Batch_2_vs_Batch_3 |        7 |      17 |                 -0.246  |   0.469  |  1     |
+| F11_c2_perimeter_fraction_adjacent_c0 | Batch_2_vs_Batch_3 |        7 |      17 |                 -0.393  |   0.614  |  1     |
 
 ## Session-leakage evidence: LOIO vs LOGO (loio_logo.csv)
 
@@ -190,4 +190,4 @@ Reading: a positive LOIO - LOGO gap means part of the LOIO accuracy comes from i
 | x77cy643    | F04_c2_eqdiam_p90_px z=+4.5                                                                                                            |
 | xgj4xftb    | F03_c2_eqdiam_median_px z=+3.3                                                                                                         |
 
-Expected from the C4 check: vc2whyaq, ufdvpb81, hzumfsms.
+Flagged on this table (excluded in the `excl_loo_flagged` rows of batch_tests.csv): 0grcilhi, hzumfsms, mgxahqnk, tuy3zymq, vc2whyaq, x77cy643, xgj4xftb.
