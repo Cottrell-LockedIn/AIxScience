@@ -23,6 +23,8 @@ from one image across folds, splits or permutations. See docs/FRAMEWORK.md Secti
 from __future__ import annotations
 
 from concurrent.futures import ProcessPoolExecutor
+from functools import lru_cache
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 
@@ -52,6 +54,26 @@ def fractions(lab: np.ndarray) -> dict[str, float]:
     return {f"frac_c{k}": float((lab == k).sum() / n) for k in range(3)}
 
 
+@lru_cache(maxsize=16)
+def _tpc_geometry(
+    height: int, width: int, max_r_px: int
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    dy = np.arange(-max_r_px, max_r_px + 1)
+    dx = np.arange(-max_r_px, max_r_px + 1)
+    bins = np.floor(np.hypot(dy[:, None], dx[None, :]) + 0.5).astype(np.int16)
+    valid = bins <= max_r_px
+    fft_shape = (2 * height - 1, 2 * width - 1)
+    yidx = np.mod(dy, fft_shape[0])
+    xidx = np.mod(dx, fft_shape[1])
+    overlap = (height - np.abs(dy))[:, None] * (width - np.abs(dx))[None, :]
+    bin_ids = bins[valid]
+    radial_counts = np.bincount(bin_ids, minlength=max_r_px + 1)
+    arrays = (yidx, xidx, valid, bin_ids, overlap, radial_counts)
+    for array in arrays:
+        array.setflags(write=False)
+    return arrays
+
+
 def _eqdiams(mask: np.ndarray) -> np.ndarray:
     if not mask.any():
         return np.array([])
@@ -73,18 +95,16 @@ def tpc_length(mask: np.ndarray, max_r_px: int = 256) -> float:
     spectrum = np.fft.rfftn(indicator, s=fft_shape)
     autocorrelation = np.fft.irfftn(spectrum * spectrum.conj(), s=fft_shape).real
 
-    dy = np.arange(-max_r_px, max_r_px + 1)
-    dx = np.arange(-max_r_px, max_r_px + 1)
-    bins = np.floor(np.hypot(dy[:, None], dx[None, :]) + 0.5).astype(np.int16)
-    valid = bins <= max_r_px
-    yidx = np.mod(dy, fft_shape[0])
-    xidx = np.mod(dx, fft_shape[1])
+    yidx, xidx, valid, bin_ids, overlap, radial_counts = _tpc_geometry(h, w, max_r_px)
     pairs = autocorrelation[np.ix_(yidx, xidx)]
-    overlap = (h - np.abs(dy))[:, None] * (w - np.abs(dx))[None, :]
     s2 = pairs / overlap
-    sums = np.bincount(bins[valid], weights=s2[valid], minlength=max_r_px + 1)
-    counts = np.bincount(bins[valid], minlength=max_r_px + 1)
-    radial_s2 = np.divide(sums, counts, out=np.full(max_r_px + 1, np.nan), where=counts > 0)
+    sums = np.bincount(bin_ids, weights=s2[valid], minlength=max_r_px + 1)
+    radial_s2 = np.divide(
+        sums,
+        radial_counts,
+        out=np.full(max_r_px + 1, np.nan),
+        where=radial_counts > 0,
+    )
     corr = (radial_s2 - phi * phi) / (phi - phi * phi)
     target = 1.0 / np.e
     for radius in range(1, max_r_px + 1):
@@ -155,23 +175,72 @@ def kpis(
     return out
 
 
+def sensitivity_for_tile(
+    row: dict[str, Any],
+    tile: np.ndarray,
+    saved_mask: np.ndarray,
+    cfg_s: dict[str, Any],
+    saved_png: bytes,
+) -> list[dict[str, Any]]:
+    keys = {k: row[k] for k in ("tile_id", "sample_id", "batch", "y", "x")}
+    thresholds = (float(row["t0"]), float(row["t1"]))
+    fallback = bool(row.get("threshold_fallback", False)) or any(
+        np.isnan(value) for value in thresholds
+    )
+    denoised = _segment.denoise(tile, int(cfg_s["median_px"]))
+    generated = (
+        _segment.fallback_label(denoised)
+        if fallback
+        else _segment.label_from_thresholds(denoised, thresholds, int(cfg_s["min_obj_px"]))
+    )
+    encoded = BytesIO()
+    Image.fromarray(generated, mode="L").save(encoded, format="PNG", compress_level=1)
+    if not np.array_equal(generated, saved_mask) or encoded.getvalue() != saved_png:
+        raise AssertionError(f"scale-1.0 mask mismatch: {row['tile_id']}")
+
+    sensitivity = float(cfg_s.get("sens_pct", 0.1))
+    output = []
+    for scale in (round(1.0 - sensitivity, 3), 1.0, round(1.0 + sensitivity, 3)):
+        if fallback:
+            labels = saved_mask
+        elif scale == 1.0:
+            labels = generated
+        else:
+            labels = _segment.label_from_thresholds(
+                denoised,
+                tuple(value * scale for value in thresholds),
+                int(cfg_s["min_obj_px"]),
+            )
+        output.append({
+            **keys,
+            "scale": scale,
+            **kpis(labels, float(cfg_s["crack_aspect_min"]), int(cfg_s["tpc_max_r_px"])),
+        })
+    return output
+
+
+def _sensitivity_work(args) -> dict[str, Any]:
+    row, tiles_dir, masks_dir, cfg_s = args
+    tile_path = Path(tiles_dir) / row["path"]
+    mask_path = Path(masks_dir) / row["mask_path"]
+    tile = np.load(tile_path)
+    with Image.open(mask_path) as image:
+        saved_mask = np.asarray(image)
+    rows = sensitivity_for_tile(
+        row, tile, saved_mask, cfg_s, mask_path.read_bytes()
+    )
+    return {"rows": rows, "mask_parity_checks": 1}
+
+
 def _work(args) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     row, tiles_dir, masks_dir, cfg_s = args
     keys = {k: row[k] for k in ("tile_id", "sample_id", "batch", "y", "x")}
-    lab = np.asarray(Image.open(Path(masks_dir) / row["mask_path"]))
+    mask_path = Path(masks_dir) / row["mask_path"]
+    with Image.open(mask_path) as image:
+        lab = np.asarray(image)
     rec = {**keys, **kpis(lab, cfg_s["crack_aspect_min"], cfg_s["tpc_max_r_px"])}
-    th = (row["t0"], row["t1"])
-    fallback = bool(row.get("threshold_fallback", False)) or any(np.isnan(t) for t in th)
-    den = None if fallback else _segment.denoise(np.load(Path(tiles_dir) / row["path"]), int(cfg_s["median_px"]))
-    sens = []
-    for scale in (1.0 - cfg_s["sens_pct"], 1.0, 1.0 + cfg_s["sens_pct"]):
-        # fallback tiles have no thresholds to perturb: their label image is reported unchanged at every scale
-        lab_s = lab if (scale == 1.0 or fallback) else _segment.label_from_thresholds(
-            den, tuple(t * scale for t in th), int(cfg_s["min_obj_px"]))
-        sens.append({
-            **keys, "scale": round(scale, 3),
-            **kpis(lab_s, cfg_s["crack_aspect_min"], cfg_s["tpc_max_r_px"]),
-        })
+    tile = np.load(Path(tiles_dir) / row["path"])
+    sens = sensitivity_for_tile(row, tile, lab, cfg_s, mask_path.read_bytes())
     return rec, sens
 
 

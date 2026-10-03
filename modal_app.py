@@ -1,8 +1,8 @@
 """Modal fan-out for KPI and feature sensitivity plus frozen DINOv2 embeddings."""
 from __future__ import annotations
 
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from datetime import datetime, timezone
-from io import BytesIO
 from pathlib import Path
 import time
 
@@ -46,59 +46,40 @@ MODAL_PRICING = (
 
 @app.function(
     image=common_image,
-    cpu=1,
+    cpu=2,
     memory=4096,
     volumes={"/mnt/data": data_volume},
     timeout=30 * 60,
     max_containers=20,
 )
 def kpi_sensitivity_image(payload: dict) -> dict:
-    from qc import kpi, segment
+    from qc import kpi
     from PIL import Image
     import numpy as np
 
     started = time.perf_counter()
     data_root = Path("/mnt/data")
     params = payload["params"]
-    out_rows = []
-    parity_checks = 0
-    for row in payload["rows"]:
+
+    def process(row):
         tile_path = data_root / "tiles" / row["path"]
         mask_path = data_root / "masks" / row["mask_path"]
         tile = np.load(tile_path)
-        saved = np.asarray(Image.open(mask_path))
-        thresholds = (float(row["t0"]), float(row["t1"]))
-        fallback = bool(row["threshold_fallback"]) or any(np.isnan(t) for t in thresholds)
-        denoised = segment.denoise(tile, params["median_px"])
-        if fallback:
-            generated = segment.fallback_label(denoised)
-        else:
-            generated = segment.label_from_thresholds(denoised, thresholds, params["min_obj_px"])
-        buffer = BytesIO()
-        Image.fromarray(generated, mode="L").save(buffer, format="PNG", compress_level=1)
-        if not np.array_equal(generated, saved) or buffer.getvalue() != mask_path.read_bytes():
-            raise AssertionError(f"scale-1.0 mask mismatch: {row['tile_id']}")
-        parity_checks += 1
+        with Image.open(mask_path) as image:
+            saved = np.asarray(image)
+        result_rows = kpi.sensitivity_for_tile(
+            row, tile, saved, params, mask_path.read_bytes()
+        )
+        return result_rows
 
-        for scale in (0.9, 1.0, 1.1):
-            if fallback:
-                labels = saved
-            elif scale == 1.0:
-                labels = generated
-            else:
-                labels = segment.label_from_thresholds(
-                    denoised, tuple(t * scale for t in thresholds), params["min_obj_px"]
-                )
-            out_rows.append({
-                **{key: row[key] for key in ("tile_id", "sample_id", "batch", "y", "x")},
-                "scale": scale,
-                **kpi.kpis(labels, params["crack_aspect_min"], params["tpc_max_r_px"]),
-            })
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        results = list(executor.map(process, payload["rows"]))
+    out_rows = [row for result in results for row in result]
     return {
-        "sample_id": payload["sample_id"],
+        "chunk_id": payload["chunk_id"],
         "rows": out_rows,
         "n_tiles": len(payload["rows"]),
-        "mask_parity_checks": parity_checks,
+        "mask_parity_checks": len(payload["rows"]),
         "wall_s": time.perf_counter() - started,
     }
 
@@ -140,7 +121,93 @@ def _append_modal_run(
 def _run_kpi_sensitivity() -> None:
     import numpy as np
     import pandas as pd
-    from PIL import Image
+    from qc import kpi, segment
+
+    cfg = _config.load()
+    results_dir = _config.ROOT / "results"
+    tiles_dir = _config.resolve(cfg["data"]["tiles_dir"])
+    masks_dir = _config.resolve(cfg["data"].get("masks_dir", "data/masks"))
+    index = pd.read_parquet(tiles_dir / "index.parquet")
+    thresholds = pd.read_parquet(results_dir / "thresholds_per_tile.parquet")
+    local_sensitivity = pd.read_parquet(results_dir / "kpi_sensitivity.parquet")
+    local_sensitivity = local_sensitivity.loc[local_sensitivity["level"] == "tile"].set_index(
+        ["tile_id", "scale"]
+    )
+    rows = kpi.join_thresholds(thresholds, index, cfg)
+    params = {
+        **segment.params(cfg["segmentation"]),
+        "crack_aspect_min": float(cfg["kpi_extra"]["crack_aspect_min"]),
+        "tpc_max_r_px": int(cfg["kpi_extra"]["tpc_max_r_px"]),
+    }
+    records = rows.sort_values(["batch", "sample_id", "y", "x"]).to_dict("records")
+    chunk_size = 10
+    payloads = [
+        {"chunk_id": chunk_id, "rows": records[start:start + chunk_size], "params": params}
+        for chunk_id, start in enumerate(range(0, len(records), chunk_size))
+    ]
+    started = time.perf_counter()
+    map_started = time.perf_counter()
+    remote = list(kpi_sensitivity_image.map(payloads))
+    map_wall_s = time.perf_counter() - map_started
+    container_seconds = float(sum(result["wall_s"] for result in remote))
+    rate = 2 * 0.0000131 + 4 * 0.00000222
+    _append_modal_run(
+        cfg, "kpi_sensitivity", len(payloads), map_wall_s, "Modal CPU (2 cores, 4 GiB)",
+        container_seconds * rate,
+    )
+    parity_checks = sum(result["mask_parity_checks"] for result in remote)
+    if parity_checks != len(rows):
+        raise RuntimeError(f"scale-1.0 mask parity checks {parity_checks} != {len(rows)}")
+    sensitivity_rows = [row for result in remote for row in result["rows"]]
+    base = pd.read_parquet(results_dir / "kpi_per_tile.parquet").set_index("tile_id")
+    for row in sensitivity_rows:
+        if row["scale"] != 1.0:
+            continue
+        for col in kpi.KPI_COLS:
+            local_value = base.at[row["tile_id"], col]
+            remote_value = row[col]
+            if pd.isna(local_value) and pd.isna(remote_value):
+                continue
+            if col in kpi.FRAC_COLS:
+                matches = local_value == remote_value
+            else:
+                matches = np.isclose(local_value, remote_value, rtol=1e-12, atol=0)
+            if not matches:
+                raise AssertionError(
+                    f"scale-1.0 KPI mismatch at {row['tile_id']} {col}: "
+                    f"{remote_value} != {local_value}"
+                )
+
+    for row in sensitivity_rows:
+        for col in kpi.FRAC_COLS:
+            expected = local_sensitivity.at[(row["tile_id"], row["scale"]), col]
+            if row[col] != expected:
+                raise AssertionError(
+                    f"Modal fraction mismatch at {row['tile_id']} scale={row['scale']} {col}: "
+                    f"{row[col]} != {expected}"
+                )
+
+    tile = pd.DataFrame(sensitivity_rows)
+    tile["phase_identity"] = kpi.PHASE_IDENTITY
+    image = kpi.per_image(tile, kpi.KPI_COLS, ["scale"])
+    image["phase_identity"] = kpi.PHASE_IDENTITY
+    sensitivity = _config.stamp(
+        pd.concat([tile.assign(level="tile"), image.assign(level="image")], ignore_index=True),
+        cfg,
+    )
+    sensitivity.to_parquet(results_dir / "kpi_sensitivity.parquet", index=False)
+    elapsed = time.perf_counter() - started
+    print(
+        f"kpi_sensitivity: {len(sensitivity_rows)} tile-scale rows, {len(payloads) * 3} image-scale rows; "
+        f"{parity_checks}/{len(rows)} byte-identical masks; scale-1.0 KPI and fraction parity exact; "
+        f"Modal wall={map_wall_s:.2f}s, container seconds={container_seconds:.2f}, "
+        f"local elapsed={elapsed:.2f}s, estimated cost=${container_seconds * rate:.6f}"
+    )
+
+
+def _run_kpi_local_benchmark() -> None:
+    import numpy as np
+    import pandas as pd
     from qc import kpi, segment
 
     cfg = _config.load()
@@ -155,72 +222,51 @@ def _run_kpi_sensitivity() -> None:
         "crack_aspect_min": float(cfg["kpi_extra"]["crack_aspect_min"]),
         "tpc_max_r_px": int(cfg["kpi_extra"]["tpc_max_r_px"]),
     }
-    payloads = [
-        {"sample_id": sample_id, "rows": group.to_dict("records"), "params": params}
-        for (_, sample_id), group in rows.groupby(["batch", "sample_id"], sort=True)
+    tasks = [
+        (row, str(tiles_dir), str(masks_dir), params)
+        for row in rows.sort_values(["batch", "sample_id", "y", "x"]).to_dict("records")
     ]
     started = time.perf_counter()
-    remote = list(kpi_sensitivity_image.map(payloads))
-    wall_s = float(sum(result["wall_s"] for result in remote))
-    parity_checks = sum(result["mask_parity_checks"] for result in remote)
-    if parity_checks != len(rows):
-        raise RuntimeError(f"scale-1.0 mask parity checks {parity_checks} != {len(rows)}")
-    sensitivity_rows = [row for result in remote for row in result["rows"]]
-    base = pd.read_parquet(results_dir / "kpi_per_tile.parquet").set_index("tile_id")
-    for row in sensitivity_rows:
-        if row["scale"] != 1.0:
-            continue
-        for col in kpi.KPI_COLS:
-            local_value = base.at[row["tile_id"], col]
-            remote_value = row[col]
-            if not (pd.isna(local_value) and pd.isna(remote_value)) and local_value != remote_value:
+    with ProcessPoolExecutor(max_workers=8) as executor:
+        results = list(executor.map(kpi._sensitivity_work, tasks, chunksize=4))
+    wall_s = time.perf_counter() - started
+    parity_checks = sum(result["mask_parity_checks"] for result in results)
+    local_rows = [row for result in results for row in result["rows"]]
+
+    remote = pd.read_parquet(results_dir / "kpi_sensitivity.parquet")
+    remote = remote.loc[remote["level"] == "tile"].set_index(["tile_id", "scale"])
+    max_abs_diff = 0.0
+    for row in local_rows:
+        for column in kpi.KPI_COLS:
+            local_value = row[column]
+            remote_value = remote.at[(row["tile_id"], row["scale"]), column]
+            if pd.isna(local_value) and pd.isna(remote_value):
+                continue
+            if column in kpi.FRAC_COLS:
+                matches = local_value == remote_value
+            else:
+                matches = np.isclose(local_value, remote_value, rtol=1e-12, atol=0)
+                max_abs_diff = max(max_abs_diff, abs(local_value - remote_value))
+            if not matches:
                 raise AssertionError(
-                    f"scale-1.0 KPI mismatch at {row['tile_id']} {col}: "
-                    f"{remote_value} != {local_value}"
+                    f"local/Modal KPI mismatch at {row['tile_id']} scale={row['scale']} "
+                    f"{column}: {local_value} != {remote_value}"
                 )
 
-    expected_fraction = {}
-    for row in rows.to_dict("records"):
-        lab = np.asarray(Image.open(masks_dir / row["mask_path"]))
-        thresholds_pair = (float(row["t0"]), float(row["t1"]))
-        fallback = bool(row["threshold_fallback"]) or any(np.isnan(t) for t in thresholds_pair)
-        denoised = None if fallback else segment.denoise(
-            np.load(tiles_dir / row["path"]), params["median_px"]
-        )
-        for scale in (0.9, 1.0, 1.1):
-            labels = lab if fallback or scale == 1.0 else segment.label_from_thresholds(
-                denoised, tuple(t * scale for t in thresholds_pair), params["min_obj_px"]
-            )
-            expected_fraction[(row["tile_id"], scale)] = kpi.fractions(labels)
-    for row in sensitivity_rows:
-        expected = expected_fraction[(row["tile_id"], row["scale"])]
-        for col in kpi.FRAC_COLS:
-            if row[col] != expected[col]:
-                raise AssertionError(
-                    f"Modal fraction mismatch at {row['tile_id']} scale={row['scale']} {col}: "
-                    f"{row[col]} != {expected[col]}"
-                )
-
-    tile = pd.DataFrame(sensitivity_rows)
-    tile["phase_identity"] = kpi.PHASE_IDENTITY
-    image = kpi.per_image(tile, kpi.KPI_COLS, ["scale"])
-    image["phase_identity"] = kpi.PHASE_IDENTITY
-    sensitivity = _config.stamp(
-        pd.concat([tile.assign(level="tile"), image.assign(level="image")], ignore_index=True),
-        cfg,
-    )
-    sensitivity.to_parquet(results_dir / "kpi_sensitivity.parquet", index=False)
-    rate = 0.0000131 + 4 * 0.00000222
     _append_modal_run(
-        cfg, "kpi_sensitivity", len(payloads), wall_s, "Modal CPU (1 core, 4 GiB)",
-        wall_s * rate,
+        cfg,
+        "kpi_sensitivity_local",
+        len(tasks),
+        wall_s,
+        "local-cpu (8 cores)",
+        0.0,
+        "local CPU benchmark (8 worker processes); no Modal charge",
     )
-    elapsed = time.perf_counter() - started
     print(
-        f"kpi_sensitivity: {len(sensitivity_rows)} tile-scale rows, {len(payloads) * 3} image-scale rows; "
-        f"{parity_checks}/{len(rows)} byte-identical masks; scale-1.0 KPI and fraction parity exact; "
-        f"Modal container seconds={wall_s:.2f}, local elapsed={elapsed:.2f}, "
-        f"estimated cost=${wall_s * rate:.6f}"
+        f"kpi_sensitivity_local: {len(local_rows)} tile-scale rows; "
+        f"{parity_checks}/{len(rows)} byte-identical masks; fractions exact; "
+        f"all KPI values matched Modal within 1e-12; max_abs_diff={max_abs_diff:.3g}; "
+        f"8-core local wall={wall_s:.2f}s"
     )
 
 
@@ -228,5 +274,8 @@ def _run_kpi_sensitivity() -> None:
 def main(task: str = "kpi"):
     if task == "kpi":
         _run_kpi_sensitivity()
+        return
+    if task == "kpi-local":
+        _run_kpi_local_benchmark()
         return
     raise ValueError(f"unsupported task {task!r}")
