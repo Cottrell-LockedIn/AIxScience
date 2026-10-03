@@ -153,27 +153,20 @@ def local_thickness(
         raise ValueError("local-thickness radius growth must exceed 1")
     skeleton, distance = medial_axis(mask, return_distance=True, rng=0)
     distance = np.asarray(distance, dtype=np.float64)
-    radii = np.unique(distance[skeleton])
-    exact = radii[radii <= exact_radius_max_px]
-    for radius in exact:
-        centers = skeleton & (distance == radius)
+    max_radius = float(distance[skeleton].max())
+    sampled_radii = list(np.arange(1, np.floor(exact_radius_max_px) + 1, dtype=float))
+    if not sampled_radii or sampled_radii[-1] < exact_radius_max_px:
+        sampled_radii.append(float(exact_radius_max_px))
+    while sampled_radii[-1] < max_radius:
+        sampled_radii.append(sampled_radii[-1] * growth)
+    for index, radius in enumerate(sampled_radii):
+        upper = sampled_radii[index + 1] if index + 1 < len(sampled_radii) else np.inf
+        centers = skeleton & (distance >= radius) & (distance < upper)
         if not np.any(centers):
             continue
         to_center = ndimage.distance_transform_edt(~centers)
         covered = to_center <= radius
         thickness[covered] = np.maximum(thickness[covered], 2 * radius)
-
-    large = radii[radii > exact_radius_max_px]
-    if large.size:
-        lower = float(exact_radius_max_px)
-        upper = lower * growth
-        while lower <= float(large.max()):
-            centers = skeleton & (distance >= lower) & (distance < upper)
-            if np.any(centers):
-                to_center = ndimage.distance_transform_edt(~centers)
-                covered = to_center <= lower
-                thickness[covered] = np.maximum(thickness[covered], 2 * lower)
-            lower, upper = upper, upper * growth
     thickness[~mask] = 0
     return thickness
 
