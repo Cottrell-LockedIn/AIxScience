@@ -1,0 +1,79 @@
+# Phase B pre-registered statistics, gates and verdict rules (B4, B5, B7). Read by `qc stats` and `qc verdict`.
+# Written before any batch contrast was computed; see docs/PHASE_B_PREREGISTRATION.md for the definitions.
+# Its sha256 prefix is stamped on every B4/B5/B7 output row as `stats_config_hash`. Do not edit after results exist;
+# any later change is logged as exploratory.
+version: stats_v1
+reference_batch: from_v1_config          # configs/v1.yaml stats.reference_batch (Batch_3, Polaron-stated)
+seed: 20261003
+unit: image                              # never tile
+
+tables:
+  kpi:      {file: results/kpi_per_image.parquet,      sensitivity: results/kpi_sensitivity.parquet}
+  features: {file: results/features_per_image.parquet, sensitivity: results/features_sensitivity.parquet}
+  embedding: {file: results/emb_per_image.parquet, primary_channel: BSE, secondary_channels: [Inlens, ETD]}
+
+features:                                # family = evidence line for B7; g5 = consultant failure mode observable in 2D BSE
+  frac_c0:                     {family: phase_fraction,      g5: [FM13, FM14]}
+  frac_c1:                     {family: phase_fraction,      g5: [FM10]}
+  frac_c2:                     {family: phase_fraction,      g5: [FM10, FM21]}
+  c2_count_density_per_Mpx:    {family: silicon_particle,    g5: [FM08, FM10]}
+  c2_eqdiam_median_px:         {family: silicon_particle,    g5: [FM08]}
+  c2_eqdiam_p90_px:            {family: silicon_particle,    g5: [FM08]}
+  c2_tpc_length_px:            {family: silicon_particle,    g5: [FM08]}
+  c0_region_eqdiam_median_px:  {family: void_morphology,     g5: [FM14]}
+  c0_region_area_mean_px:      {family: void_morphology,     g5: [FM14]}
+  c0_cracklike_frac:           {family: void_morphology,     g5: [FM07]}
+  c1_flake_eqdiam_median_px:   {family: graphite_morphology, g5: [FM13, FM10], requires_not_percolating: true}
+  c1_flake_aspect_median:      {family: graphite_morphology, g5: [FM13],       requires_not_percolating: true}
+  F01_c0_area_fraction:                 {family: phase_fraction,   g5: [FM13, FM14]}
+  F02_c2_area_fraction:                 {family: phase_fraction,   g5: [FM10, FM21]}
+  F03_c2_eqdiam_median_px:              {family: silicon_particle, g5: [FM08]}
+  F04_c2_eqdiam_p90_px:                 {family: silicon_particle, g5: [FM08]}
+  F05_c2_count_density_per_Mpx:         {family: silicon_particle, g5: [FM08, FM10]}
+  F06_c2_clark_evans_R:                 {family: silicon_particle, g5: [FM08]}
+  F07_c2_solidity_area_weighted_median: {family: silicon_particle, g5: [FM08]}
+  F08_c0_local_thickness_median_px:     {family: void_morphology,  g5: [FM14]}
+  F09_c0_chord_anisotropy_h_over_v:     {family: void_morphology,  g5: [FM13, FM14]}
+  F10_c0_fraction_iqr_512px:            {family: void_morphology,  g5: [FM11, FM13]}
+  F11_c2_perimeter_fraction_adjacent_c0: {family: silicon_particle, g5: [FM21, FM03]}
+percolation_rule: {column: c1_largest_component_frac, per_image_threshold: 0.5, max_share_of_images: 0.5}
+
+covariates:                              # acquisition / preparation proxies, per image (n = 31)
+  from_artefacts_per_image:              # results/artefacts_per_image.parquet, channel as given
+    - {column: noise_sigma,      channel: BSE}
+    - {column: sharpness,        channel: BSE}
+    - {column: curtaining_score, channel: BSE}
+    - {column: hstripe_score,    channel: BSE}
+    - {column: edge_charging,    channel: BSE}
+    - {column: edge_charging,    channel: Inlens}
+  from_images_csv: [height, nm_per_px_if_tag_true]   # results/audit/images.csv
+  excluded_on_purpose: [mean, std, p01, p99]          # grey-level statistics carry composition (material) signal
+  residualisation: {method: ols_label_free, standardise: true, intercept: true}
+
+scale: {estimator: mad, consistency_factor: 1.4826, fallback: all_images_mad, else: exclude}
+permutations: 2000                      # image-label permutations per test (>= 1000)
+null: {splits: 1000, sizes: [7, 10]}     # Batch_3 split-halves: 7 = size of Batch_1/Batch_2, 10 = remainder as pseudo-reference
+bands: {within: 0.95, outside: 0.99}
+multiple_testing: {method: benjamini_hochberg, alpha: 0.05}
+embedding: {normalise: l2, distance: euclidean, energy: u_statistic, mmd: {kernel: rbf, bandwidth: median_pairwise_all_images, estimator: unbiased}}
+bootstrap: {replicates: 1000}
+consistency: {jackknife: leave_one_image_out, separable_z: 1.96}
+
+gates:
+  G1: {p_bh_max: 0.05}
+  G2: {acquisition_drift_p_bh_max: 0.05, residualised_p_max: 0.05, same_sign: true}
+  G3: {max_ratio_to_reference_scale: 0.5}
+  G4: {loo_outlier_robust_z: 3.5}
+  G5: {source: features.g5}
+  keep: {rank_stability_min: 0.7, requires: [G2, G3, G4]}
+  drop: {any_of: [G5_fail, sensitivity_ratio_ge_1.0]}
+
+verdict:
+  line: {band: outside, p_bh_max: 0.05}
+  outside_bounds: {min_lines: 2, distinct_families: true, line_status: keep, no_acquisition_drift: true}
+  within_bounds: {no_signal_beyond: within, no_acquisition_drift: true}
+  reference_batch: {outlier_robust_z: 3.5, investigate_if_image_outlier_in_families_ge: 2, never_outside: true}
+  routing: {outside_bounds: materials_expert_review, investigate_material: materials_expert_review,
+            investigate_acquisition: microscopy_team, within_bounds: none}
+  exploratory: true
+  frozen: false
