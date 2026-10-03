@@ -27,7 +27,7 @@ Order of work: build data (S1-S2) -> measure (S3-S5, in parallel) -> compare and
 ### Hard rules (violating any of these invalidates the result)
 
 1. The **image** (field of view, 8-char id) is the independent unit. Tiles from one image never appear on both sides of any split, permutation or bootstrap. All cross-validation is leave-one-image-out.
-2. Never name chemistry. Say "high-Z particle phase", not "silicon", until Polaron confirms. Say "pixel-domain" units until the 25 nm/px pixel size is confirmed.
+2. Chemistry only as stated by Polaron: class 2 = silicon, class 1 = graphite, class 0 = void/pore, always tagged "stated by Polaron, not image-verified" (Si vs SiOx indistinguishable in BSE; binder/additive lumped). Nothing beyond that without EDS or labels. Say "pixel-domain" units until the 25 nm/px pixel size is confirmed.
 3. Artefacts (curtaining, edge charging, detector type ETD vs SE) are **measured and reported**, never silently removed. Every KPI is computed on raw images; destriped variants are a sensitivity check.
 4. Report `n` images on every statistic. No calibrated probabilities, no conformal claims, no p-values without the effect size and null band next to them.
 5. `investigate` is a valid, first-class outcome. Conflicting evidence or acquisition drift routes there, with the reason stated.

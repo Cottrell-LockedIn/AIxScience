@@ -31,7 +31,7 @@ This is a **graphite anode cross-section with a second, brighter particle phase*
 - BSE channel: graphite appears dark grey; a minority of angular, blocky particles appear distinctly brighter (higher mean atomic number). In a graphite anode the obvious candidate is **silicon or SiOx**. The same particles are the speckled ones in Inlens. Pores are black.
 - Faint vertical streaks (curtaining) visible in Inlens; BSE is noisier (grainy) but has the cleanest phase contrast.
 
-Do not label the bright phase "silicon" in outputs until Polaron confirms; use "high-Z particle phase" until then.
+Update: Polaron has stated the identities (bright = silicon, mid = graphite, dark = void). Outputs use these names with the provenance tag "stated by Polaron, not image-verified".
 
 ## Why this matters for the KPIs
 

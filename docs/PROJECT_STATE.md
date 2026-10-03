@@ -74,3 +74,10 @@ Record for each entry:
 - reviewer verdict;
 - unresolved risks;
 - exact next action.
+
+## Decision log: phase identities and reference batch (C1 pre-sign-off)
+
+- Polaron (via Alvin) states: class 2 (bright) = silicon, class 1 (mid) = graphite, class 0 (dark) = void/pore. Adopted as named phases with provenance "stated by Polaron, not image-verified"; caveats: Si vs SiOx indistinguishable in BSE, binder/conductive additive lumped into class 0/1. Rule updated in AGENTS.md, FRAMEWORK.md Section 00, HANDOFF_BRIEF.md (configs/v1.yaml comment left unchanged on purpose: the config hash is over the file bytes and all PR #1 results carry 1bec114301c3).
+- Reference batch = Batch_3 (Polaron). Treated as a robust reference distribution (median/MAD, leave-one-out within Batch_3); the LOO check flags `vc2whyaq` (silicon eq-diameter z +10.8), `ufdvpb81` (+6.7), `hzumfsms` (void fraction +3.7) for `investigate` before they define "normal".
+- No further clarification from Polaron is available. Defaults with measured evidence: pixel size reported in px (tags 24.9992-25.0006 nm/px, software-written); no collector / free surface in frame (edge dark fraction equals mid-image in all 31 BSE images); the 13 (height, resolution-tag) groups are treated as acquisition sessions (within-group noise range 1.7 % vs 45 % between groups; permutation p = 0.0002) so leave-one-group-out validation is required in addition to LOIO.
+- The materials consultant is independent of Polaron; C1 asks them only for image-based judgements (consistency of the stated identities, preparation damage vs real damage, scale plausibility, which of the 10 pre-registered measurements matter).

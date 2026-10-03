@@ -24,7 +24,7 @@ Produce v1 up to the reality-check figure. Stop after step 5 and report.
 ## Rules that apply to every step
 
 - The image (8-char sample id) is the independent unit. Never aggregate across images without keeping the image id. Never split tiles of one image across anything.
-- Class names are 0, 1, 2. In text say "dark class / mid class / bright class" or "pore / graphite / high-Z particle phase (unconfirmed)". Never "silicon".
+- Class names are 0, 1, 2 in code. In text say "void / graphite / silicon (identity stated by Polaron, not image-verified)"; keep the class number alongside the name so the mapping is auditable. (Superseded the earlier "never silicon" rule once Polaron stated the identities; see AGENTS.md.)
 - Units are pixels. Pixel size 25 nm is unconfirmed; mention it as unconfirmed if you convert anything.
 - Artefact scores are measured; images are not modified for KPIs.
 - Every result file includes `config_hash` and `git_sha` (use `qc.config.load` and the CLI banner).
