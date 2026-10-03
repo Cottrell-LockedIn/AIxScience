@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import importlib
 import json
-import subprocess
 
 import typer
 
@@ -17,16 +16,9 @@ STAGES = ["audit", "tiles", "artefacts", "segment", "kpi", "features", "stats", 
           "verdict", "robustness", "heldout"]
 
 
-def _git_sha() -> str:
-    try:
-        return subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], text=True).strip()
-    except Exception:  # noqa: BLE001
-        return "unknown"
-
-
 def _run(stage: str, cfg_path: str) -> None:
     cfg = _config.load(cfg_path)
-    typer.echo(f"[qc] {stage}  config={cfg['_path']}@{cfg['_hash']}  git={_git_sha()}")
+    typer.echo(f"[qc] {stage}  config={cfg['_path']}@{cfg['_hash']}  git={_config.git_sha()}")
     importlib.import_module(f"qc.{stage}").run(cfg)
 
 
@@ -48,10 +40,51 @@ def run(config: str = typer.Option("configs/v1.yaml", "--config", "-c")) -> None
 
 
 @app.command()
+def validate(features: str = typer.Option(..., "--features", help="image-level feature table (.parquet or .csv)"),
+             out: str = typer.Option(None, "--out", help="output dir, default results/validate/<table-name>/"),
+             artefacts: str = typer.Option("results/artefacts_per_image.parquet", "--artefacts"),
+             images: str = typer.Option("results/audit/images.csv", "--images"),
+             sensitivity: str = typer.Option("results/kpi_sensitivity.parquet", "--sensitivity"),
+             seed: int = typer.Option(0, "--seed"), n_boot: int = typer.Option(1000, "--n-boot"),
+             n_perm: int = typer.Option(10_000, "--n-perm"),
+             rf: bool = typer.Option(False, "--rf", help="also fit a random forest in the LOIO/LOGO check"),
+             config: str = typer.Option("configs/v1.yaml", "--config", "-c")) -> None:
+    """Validation harness for any image-level feature table (stability, confounding, batch tests, LOIO/LOGO)."""
+    cfg = _config.load(config)
+    typer.echo(f"[qc] validate  config={cfg['_path']}@{cfg['_hash']}  git={_config.git_sha()}")
+    importlib.import_module("qc.validate").run(cfg, features, out, artefacts, images, sensitivity, seed, n_boot, n_perm, rf)
+
+
+@app.command()
+def classify(features: str = typer.Option("results/features/features_f01_f11.parquet", "--features", help="image-level feature table"),
+             out: str | None = typer.Option(None, "--out"),
+             heldout: str | None = typer.Option(None, "--heldout", help="table of new images (sample_id + feature columns) to score with the frozen model"),
+             seed: int = typer.Option(0, "--seed"), n_perm: int = typer.Option(200, "--n-perm"),
+             rf: bool = typer.Option(False, "--rf", help="also fit a random forest"),
+             config: str = typer.Option("configs/v1.yaml", "--config", "-c")) -> None:
+    """Batch identification per feature family (LOIO/LOGO + permutation null), drivers, OOD screen vs each batch, held-out path (results/classify/)."""
+    cfg = _config.load(config)
+    typer.echo(f"[qc] classify  config={cfg['_path']}@{cfg['_hash']}  git={_config.git_sha()}")
+    importlib.import_module("qc.classify").run(cfg, features, out, heldout=heldout, seed=seed, n_perm=n_perm, rf=rf)
+
+
+@app.command()
+def register(config: str = typer.Option("configs/v1.yaml", "--config", "-c")) -> None:
+    """Check BSE / Inlens / ETD-SE pixel registration per image (results/registration/)."""
+    _run("registration", config)
+
+
+@app.command()
+def charging(config: str = typer.Option("configs/v1.yaml", "--config", "-c")) -> None:
+    """Flag class-2 BSE pixels that are also bright in both SE detectors (results/charging/); registered images only."""
+    _run("charging", config)
+
+
+@app.command()
 def info(config: str = typer.Option("configs/v1.yaml", "--config", "-c")) -> None:
     """Print config hash, git sha and stage list."""
     cfg = _config.load(config)
-    typer.echo(json.dumps({"config": cfg["_path"], "config_hash": cfg["_hash"], "git": _git_sha(),
+    typer.echo(json.dumps({"config": cfg["_path"], "config_hash": cfg["_hash"], "git": _config.git_sha(),
                            "stages": STAGES}, indent=2))
 
 

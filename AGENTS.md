@@ -25,7 +25,7 @@ This repository contains the submission implementation for the AI x Science Trac
 - Treat batch, specimen and original image identifiers as experimental hierarchy.
 - Tiles from one image are not independent samples.
 - Use physical units only when scale metadata supports them.
-- Do not name image regions as chemical phases without labels, EDS or equivalent evidence.
+- Phase identities are those stated by Polaron (class 2 bright = silicon, class 1 mid = graphite, class 0 dark = void/pore) and are not image-verified. Use the names, but every table, figure and verdict must carry the provenance `phase_identity: stated by Polaron, not image-verified`, and keep the caveats: Si vs SiOx is indistinguishable in BSE; binder and conductive additive are lumped into class 0/1. Do not go beyond this (e.g. SEI, plated lithium, SiOx) without labels, EDS or equivalent evidence.
 - Separate sampling, segmentation or model, and decision uncertainty.
 - Prefer an `investigate` or abstain result over unsupported certainty.
 - Freeze preprocessing, model, aggregation and thresholds before evaluating the unseen batch.
@@ -51,7 +51,7 @@ Conditional or failed work is not presented as validated.
 - Report only consequential, actionable defects introduced by the pull request. Leave formatting, lint and other deterministic checks to CI.
 - Flag data leakage or pseudoreplication. Train, validation and test splits must respect batch, specimen and original-image boundaries; tiles from one image are not independent samples.
 - Flag changes to preprocessing, models, aggregation or thresholds after evaluation on the unseen batch unless the result is explicitly marked exploratory.
-- Flag physical-unit claims without scale metadata and chemical-phase labels without supporting labels, EDS or equivalent evidence.
+- Flag physical-unit claims without scale metadata and chemical-phase labels beyond the Polaron-stated identities (silicon / graphite / void) or missing their provenance tag.
 - Flag results that hide uncertainty, overstate conclusions or force a binary decision when `investigate` or abstention is appropriate.
 - Flag exposed credentials, private links, confidential datasets, sensitive samples or generated artefacts that should not be committed.
 - Require changed scientific or data-processing behaviour to have an appropriate test or documented verification, and state what remains unverified.

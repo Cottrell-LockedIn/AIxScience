@@ -2,6 +2,7 @@
 numpy>=1.26,<3
 scipy>=1.13
 pandas>=2.2
+tabulate>=0.9
 pyarrow>=16
 scikit-image>=0.24
 scikit-learn>=1.5

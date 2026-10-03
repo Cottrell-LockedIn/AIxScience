@@ -1,0 +1,9 @@
+feature,decision,rank_stability,acquisition_confounded,threshold_sensitivity,mad_Batch_3,sens_over_mad,reasons,notes,config_hash,git_sha
+frac_c0,investigate,0.726,False,0.014575787079639926,0.01180047422922573,1.235186552379454,threshold sensitivity 0.0146 >= 0.5 x Batch_3 MAD 0.0118,,de199d6c8d69,eca6fa7
+frac_c1,investigate,0.584,False,0.03367392833416283,0.019800664395552402,1.7006463854680867,rank-stability 0.58 < 0.7; threshold sensitivity 0.0337 >= 0.5 x Batch_3 MAD 0.0198,abs(rho) >= 0.5 with curtaining_score (rho -0.54); compare raw vs residualised batch tests,de199d6c8d69,eca6fa7
+frac_c2,investigate,0.4395,False,0.043108738385714024,0.02685720055653498,1.6051091510810747,rank-stability 0.44 < 0.7; threshold sensitivity 0.0431 >= 0.5 x Batch_3 MAD 0.0269,,de199d6c8d69,eca6fa7
+c2_count_density_per_Mpx,investigate,0.3805,True,,81.01022426898665,,"rank-stability 0.38 < 0.7; acquisition_confounded (z_group 3.1 > z_batch -1.0, p_group 0.0010); no threshold-sensitivity measurement for this feature",,de199d6c8d69,eca6fa7
+c2_eqdiam_median_px,investigate,0.514,True,,0.20214111860795786,,"rank-stability 0.51 < 0.7; acquisition_confounded (z_group 1.8 > z_batch -0.1, p_group 0.0392); no threshold-sensitivity measurement for this feature",,de199d6c8d69,eca6fa7
+c2_eqdiam_p90_px,investigate,0.3625,True,,18.39702796011746,,"rank-stability 0.36 < 0.7; acquisition_confounded (z_group 2.9 > z_batch -0.3, p_group 0.0025); no threshold-sensitivity measurement for this feature",,de199d6c8d69,eca6fa7
+c0_region_eqdiam_median_px,investigate,0.843,False,,0.2809788621051455,,no threshold-sensitivity measurement for this feature,abs(rho) >= 0.5 with noise_sigma (rho -0.63); compare raw vs residualised batch tests,de199d6c8d69,eca6fa7
+c0_region_area_mean_px,investigate,0.7465,True,,182.0415733973613,,"acquisition_confounded (z_group 2.2 > z_batch 0.9, p_group 0.0173); no threshold-sensitivity measurement for this feature",,de199d6c8d69,eca6fa7
