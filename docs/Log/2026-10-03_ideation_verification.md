@@ -118,3 +118,10 @@ Additional checks for the comparison:
 - Re-read the track brief: test is described as a "brand-new unseen batch" for generalisation; Polaron said three held-back images. Added `FRAMEWORK.md` Section 13 (open-set by construction, leave-one-batch-out calibration, no test-time batch dependence, acquisition-invariance robustness panel with flip rates added to the selection rule, generalisation-favouring choices, held-back screen contents).
 - Skills search via `npx skills find`: relevant and reputable = Modal official skill (`modal skills install`), k-dense-ai/scientific-agent-skills {statistical-analysis, scikit-learn, scientific-visualization, scientific-critical-thinking, peer-review, optimize-for-gpu, pytorch-lightning} (~1.7-2.1K installs each). No microscopy-segmentation or Streamlit skill worth installing.
 - Devin local -> cloud: `/handoff` carries conversation context, repo + branch, and uncommitted diff of the git repo. Planning docs in this folder are outside the repo and must be committed into it first.
+
+## T+6h update: repo set up
+
+- Local `code/AIxScience_Msia` re-pointed to https://github.com/Cottrell-LockedIn/AIxScience (private org repo; existing commit 9c9f31e had an AGENTS.md compatible with ours; appended an implementation guide and working conventions).
+- Pushed scaffold c9943d0: docs/ (FRAMEWORK, PROJECT_STATE, READ, RESEARCH, Log + Drive listing), AGENTS.md, .gitignore (data/, tifs, secrets, weights), MIT LICENSE, README, pyproject + requirements, configs/v1.yaml, src/qc with 11 stage modules (docstring contracts) and a Typer CLI (`python -m qc info|run|<stage>`), schema/verdict.schema.json, scripts/download_drive.py, modal_app.py stub, app/streamlit_app.py stub, tests (3 passing), .agents/skills (modal + 7 K-Dense skills).
+- Verified locally: `uv venv` + `uv pip install -e .`, `python -m qc info`, `pytest` 3 passed.
+- Not done: handoff to Devin Cloud (awaiting approval). Pending: branch protection on main (needs org admin), Devin GitHub App on the org for cloud sessions.

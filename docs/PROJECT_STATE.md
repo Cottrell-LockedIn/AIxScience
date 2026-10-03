@@ -2,7 +2,7 @@
 
 Updated: 2026-10-03, T+1h (Devin)
 Phase: event started; FRAMEWORK.md v2 written after Polaron kickoff; awaiting team review
-Submission repository: `code/AIxScience_Msia` cloned from github.com/alvinbong03/AIxScience_Msia, empty (no commits)
+Submission repository: github.com/Cottrell-LockedIn/AIxScience (private, org), local clone at `code/AIxScience_Msia`. Scaffold pushed to `main` at commit c9943d0 (T+6h). Planning docs mirrored under `docs/` in the repo.
 
 ## Current decision
 
