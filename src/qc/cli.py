@@ -40,6 +40,18 @@ def run(config: str = typer.Option("configs/v1.yaml", "--config", "-c")) -> None
 
 
 @app.command()
+def register(config: str = typer.Option("configs/v1.yaml", "--config", "-c")) -> None:
+    """Check BSE / Inlens / ETD-SE pixel registration per image (results/registration/)."""
+    _run("registration", config)
+
+
+@app.command()
+def charging(config: str = typer.Option("configs/v1.yaml", "--config", "-c")) -> None:
+    """Flag class-2 BSE pixels that are also bright in both SE detectors (results/charging/); registered images only."""
+    _run("charging", config)
+
+
+@app.command()
 def info(config: str = typer.Option("configs/v1.yaml", "--config", "-c")) -> None:
     """Print config hash, git sha and stage list."""
     cfg = _config.load(config)
