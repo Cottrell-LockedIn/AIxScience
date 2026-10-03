@@ -1,6 +1,6 @@
 # Data audit (S1)
 
-Generated 2026-10-03T17:17:39+00:00 by `python -m qc audit` (config `configs/v1.yaml` @ `de199d6c8d69`, git `f1ea178`). Source tables: `results/audit/files.csv` (per TIFF) and `results/audit/images.csv` (per 8-char sample id).
+Generated 2026-10-03T19:59:00+00:00 by `python -m qc audit` (config `configs/v1.yaml` @ `de199d6c8d69`, git `789c491`). Source tables: `results/audit/files.csv` (per TIFF) and `results/audit/images.csv` (per 8-char sample id).
 
 ## Images per batch
 
@@ -70,9 +70,13 @@ Consistent across all files: **no**. If the tag were intentional it would mean 2
 | ('Batch_3', 'Inlens') |  105.3 |  52.6 |  15.9 | 242.8 |
 | ('Batch_3', 'SE')     |   74   |  33.4 |   0   | 164   |
 
+## Answered (provenance)
+
+- BSE class names from `configs/v1.yaml` `segmentation.class_names`: 0 = void, 1 = graphite, 2 = silicon; stated by Polaron, not image-verified (no EDS).
+- Reference batch: **Batch_3**, the supplier-promised baseline ([Polaron clarification](READ/Polaron%20Clarification%20Batch%20Baseline%20and%20Judging.md)). `stats.reference_batch: auto` is resolved to `Batch_3` by `qc.validate.REFERENCE_BATCH`; the config stays unchanged to preserve its hash.
+- Same field of view across detectors: confirmed by registration for 31/31 image stems, with median |shift| ≤ 0.10 px ([registration results](../results/registration/REGISTRATION.md)).
+
 ## Unconfirmed facts (see docs/READ/Questions for Polaron.md)
 
 - Pixel size (25 nm/px inferred from a tifffile-written tag).
-- Identity of the bright class on BSE (no EDS); class names stay 0 / 1 / 2.
-- Whether a reference batch is designated.
 - Whether ETD vs SE naming reflects a different session or microscope.

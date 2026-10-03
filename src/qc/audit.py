@@ -136,11 +136,15 @@ def build_images_table(files: pd.DataFrame) -> pd.DataFrame:
 
 
 def write_markdown(files: pd.DataFrame, images: pd.DataFrame, cfg: dict[str, Any], out: Path) -> None:
+    from qc.validate import REFERENCE_BATCH
+
     prov = _config.provenance(cfg)
     per_batch = images.groupby("batch").agg(images=("sample_id", "count"), files=("n_files", "sum"))
     chan_sets = images.groupby(["batch", "channels"]).size().unstack(fill_value=0)
     res_tags = files["res_tag"].value_counts()
     nm = files["nm_per_px_if_tag_true"].dropna().unique()
+    class_names = cfg["segmentation"]["class_names"]
+    class_name_line = ", ".join(f"{i} = {name}" for i, name in enumerate(class_names))
     lines = [
         "# Data audit (S1)",
         "",
@@ -189,11 +193,20 @@ def write_markdown(files: pd.DataFrame, images: pd.DataFrame, cfg: dict[str, Any
         "",
         files.groupby(["batch", "channel"])[["mean", "std", "p01", "p99"]].mean().round(1).to_markdown(),
         "",
+        "## Answered (provenance)",
+        "",
+        f"- BSE class names from `configs/v1.yaml` `segmentation.class_names`: {class_name_line}; "
+        "stated by Polaron, not image-verified (no EDS).",
+        f"- Reference batch: **{REFERENCE_BATCH}**, the supplier-promised baseline "
+        "([Polaron clarification](READ/Polaron%20Clarification%20Batch%20Baseline%20and%20Judging.md)). "
+        f"`stats.reference_batch: {cfg.get('stats', {}).get('reference_batch', 'auto')}` is resolved to "
+        f"`{REFERENCE_BATCH}` by `qc.validate.REFERENCE_BATCH`; the config stays unchanged to preserve its hash.",
+        "- Same field of view across detectors: confirmed by registration for 31/31 image stems, with median "
+        "|shift| ≤ 0.10 px ([registration results](../results/registration/REGISTRATION.md)).",
+        "",
         "## Unconfirmed facts (see docs/READ/Questions for Polaron.md)",
         "",
         "- Pixel size (25 nm/px inferred from a tifffile-written tag).",
-        "- Identity of the bright class on BSE (no EDS); class names stay 0 / 1 / 2.",
-        "- Whether a reference batch is designated.",
         "- Whether ETD vs SE naming reflects a different session or microscope.",
         "",
     ]
