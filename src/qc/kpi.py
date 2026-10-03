@@ -78,13 +78,35 @@ def _work(args) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     lab = np.asarray(Image.open(Path(masks_dir) / row["mask_path"]))
     rec = {**keys, **kpis(lab)}
     th = (row["t0"], row["t1"])
-    den = _segment.denoise(np.load(Path(tiles_dir) / row["path"]), int(cfg_s["median_px"]))
+    fallback = bool(row.get("threshold_fallback", False)) or any(np.isnan(t) for t in th)
+    den = None if fallback else _segment.denoise(np.load(Path(tiles_dir) / row["path"]), int(cfg_s["median_px"]))
     sens = []
     for scale in (1.0 - cfg_s["sens_pct"], 1.0, 1.0 + cfg_s["sens_pct"]):
-        lab_s = lab if scale == 1.0 else _segment.label_from_thresholds(
+        # fallback tiles have no thresholds to perturb: their label image is reported unchanged at every scale
+        lab_s = lab if (scale == 1.0 or fallback) else _segment.label_from_thresholds(
             den, tuple(t * scale for t in th), int(cfg_s["min_obj_px"]))
         sens.append({**keys, "scale": round(scale, 3), **fractions(lab_s)})
     return rec, sens
+
+
+def join_thresholds(th: pd.DataFrame, index: pd.DataFrame, cfg: dict[str, Any]) -> pd.DataFrame:
+    """Attach current tile paths to the saved thresholds, refusing to mix stale masks with re-tiled data.
+
+    A tile_id encodes sample/channel/position but not the tiling config or source pixels, so the saved
+    thresholds must come from the same config (hash) as the current run and the current index, and every
+    threshold row must match exactly one index row at the same (y, x) with the same tile size.
+    """
+    for name, hashes in (("thresholds_per_tile", th["config_hash"].unique()), ("tiles index", index["config_hash"].unique())):
+        if len(hashes) != 1 or hashes[0] != cfg["_hash"]:
+            raise RuntimeError(f"{name} was produced with config hash {list(hashes)}, current config is {cfg['_hash']}: "
+                               "re-run `qc tiles` and `qc segment` before `qc kpi`")
+    cols = ["tile_id", "path", "y", "x", "h", "w"]
+    merged = th.merge(index[cols].rename(columns={"y": "y_idx", "x": "x_idx"}), on="tile_id", how="inner", validate="one_to_one")
+    if len(merged) != len(th):
+        raise RuntimeError(f"{len(th) - len(merged)} threshold rows have no tile in the current index: re-run `qc segment`")
+    if not ((merged["y"] == merged["y_idx"]) & (merged["x"] == merged["x_idx"])).all():
+        raise RuntimeError("tile positions in thresholds_per_tile differ from the current index: re-run `qc segment`")
+    return merged.drop(columns=["y_idx", "x_idx", "h", "w"])
 
 
 def per_image(per_tile: pd.DataFrame, cols: list[str], extra_keys: list[str] | None = None) -> pd.DataFrame:
@@ -138,7 +160,7 @@ def run(cfg: dict[str, Any]) -> None:
     res = _config.ROOT / "results"
     index = pd.read_parquet(tiles_dir / "index.parquet")
     th = pd.read_parquet(res / "thresholds_per_tile.parquet")
-    th = th.merge(index[["tile_id", "path"]], on="tile_id", how="left")
+    th = join_thresholds(th, index, cfg)
     cfg_s = _segment.params(cfg["segmentation"])
     with ProcessPoolExecutor() as ex:
         results = list(ex.map(_work, [(r, str(tiles_dir), str(masks_dir), cfg_s) for r in th.to_dict("records")],

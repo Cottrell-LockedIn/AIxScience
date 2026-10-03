@@ -2,7 +2,7 @@
 
 Reads:  data/tiles/index.parquet + BSE tiles
 Writes: data/masks/<batch>/<sample_id>/<tile_id>.png   (uint8 label masks, values 0/1/2; ignored data, never committed)
-        results/thresholds_per_tile.parquet            (t_lo, t_hi per tile + provenance)
+        results/thresholds_per_tile.parquet            (t0, t1 per tile, threshold_fallback flag, provenance)
 
 Per tile: median filter (`segmentation.median_px`) -> skimage.filters.threshold_multiotsu(classes=3) on the
 denoised tile -> labels 0 (dark) / 1 (mid) / 2 (bright) -> for classes 2 and 0: remove connected components
@@ -49,8 +49,17 @@ def denoise(tile: np.ndarray, median_px: int) -> np.ndarray:
     return ndimage.median_filter(tile, size=median_px)
 
 
-def fit_thresholds(den: np.ndarray, classes: int = 3) -> tuple[float, ...]:
+def fit_thresholds(den: np.ndarray, classes: int = 3) -> tuple[float, ...] | None:
+    """Multi-Otsu thresholds, or None when the tile has fewer than `classes` distinct grey levels
+    (uniform / two-level tiles), in which case the caller uses the deterministic fallback below."""
+    if len(np.unique(den)) < classes:
+        return None
     return tuple(float(t) for t in threshold_multiotsu(den, classes=classes))
+
+
+def fallback_label(den: np.ndarray) -> np.ndarray:
+    """Every pixel -> class 1 (mid). Used when thresholds cannot be fitted; flagged in thresholds_per_tile."""
+    return np.ones(den.shape, dtype=np.uint8)
 
 
 def _clean(mask: np.ndarray, min_obj_px: int) -> np.ndarray:
@@ -77,8 +86,13 @@ def label_from_thresholds(den: np.ndarray, thresholds: tuple[float, ...], min_ob
 
 
 def segment_tile(tile: np.ndarray, cfg_s: dict[str, Any]) -> tuple[np.ndarray, tuple[float, ...]]:
+    """(label image, thresholds). Thresholds are NaN and the label image is all class 1 when the tile has
+    fewer than `classes` distinct grey levels; see `fit_thresholds`."""
     den = denoise(tile, int(cfg_s["median_px"]))
-    th = fit_thresholds(den, int(cfg_s["classes"]))
+    classes = int(cfg_s["classes"])
+    th = fit_thresholds(den, classes)
+    if th is None:
+        return fallback_label(den), (float("nan"),) * (classes - 1)
     return label_from_thresholds(den, th, int(cfg_s["min_obj_px"])), th
 
 
@@ -95,6 +109,7 @@ def _work(args) -> dict[str, Any]:
     Image.fromarray(lab, mode="L").save(out_path, compress_level=1)
     rec = {k: row[k] for k in ("tile_id", "sample_id", "batch", "channel", "y", "x")}
     rec.update({f"t{i}": t for i, t in enumerate(th)})
+    rec["threshold_fallback"] = bool(np.isnan(th[0]))
     rec["mask_path"] = str(out_path.relative_to(Path(masks_dir)))
     return rec
 

@@ -32,12 +32,21 @@ NAME_RE = re.compile(r"^img_(?P<sample>[a-z0-9]{8})_(?P<channel>BSE|Inlens|ETD|S
 
 
 def tile_grid(height: int, width: int, tile: int, stride: int) -> list[tuple[int, int]]:
-    """Top-left corners of all full tiles (no partial tiles) in row-major order."""
+    """Top-left corners of all full tiles (no partial tiles) in row-major order.
+
+    Stride-aligned positions plus, when the grid does not reach the bottom/right edge, one extra tile
+    anchored on that edge so every pixel is covered (the last tile overlaps its neighbour by more than usual).
+    """
     if height < tile or width < tile:
         return []
-    ys = range(0, height - tile + 1, stride)
-    xs = range(0, width - tile + 1, stride)
-    return [(y, x) for y in ys for x in xs]
+
+    def starts(n: int) -> list[int]:
+        s = list(range(0, n - tile + 1, stride))
+        if s[-1] != n - tile:  # stride grid stops short of the edge: anchor one last full tile on it
+            s.append(n - tile)
+        return s
+
+    return [(y, x) for y in starts(height) for x in starts(width)]
 
 
 def read_gray(path: Path, read_channel: int) -> np.ndarray:

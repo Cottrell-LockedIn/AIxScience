@@ -85,7 +85,8 @@ def inspect_file(path: str, known_sha: str | None = None) -> dict[str, Any]:
     row["right_edge_rgb_differs"] = bool(arr.ndim == 3 and not np.array_equal(arr[:, -2:, 0], arr[:, -2:, 1]))
     row["left_edge_rgb_differs"] = bool(arr.ndim == 3 and not np.array_equal(arr[:, :2, 0], arr[:, :2, 1]))
     row["pixel_sha256"] = hashlib.sha256(np.ascontiguousarray(g).tobytes()).hexdigest()
-    row["sha256"] = known_sha or _sha256(p)
+    row["sha256"] = _sha256(p)  # always recomputed; the inventory digest is only cross-checked below
+    row["sha256_matches_inventory"] = None if known_sha is None else row["sha256"] == known_sha
     return row
 
 
@@ -104,6 +105,12 @@ def build_files_table(raw_dir: Path) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def _first_scale(vals: pd.Series) -> float | None:
+    """Image-level pixel size from the tag: None when absent on every channel (scale stays unconfirmed)."""
+    v = vals.dropna()
+    return float(v.iloc[0]) if len(v) else None
+
+
 def build_images_table(files: pd.DataFrame) -> pd.DataFrame:
     sha_counts = Counter(files["sha256"])
     pix_counts = Counter(files["pixel_sha256"])
@@ -119,7 +126,7 @@ def build_images_table(files: pd.DataFrame) -> pd.DataFrame:
             "height": int(g["height"].iloc[0]), "width": int(g["width"].iloc[0]),
             "shapes_consistent_across_channels": len(shapes) == 1,
             "dtype": "+".join(sorted(set(g["dtype"]))), "res_tag": "+".join(sorted(set(g["res_tag"]))),
-            "nm_per_px_if_tag_true": float(g["nm_per_px_if_tag_true"].iloc[0]),
+            "nm_per_px_if_tag_true": _first_scale(g["nm_per_px_if_tag_true"]),
             "channels_identical_rgb": bool(g["channels_identical"].all()),
             "duplicate_file_elsewhere": bool(any(sha_counts[s] > 1 for s in g["sha256"])),
             "duplicate_pixels_elsewhere": bool(any(pix_counts[s] > 1 for s in g["pixel_sha256"])),

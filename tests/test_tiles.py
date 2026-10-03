@@ -18,8 +18,21 @@ def test_grid_has_no_partial_tiles():
     grid = tiles.tile_grid(h, w, t, s)
     assert grid, "grid should not be empty"
     assert all(y + t <= h and x + t <= w for y, x in grid)
-    assert len(grid) == ((h - t) // s + 1) * ((w - t) // s + 1)
+    # stride grid gives 3 rows x 12 cols; neither 2300 nor 6984 is reached by it, so one edge-anchored row and column are added
+    assert len(grid) == (3 + 1) * (12 + 1)
     assert tiles.tile_grid(500, 500, 1024, 512) == []
+
+
+def test_grid_covers_every_pixel():
+    t, s = 1024, 512
+    for h, w in [(2044, 6984), (2064, 6944), (2048, 7000), (1596, 6984), (1024, 1024), (1025, 1030)]:
+        grid = tiles.tile_grid(h, w, t, s)
+        cover = np.zeros((h, w), dtype=bool)
+        for y, x in grid:
+            assert 0 <= y <= h - t and 0 <= x <= w - t
+            cover[y:y + t, x:x + t] = True
+        assert cover.all(), (h, w)
+        assert len(set(grid)) == len(grid)
 
 
 def test_index_round_trip(tmp_path):

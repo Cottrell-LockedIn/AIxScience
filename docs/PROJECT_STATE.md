@@ -58,10 +58,11 @@ Before the unseen batch arrives, record:
 
 ### 2026-10-03 cloud session 1 (S1-S5)
 
-- Completed: `audit.py`, `tiles.py`, `artefacts.py`, `segment.py`, `kpi.py`, `scripts/reality_check.py`, tests (9 passing); all stages run on 31 images (audit 12 s, tiles 12 s, artefacts 44 s, segment 50 s, kpi 65 s on 8 CPU cores). Results under `results/` with `config_hash` + `git_sha`.
+- Completed: `audit.py`, `tiles.py`, `artefacts.py`, `segment.py`, `kpi.py`, `scripts/reality_check.py`, tests (13 passing); all stages run on 31 images (audit 12 s, tiles 16 s, artefacts 57 s, segment 75 s, kpi 89 s on 8 CPU cores; 4329 tiles, 1443 BSE). Results under `results/` with `config_hash` + `git_sha`.
 - Evidence: PR #1 (figures + Report-back), `results/audit/REALITY_CHECK.md`, `docs/DATA_AUDIT.md`, `results/audit/overlays/`.
 - Decisions: tile 1024/512 per config (FRAMEWORK 2b still says 512, doc discrepancy open); per-image KPI = mean over tiles; curtaining measured on the k_y~0 FFT band (vertical image stripes) with the orthogonal band kept as control; hole filling limited to holes < 20 px so enclosed bright particles survive.
 - Reviewer verdict: pending (fresh-context review required per AGENTS.md).
+- Review fixes (Devin Review on PR #1): edge-anchored tiles for full field-of-view coverage, fallback for tiles with <3 grey levels, config-hash/position check before joining masks in `qc kpi`, SHA-256 recomputed in audit, nullable pixel-size tag. All S2-S5 outputs regenerated; conclusions unchanged (13 acquisition groups, not 15, after recount).
 - Unresolved risks: batch/session confound (noise, sharpness, res-tag groups); multi-Otsu instability on tiles without class-2 particles; pixel size and phase identity unconfirmed.
 - Exact next action: consultant checkpoint C1 on overlays/figures and the five questions in PR #1; then wave 1 (S5 embeddings on Modal, S6, S7 with artefact ablation + leave-one-group-out, S8, S9).
 

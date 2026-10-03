@@ -47,3 +47,35 @@ def test_kpis_and_small_objects_removed():
     for cls in (0, 2):
         areas = [r.area for r in regionprops(label(lab == cls, connectivity=1))]
         assert min(areas) >= CFG_S["min_obj_px"]
+
+
+def test_uniform_and_two_level_tiles_fall_back_to_class_1():
+    for img in (np.full((256, 256), 120, dtype=np.uint8),
+                np.where(np.arange(256)[None, :] < 128, 30, 220).astype(np.uint8)):
+        lab, th = segment.segment_tile(img, CFG_S)
+        assert all(np.isnan(t) for t in th) and len(th) == 2
+        assert (lab == 1).all()
+    img, _ = synthetic()
+    _, th = segment.segment_tile(img, CFG_S)
+    assert not any(np.isnan(t) for t in th)
+
+
+def test_join_thresholds_rejects_stale_inputs():
+    import pandas as pd
+    import pytest
+
+    cfg = {"_hash": "abc"}
+    index = pd.DataFrame({"tile_id": ["t1", "t2"], "path": ["p1", "p2"], "y": [0, 512], "x": [0, 0],
+                          "h": [1024, 1024], "w": [1024, 1024], "config_hash": ["abc", "abc"]})
+    th = pd.DataFrame({"tile_id": ["t1", "t2"], "y": [0, 512], "x": [0, 0], "t0": [60.0, 61.0], "t1": [150.0, 151.0],
+                       "config_hash": ["abc", "abc"]})
+    out = kpi.join_thresholds(th, index, cfg)
+    assert list(out["path"]) == ["p1", "p2"]
+    with pytest.raises(RuntimeError):
+        kpi.join_thresholds(th.assign(config_hash="old"), index, cfg)
+    with pytest.raises(RuntimeError):
+        kpi.join_thresholds(th, index.assign(config_hash="retiled"), cfg)
+    with pytest.raises(RuntimeError):
+        kpi.join_thresholds(th.assign(y=[0, 520]), index, cfg)
+    with pytest.raises(RuntimeError):
+        kpi.join_thresholds(th, index.iloc[:1], cfg)
