@@ -8,6 +8,7 @@ Reads:  data/tiles/index.parquet, results/thresholds_per_tile.parquet (for the s
         data/masks/<batch>/<sample_id>/<tile_id>.png
 Writes: results/features/features_f01_f11.parquet          (one row per image: sample_id, batch, F01..F11;
                                                             provenance in Parquet metadata)
+        results/features/features_sensitivity.parquet       (image-level F01..F11 at scales 0.9 / 1.0 / 1.1)
         results/features/features_by_image.parquet + .csv   (one row per image: sample_id, batch, F01..F11,
                                                               diagnostics, n_tiles, config_hash, features_config_hash, git_sha)
         results/features/features_by_tile.parquet            (same features per 1024 px tile; tiles are pseudo-replicates)
@@ -306,14 +307,35 @@ def to_columns(feat: dict[str, float], reg: dict[str, Any]) -> dict[str, float]:
 
 # -------------------------------------------------------------------------------------------------------- pipeline
 
-def _image_work(args) -> dict[str, Any]:
-    batch, sample_id, rows, masks_dir, p, reg = args
-    tiles = [(int(r["y"]), int(r["x"]), np.asarray(Image.open(Path(masks_dir) / r["mask_path"]))) for r in rows]
+def _image_work(args) -> tuple[dict[str, Any], list[dict[str, Any]]]:
+    batch, sample_id, rows, masks_dir, tiles_dir, p, reg, cfg_s = args
+    mask_rows = [(r, np.asarray(Image.open(Path(masks_dir) / r["mask_path"]))) for r in rows]
+    tiles = [(int(r["y"]), int(r["x"]), mask) for r, mask in mask_rows]
     lab = stitch(tiles, int(rows[0]["img_h"]), int(rows[0]["img_w"]))
     t0 = time.perf_counter()
     rec = {"sample_id": sample_id, "batch": batch, **to_columns(compute(lab, p), reg), "n_tiles": len(rows),
            "seconds": round(time.perf_counter() - t0, 2)}
-    return rec
+    del lab
+    feature_cols = [f["column"] for f in reg["features"]]
+    sensitivity = [{"sample_id": sample_id, "batch": batch, "scale": 1.0, "level": "image",
+                    **{col: rec[col] for col in feature_cols}}]
+    img_shape = (int(rows[0]["img_h"]), int(rows[0]["img_w"]))
+    scales = (1.0 - cfg_s["sens_pct"], 1.0 + cfg_s["sens_pct"])
+    scaled_images = {round(scale, 3): np.full(img_shape, UNANALYSED, dtype=np.uint8) for scale in scales}
+    for row, base_lab in sorted(mask_rows, key=lambda pair: (pair[0]["y"], pair[0]["x"])):
+        thresholds = (row["t0"], row["t1"])
+        fallback = bool(row.get("threshold_fallback", False)) or any(not np.isfinite(t) for t in thresholds)
+        tile = None if fallback else np.load(Path(tiles_dir) / row["path"])
+        for scale, lab_s in _kpi.scaled_threshold_labels(tile, base_lab, thresholds, cfg_s, fallback):
+            if scale != 1.0:
+                y, x = int(row["y"]), int(row["x"])
+                h, w = lab_s.shape
+                scaled_images[scale][y:y + h, x:x + w] = lab_s
+    for scale, scale_lab in sorted(scaled_images.items()):
+        values = to_columns(compute(scale_lab, p), reg)
+        sensitivity.append({"sample_id": sample_id, "batch": batch, "scale": scale, "level": "image",
+                            **{col: values[col] for col in feature_cols}})
+    return rec, sensitivity
 
 
 def _tile_work(args) -> dict[str, Any]:
@@ -375,7 +397,7 @@ def write_readme(path: Path, reg: dict[str, Any], cfg: dict[str, Any], img: pd.D
              "", "## Registry", "", "| id | column | class | unit | definition | provenance |", "|---|---|---|---|---|---|"]
     for f in reg["features"]:
         lines.append(f"| {f['id']} | `{f['column']}` | {f['class']} | {f['unit']} | {f['definition']} | {f['provenance']} |")
-    lines += ["", "Files: `features_f01_f11.parquet`, `features_by_image.parquet` / `.csv`, "
+    lines += ["", "Files: `features_f01_f11.parquet`, `features_sensitivity.parquet`, `features_by_image.parquet` / `.csv`, "
               "`features_by_tile.parquet`, `features_batch_medians.csv`. "
               "Parquet metadata carries `phase_identity`, `features_config` and `provenance`."]
     path.write_text("\n".join(lines) + "\n")
@@ -395,11 +417,15 @@ def run(cfg: dict[str, Any]) -> None:
     th = th.merge(index[["tile_id", "img_h", "img_w"]], on="tile_id", how="left", validate="one_to_one")
     th = th.sort_values(["batch", "sample_id", "y", "x"]).reset_index(drop=True)
 
-    img_jobs = [(b, s, g.to_dict("records"), str(masks_dir), p, reg) for (b, s), g in th.groupby(["batch", "sample_id"], sort=True)]
+    cfg_s = _segment.params(cfg["segmentation"])
+    img_jobs = [(b, s, g.to_dict("records"), str(masks_dir), str(tiles_dir), p, reg, cfg_s)
+                for (b, s), g in th.groupby(["batch", "sample_id"], sort=True)]
     tile_jobs = [(r, str(masks_dir), p, reg) for r in th.to_dict("records")]
     with ProcessPoolExecutor() as ex:
-        img_rows = list(ex.map(_image_work, img_jobs))
+        image_results = list(ex.map(_image_work, img_jobs))
         tile_rows = list(ex.map(_tile_work, tile_jobs, chunksize=8))
+    img_rows = [row for row, _ in image_results]
+    sensitivity_rows = [row for _, rows in image_results for row in rows]
     img = _config.stamp(pd.DataFrame(img_rows), cfg)
     img["features_config_hash"] = reg["_hash"]
     img["phase_identity"] = PHASE_IDENTITY
@@ -412,8 +438,13 @@ def run(cfg: dict[str, Any]) -> None:
     img.to_csv(res / "features_by_image.csv", index=False)
     write_parquet(per_tile, res / "features_by_tile.parquet", reg, cfg)
     batch_medians(img, reg).to_csv(res / "features_batch_medians.csv", index=False)
+    sens = _config.stamp(pd.DataFrame(sensitivity_rows), cfg)
+    sens["features_config_hash"] = reg["_hash"]
+    sens["phase_identity"] = PHASE_IDENTITY
+    write_parquet(sens, res / "features_sensitivity.parquet", reg, cfg)
     elapsed = time.perf_counter() - t_start
     write_readme(res / "README.md", reg, cfg, img, elapsed)
     print(f"features: {len(img)} images, {len(per_tile)} tiles -> results/features/ (features_f01_f11.parquet, "
+          "features_sensitivity.parquet, "
           f"features_by_image.parquet/.csv, features_by_tile.parquet, features_batch_medians.csv, README.md) "
           f"in {elapsed:.0f} s")

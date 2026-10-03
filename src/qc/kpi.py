@@ -3,8 +3,8 @@
 Reads:  data/tiles/index.parquet, BSE tiles, data/masks/**, results/thresholds_per_tile.parquet
 Writes: results/kpi_per_tile.parquet        (one row per BSE tile)
         results/kpi_per_image.parquet       (mean and sd over tiles per image, n_tiles)
-        results/kpi_sensitivity.parquet     (class fractions per tile with thresholds scaled by 1 +/- segmentation.sens_pct,
-                                             plus the per-image aggregate; `scale` column = 0.9 / 1.0 / 1.1)
+        results/kpi_sensitivity.parquet     (all eight KPI values per tile and image with thresholds scaled by
+                                             1 +/- segmentation.sens_pct; `scale` = 0.9 / 1.0 / 1.1)
         results/audit/overlays/*.png        (6 example tiles, 2 per batch, class 0 and class 2 outlined)
 
 KPIs per tile (pixel units; pixel size is unconfirmed, see docs/DATA_AUDIT.md):
@@ -72,6 +72,23 @@ def kpis(lab: np.ndarray) -> dict[str, float]:
     return out
 
 
+def scaled_threshold_labels(tile: np.ndarray | None, lab: np.ndarray, thresholds: tuple[float, float],
+                            cfg_s: dict[str, Any], fallback: bool = False) -> list[tuple[float, np.ndarray]]:
+    fallback = fallback or any(not np.isfinite(t) for t in thresholds)
+    if not fallback and tile is None:
+        raise ValueError("a tile is required when thresholds are available")
+    den = None if fallback else _segment.denoise(tile, int(cfg_s["median_px"]))
+    labels = []
+    for scale in (1.0 - cfg_s["sens_pct"], 1.0, 1.0 + cfg_s["sens_pct"]):
+        if scale == 1.0 or fallback:
+            lab_s = lab
+        else:
+            lab_s = _segment.label_from_thresholds(den, tuple(t * scale for t in thresholds),
+                                                   int(cfg_s["min_obj_px"]))
+        labels.append((round(scale, 3), lab_s))
+    return labels
+
+
 def _work(args) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     row, tiles_dir, masks_dir, cfg_s = args
     keys = {k: row[k] for k in ("tile_id", "sample_id", "batch", "y", "x")}
@@ -79,13 +96,9 @@ def _work(args) -> tuple[dict[str, Any], list[dict[str, Any]]]:
     rec = {**keys, **kpis(lab)}
     th = (row["t0"], row["t1"])
     fallback = bool(row.get("threshold_fallback", False)) or any(np.isnan(t) for t in th)
-    den = None if fallback else _segment.denoise(np.load(Path(tiles_dir) / row["path"]), int(cfg_s["median_px"]))
-    sens = []
-    for scale in (1.0 - cfg_s["sens_pct"], 1.0, 1.0 + cfg_s["sens_pct"]):
-        # fallback tiles have no thresholds to perturb: their label image is reported unchanged at every scale
-        lab_s = lab if (scale == 1.0 or fallback) else _segment.label_from_thresholds(
-            den, tuple(t * scale for t in th), int(cfg_s["min_obj_px"]))
-        sens.append({**keys, "scale": round(scale, 3), **fractions(lab_s)})
+    tile = None if fallback else np.load(Path(tiles_dir) / row["path"])
+    sens = [{**keys, "scale": scale, **kpis(lab_s)}
+            for scale, lab_s in scaled_threshold_labels(tile, lab, th, cfg_s, fallback)]
     return rec, sens
 
 
@@ -115,6 +128,25 @@ def per_image(per_tile: pd.DataFrame, cols: list[str], extra_keys: list[str] | N
     out = pd.concat([g[cols].mean(), g[cols].std().add_suffix("_sd")], axis=1)
     out["n_tiles"] = g.size()
     return out.reset_index()
+
+
+def fraction_sensitivity_unchanged(old: pd.DataFrame, new: pd.DataFrame) -> bool:
+    keys = ["level", "batch", "sample_id", "scale"]
+    if "tile_id" in old.columns and "tile_id" in new.columns:
+        keys.append("tile_id")
+    cols = [*keys, *FRAC_COLS]
+    if any(col not in old.columns or col not in new.columns for col in cols):
+        return False
+    try:
+        merged = old[cols].merge(new[cols], on=keys, how="outer", suffixes=("_old", "_new"),
+                                 indicator=True, validate="one_to_one")
+    except (pd.errors.MergeError, TypeError, ValueError):
+        return False
+    if not merged["_merge"].eq("both").all():
+        return False
+    return all(np.array_equal(merged[f"{col}_old"].to_numpy(dtype=float, na_value=np.nan),
+                              merged[f"{col}_new"].to_numpy(dtype=float, na_value=np.nan), equal_nan=True)
+               for col in FRAC_COLS)
 
 
 def overlay(tile: np.ndarray, lab: np.ndarray, title: str, out_png: Path) -> None:
@@ -167,13 +199,16 @@ def run(cfg: dict[str, Any]) -> None:
                               chunksize=8))
     per_tile = _config.stamp(pd.DataFrame([r for r, _ in results]), cfg)
     sens_tile = pd.DataFrame([s for _, ss in results for s in ss])
-    sens_img = per_image(sens_tile, FRAC_COLS, ["scale"])
+    sens_img = per_image(sens_tile, KPI_COLS, ["scale"])
     sens = _config.stamp(pd.concat([sens_tile.assign(level="tile"), sens_img.assign(level="image")],
                                    ignore_index=True), cfg)
     img = _config.stamp(per_image(per_tile, KPI_COLS), cfg)
     per_tile.to_parquet(res / "kpi_per_tile.parquet", index=False)
     img.to_parquet(res / "kpi_per_image.parquet", index=False)
-    sens.to_parquet(res / "kpi_sensitivity.parquet", index=False)
+    sens_path = res / "kpi_sensitivity.parquet"
+    if sens_path.exists() and not fraction_sensitivity_unchanged(pd.read_parquet(sens_path), sens):
+        sens_path = res / "kpi_sensitivity_all.parquet"
+    sens.to_parquet(sens_path, index=False)
     paths = make_overlays(th, tiles_dir, masks_dir, res / "audit" / "overlays")
-    print(f"kpi: {len(per_tile)} tiles, {len(img)} images -> results/kpi_per_*.parquet, kpi_sensitivity.parquet, "
-          f"{len(paths)} overlays")
+    print(f"kpi: {len(per_tile)} tiles, {len(img)} images -> results/kpi_per_*.parquet, "
+          f"{sens_path.relative_to(_config.ROOT)}, {len(paths)} overlays")

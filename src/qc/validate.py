@@ -556,7 +556,8 @@ def write_report(out: Path, name: str, df: pd.DataFrame, feats: list[str], stab:
         "rank_stability = mean Spearman between the observed ranking of batch medians and the ranking in each image-level "
         "bootstrap resample (resampling images within batch); rank_order_preserved_frac = share of resamples with the "
         f"identical order. cv_{REFERENCE_BATCH} = sd/mean over {REFERENCE_BATCH} images; threshold_sensitivity = median over "
-        "images of the largest |change| under +/-10 % threshold scaling (only measured for the class fractions).",
+        "images of the largest |change| under +/-10 % threshold scaling, measured at the image level for the "
+        "supplied columns.",
         "",
         _md(stab[["feature", "rank_stability", "rank_order_preserved_frac"] + [c for c in stab.columns if c.startswith("median_")]
                  + [f"cv_{REFERENCE_BATCH}", f"mad_{REFERENCE_BATCH}", "threshold_sensitivity", "degenerate"]]),

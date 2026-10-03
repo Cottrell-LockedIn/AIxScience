@@ -6,9 +6,10 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 import pytest
+from PIL import Image
 from skimage.draw import disk
 
-from qc import features as F
+from qc import features as F, segment
 
 P = {"min_object_px": 20, "connectivity": 8, "window_px": 512, "exact_radius_max_px": 16, "radius_growth": 1.2}
 
@@ -217,3 +218,33 @@ def test_compact_image_feature_table_schema_and_provenance(tmp_path):
         "config_hash": "cfg123",
         "git_sha": "abc123",
     }
+
+
+def test_image_sensitivity_has_all_features_and_reuses_nominal_mask(tmp_path):
+    cfg_s = {"median_px": 5, "classes": 3, "min_obj_px": 20, "sens_pct": 0.1}
+    image = np.full((512, 512), 120, dtype=np.uint8)
+    for y, x in ((100, 100), (300, 300)):
+        rr, cc = disk((y, x), 30, shape=image.shape)
+        image[rr, cc] = 30
+    for y, x in ((100, 300), (300, 100)):
+        rr, cc = disk((y, x), 12, shape=image.shape)
+        image[rr, cc] = 220
+    lab, thresholds = segment.segment_tile(image, cfg_s)
+    masks_dir = tmp_path / "masks"
+    tiles_dir = tmp_path / "tiles"
+    masks_dir.mkdir()
+    tiles_dir.mkdir()
+    Image.fromarray(lab).save(masks_dir / "mask.png")
+    np.save(tiles_dir / "tile.npy", image)
+    row = {"sample_id": "sample01", "batch": "Batch_1", "y": 0, "x": 0,
+           "img_h": 512, "img_w": 512, "mask_path": "mask.png", "path": "tile.npy",
+           "t0": thresholds[0], "t1": thresholds[1], "threshold_fallback": False}
+    reg = F.load_registry()
+    rec, sensitivity = F._image_work(("Batch_1", "sample01", [row], str(masks_dir), str(tiles_dir),
+                                      P, reg, cfg_s))
+    feature_cols = [f["column"] for f in reg["features"]]
+    assert len(sensitivity) == 3
+    assert {row["scale"] for row in sensitivity} == {0.9, 1.0, 1.1}
+    assert all(row["level"] == "image" and set(feature_cols) <= set(row) for row in sensitivity)
+    nominal = next(row for row in sensitivity if row["scale"] == 1.0)
+    assert np.allclose([nominal[col] for col in feature_cols], [rec[col] for col in feature_cols], equal_nan=True)

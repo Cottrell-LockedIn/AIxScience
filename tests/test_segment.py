@@ -1,4 +1,6 @@
 import numpy as np
+import pandas as pd
+from PIL import Image
 from skimage.draw import disk
 
 from qc import kpi, segment
@@ -33,6 +35,54 @@ def test_three_class_recovery():
     f_hat = kpi.fractions(lab)
     for k in f_true:
         assert abs(f_true[k] - f_hat[k]) < 0.02, (k, f_true[k], f_hat[k])
+
+
+def test_scaled_threshold_labels_share_segmenter_and_fallback_rules():
+    img, _ = synthetic()
+    lab, thresholds = segment.segment_tile(img, CFG_S)
+    variants = kpi.scaled_threshold_labels(img, lab, thresholds, CFG_S)
+    assert [scale for scale, _ in variants] == [0.9, 1.0, 1.1]
+    den = segment.denoise(img, CFG_S["median_px"])
+    for scale, scaled_lab in variants:
+        expected = lab if scale == 1.0 else segment.label_from_thresholds(
+            den, tuple(t * scale for t in thresholds), CFG_S["min_obj_px"])
+        assert np.array_equal(scaled_lab, expected)
+        assert set(kpi.kpis(scaled_lab)) == set(kpi.KPI_COLS)
+
+    flat = np.full((256, 256), 120, dtype=np.uint8)
+    fallback_lab, fallback_thresholds = segment.segment_tile(flat, CFG_S)
+    fallback_variants = kpi.scaled_threshold_labels(None, fallback_lab, fallback_thresholds, CFG_S)
+    assert all(np.array_equal(scaled_lab, fallback_lab) for _, scaled_lab in fallback_variants)
+
+
+def test_kpi_sensitivity_rows_include_all_kpis(tmp_path):
+    img, _ = synthetic()
+    lab, thresholds = segment.segment_tile(img, CFG_S)
+    masks_dir = tmp_path / "masks"
+    tiles_dir = tmp_path / "tiles"
+    masks_dir.mkdir()
+    tiles_dir.mkdir()
+    Image.fromarray(lab).save(masks_dir / "mask.png")
+    np.save(tiles_dir / "tile.npy", img)
+    row = {"tile_id": "tile01", "sample_id": "sample01", "batch": "Batch_1", "y": 0, "x": 0,
+           "mask_path": "mask.png", "path": "tile.npy", "t0": thresholds[0], "t1": thresholds[1],
+           "threshold_fallback": False}
+    rec, sensitivity = kpi._work((row, str(tiles_dir), str(masks_dir), CFG_S))
+    assert len(sensitivity) == 3
+    assert all(set(kpi.KPI_COLS) <= set(result) for result in sensitivity)
+    nominal = next(result for result in sensitivity if result["scale"] == 1.0)
+    assert np.allclose([nominal[col] for col in kpi.KPI_COLS], [rec[col] for col in kpi.KPI_COLS], equal_nan=True)
+
+
+def test_fraction_sensitivity_guard_requires_exact_values():
+    old = pd.DataFrame({"level": ["tile", "image"], "batch": ["Batch_1", "Batch_1"],
+                        "sample_id": ["sample01", "sample01"], "scale": [0.9, 0.9],
+                        "tile_id": ["tile01", None], "frac_c0": [0.1, 0.11],
+                        "frac_c1": [0.8, 0.79], "frac_c2": [0.1, 0.1]})
+    assert kpi.fraction_sensitivity_unchanged(old, old.copy())
+    changed = old.copy()
+    changed.loc[0, "frac_c0"] += 1e-12
+    assert not kpi.fraction_sensitivity_unchanged(old, changed)
 
 
 def test_kpis_and_small_objects_removed():
