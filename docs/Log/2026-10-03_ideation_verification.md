@@ -125,3 +125,13 @@ Additional checks for the comparison:
 - Pushed scaffold c9943d0: docs/ (FRAMEWORK, PROJECT_STATE, READ, RESEARCH, Log + Drive listing), AGENTS.md, .gitignore (data/, tifs, secrets, weights), MIT LICENSE, README, pyproject + requirements, configs/v1.yaml, src/qc with 11 stage modules (docstring contracts) and a Typer CLI (`python -m qc info|run|<stage>`), schema/verdict.schema.json, scripts/download_drive.py, modal_app.py stub, app/streamlit_app.py stub, tests (3 passing), .agents/skills (modal + 7 K-Dense skills).
 - Verified locally: `uv venv` + `uv pip install -e .`, `python -m qc info`, `pytest` 3 passed.
 - Not done: handoff to Devin Cloud (awaiting approval). Pending: branch protection on main (needs org admin), Devin GitHub App on the org for cloud sessions.
+
+## T+6.5h: handoff prepared (web, not CLI)
+
+- `/handoff` is not available in this Desktop session and the CLI is not logged in; team chose to start the cloud session from app.devin.ai directly.
+- `docs/HANDOFF_BRIEF.md` committed and pushed (steps 1-5: audit, tiles, artefacts, segment+kpi, reality-check figures; rules; report format; branch `stage/s1-s5-reality-check`, PR not merged).
+- Prompt for the cloud session given to Alvin in chat.
+
+## T+6.5h: phase names confirmed
+
+- Team reports Polaron confirmed: class 0 = void, 1 = graphite, 2 = silicon. Updated configs/v1.yaml (class_names), HANDOFF_BRIEF rules, FRAMEWORK hard rule 2, Dataset First Look, Questions for Polaron (#2 answered). Provenance to be cited as "Polaron, T+6.5h" wherever a phase is named. Still unconfirmed: pixel size, Si vs SiOx, nominal Si wt%.
