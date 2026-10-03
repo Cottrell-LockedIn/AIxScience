@@ -25,15 +25,16 @@ artefacts:
 segmentation:
   channel: BSE
   denoise: {method: median, size: 5}
-  classes: 3                            # pore / graphite / high-Z particle phase (names unconfirmed)
+  classes: 3                            # 0 = void/pore, 1 = graphite, 2 = silicon (confirmed by Polaron, T+6.5h)
+  class_names: [void, graphite, silicon]
   per_tile_thresholds: true
   min_object_px: 20
   threshold_perturbation: 0.10          # +/-10 % sensitivity check
 
 kpis:
   - phase_fraction
-  - highz_particle_size
-  - highz_count_density
+  - silicon_particle_size
+  - silicon_count_density
   - pore_size
   - tpc_length
 
