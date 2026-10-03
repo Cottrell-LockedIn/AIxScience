@@ -40,6 +40,22 @@ def run(config: str = typer.Option("configs/v1.yaml", "--config", "-c")) -> None
 
 
 @app.command()
+def validate(features: str = typer.Option(..., "--features", help="image-level feature table (.parquet or .csv)"),
+             out: str = typer.Option(None, "--out", help="output dir, default results/validate/<table-name>/"),
+             artefacts: str = typer.Option("results/artefacts_per_image.parquet", "--artefacts"),
+             images: str = typer.Option("results/audit/images.csv", "--images"),
+             sensitivity: str = typer.Option("results/kpi_sensitivity.parquet", "--sensitivity"),
+             seed: int = typer.Option(0, "--seed"), n_boot: int = typer.Option(1000, "--n-boot"),
+             n_perm: int = typer.Option(10_000, "--n-perm"),
+             rf: bool = typer.Option(False, "--rf", help="also fit a random forest in the LOIO/LOGO check"),
+             config: str = typer.Option("configs/v1.yaml", "--config", "-c")) -> None:
+    """Validation harness for any image-level feature table (stability, confounding, batch tests, LOIO/LOGO)."""
+    cfg = _config.load(config)
+    typer.echo(f"[qc] validate  config={cfg['_path']}@{cfg['_hash']}  git={_config.git_sha()}")
+    importlib.import_module("qc.validate").run(cfg, features, out, artefacts, images, sensitivity, seed, n_boot, n_perm, rf)
+
+
+@app.command()
 def info(config: str = typer.Option("configs/v1.yaml", "--config", "-c")) -> None:
     """Print config hash, git sha and stage list."""
     cfg = _config.load(config)
