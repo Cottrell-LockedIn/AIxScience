@@ -6,7 +6,6 @@ from __future__ import annotations
 
 import importlib
 import json
-import subprocess
 
 import typer
 
@@ -17,16 +16,9 @@ STAGES = ["audit", "tiles", "artefacts", "segment", "kpi", "features", "stats", 
           "verdict", "robustness", "heldout"]
 
 
-def _git_sha() -> str:
-    try:
-        return subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], text=True).strip()
-    except Exception:  # noqa: BLE001
-        return "unknown"
-
-
 def _run(stage: str, cfg_path: str) -> None:
     cfg = _config.load(cfg_path)
-    typer.echo(f"[qc] {stage}  config={cfg['_path']}@{cfg['_hash']}  git={_git_sha()}")
+    typer.echo(f"[qc] {stage}  config={cfg['_path']}@{cfg['_hash']}  git={_config.git_sha()}")
     importlib.import_module(f"qc.{stage}").run(cfg)
 
 
@@ -51,7 +43,7 @@ def run(config: str = typer.Option("configs/v1.yaml", "--config", "-c")) -> None
 def info(config: str = typer.Option("configs/v1.yaml", "--config", "-c")) -> None:
     """Print config hash, git sha and stage list."""
     cfg = _config.load(config)
-    typer.echo(json.dumps({"config": cfg["_path"], "config_hash": cfg["_hash"], "git": _git_sha(),
+    typer.echo(json.dumps({"config": cfg["_path"], "config_hash": cfg["_hash"], "git": _config.git_sha(),
                            "stages": STAGES}, indent=2))
 
 
