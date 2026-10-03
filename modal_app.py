@@ -118,6 +118,28 @@ def _append_modal_run(
         row.to_csv(path, index=False)
 
 
+def _assert_sensitivity_unchanged(new: pd.DataFrame, path: Path) -> None:
+    import pandas as pd
+
+    if not path.exists():
+        return
+    old = pd.read_parquet(path)
+    provenance = {"config_hash", "git_sha"}
+    columns = [column for column in new.columns if column not in provenance]
+    old_columns = [column for column in old.columns if column not in provenance]
+    if columns != old_columns:
+        raise AssertionError(
+            f"kpi_sensitivity schema changed: previous={old_columns}, new={columns}"
+        )
+    sort_keys = [key for key in ("level", "sample_id", "scale", "tile_id") if key in columns]
+    old = old.sort_values(sort_keys, kind="stable", na_position="last")[columns].reset_index(drop=True)
+    current = new.sort_values(sort_keys, kind="stable", na_position="last")[columns].reset_index(drop=True)
+    try:
+        pd.testing.assert_frame_equal(old, current, check_exact=True, check_dtype=False)
+    except AssertionError as error:
+        raise AssertionError("optimized KPI sensitivity differs from the existing output") from error
+
+
 def _run_kpi_sensitivity() -> None:
     import numpy as np
     import pandas as pd
@@ -195,11 +217,13 @@ def _run_kpi_sensitivity() -> None:
         pd.concat([tile.assign(level="tile"), image.assign(level="image")], ignore_index=True),
         cfg,
     )
+    _assert_sensitivity_unchanged(sensitivity, results_dir / "kpi_sensitivity.parquet")
     sensitivity.to_parquet(results_dir / "kpi_sensitivity.parquet", index=False)
     elapsed = time.perf_counter() - started
     print(
         f"kpi_sensitivity: {len(sensitivity_rows)} tile-scale rows, {len(payloads) * 3} image-scale rows; "
         f"{parity_checks}/{len(rows)} byte-identical masks; scale-1.0 KPI and fraction parity exact; "
+        "all previous KPI sensitivity values identical; "
         f"Modal wall={map_wall_s:.2f}s, container seconds={container_seconds:.2f}, "
         f"local elapsed={elapsed:.2f}s, estimated cost=${container_seconds * rate:.6f}"
     )
