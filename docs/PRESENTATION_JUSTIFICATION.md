@@ -25,6 +25,10 @@ Status: working note (T+1 day). Every methodological choice we will be asked to 
 | 19 | Modal used for compute, not for data | Embeddings for 4329 tiles, LOIO x LOGO x config matrix, robustness panels; it cannot fix n = 31 | `docs/READ/Modal Recommended Workflow.md` |
 | 20 | Tile grid covers 100 % of every image | Edge-anchored last tile; verified 93/93 image-channel fields fully covered after 8 px crop (found by review, fixed in PR #1) | `src/qc/tiles.py`; PR #1 |
 
+## Target as clarified by Polaron (2026-10-03)
+
+Batch_3 is the promised baseline; Batch_1/2 are different, not worse; the judged question is "what differs, and can you categorise the held-back images (in or out of the Batch_3 distribution)?" Every slide should answer that question first and keep the good/bad disclaimer as a footnote. Report batch-ID accuracy as LOIO (held-back proxy) and LOGO (new-session proxy), name the top drivers per batch, and label each driver material or acquisition. Source: `docs/READ/Polaron Clarification Batch Baseline and Judging.md`.
+
 ## Numbers now available (config hash `de199d6c8d69`, `results/validate/`)
 
 All from `python -m qc validate` (PR #2 harness) on the 11 pre-registered features alone (`results/validate/features_f01_f11/`) unless stated; n = 31 images, seed 0, 1000 bootstraps, 10 000 permutations.
