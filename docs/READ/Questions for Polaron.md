@@ -5,7 +5,7 @@ Each question states what we will do with the answer. Log answers in `DATA_AUDIT
 ## Must ask (changes the pipeline)
 
 1. **Is the pixel size 25 nm/px?** The TIFF resolution tag implies it, but there is no microscope metadata. -> Decides whether KPIs are reported in um or in px.
-2. **What is the bright phase in BSE?** Silicon, SiOx, or something else? Any nominal Si wt% per batch? -> Decides whether "high-Z phase fraction" can be named and compared against a specification.
+2. ~~What is the bright phase in BSE?~~ **Answered (T+6.5h): silicon; dark = graphite; black = void.** Still open: nominal Si wt% per batch, and whether it is Si or SiOx.
 3. **Is one of the three batches the approved reference / known-good supplier?** -> Decides whether W1 is reference-vs-incoming or pairwise.
 4. **Are the three held-back images each from one of the three batches, or could one be from a new batch?** -> Decides whether "matches none" must be a supported output.
 5. **Are the three detector files per id the same field of view, acquired in the same session?** -> Decides whether we can fuse BSE + Inlens per pixel.
