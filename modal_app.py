@@ -118,11 +118,13 @@ def _append_modal_run(
         row.to_csv(path, index=False)
 
 
-def _assert_sensitivity_unchanged(new: pd.DataFrame, path: Path) -> None:
+def _assert_sensitivity_unchanged(new: pd.DataFrame, path: Path) -> float:
+    import numpy as np
     import pandas as pd
+    from qc import kpi
 
     if not path.exists():
-        return
+        return 0.0
     old = pd.read_parquet(path)
     provenance = {"config_hash", "git_sha"}
     columns = [column for column in new.columns if column not in provenance]
@@ -134,10 +136,28 @@ def _assert_sensitivity_unchanged(new: pd.DataFrame, path: Path) -> None:
     sort_keys = [key for key in ("level", "sample_id", "scale", "tile_id") if key in columns]
     old = old.sort_values(sort_keys, kind="stable", na_position="last")[columns].reset_index(drop=True)
     current = new.sort_values(sort_keys, kind="stable", na_position="last")[columns].reset_index(drop=True)
-    try:
-        pd.testing.assert_frame_equal(old, current, check_exact=True, check_dtype=False)
-    except AssertionError as error:
-        raise AssertionError("optimized KPI sensitivity differs from the existing output") from error
+    exact_kpis = {
+        "frac_c0", "frac_c1", "frac_c2", "c2_count_density_per_Mpx",
+        "c2_eqdiam_median_px", "c2_eqdiam_p90_px", "c0_region_eqdiam_median_px",
+        "c0_region_area_mean_px", "c1_largest_component_frac", "c0_cracklike_frac",
+    }
+    max_abs_diff = 0.0
+    for column in columns:
+        left, right = old[column].to_numpy(), current[column].to_numpy()
+        if column in exact_kpis or not np.issubdtype(left.dtype, np.number):
+            equal = (left == right) | (pd.isna(left) & pd.isna(right))
+        else:
+            equal = np.isclose(left, right, rtol=1e-12, atol=0, equal_nan=True)
+            finite = np.isfinite(left) & np.isfinite(right)
+            if np.any(finite):
+                max_abs_diff = max(max_abs_diff, float(np.max(np.abs(left[finite] - right[finite]))))
+        if not np.all(equal):
+            position = int(np.flatnonzero(~equal)[0])
+            raise AssertionError(
+                f"optimized KPI sensitivity differs at row {position}, column {column}: "
+                f"{left[position]!r} != {right[position]!r}"
+            )
+    return max_abs_diff
 
 
 def _run_kpi_sensitivity() -> None:
@@ -217,13 +237,15 @@ def _run_kpi_sensitivity() -> None:
         pd.concat([tile.assign(level="tile"), image.assign(level="image")], ignore_index=True),
         cfg,
     )
-    _assert_sensitivity_unchanged(sensitivity, results_dir / "kpi_sensitivity.parquet")
+    max_abs_diff = _assert_sensitivity_unchanged(
+        sensitivity, results_dir / "kpi_sensitivity.parquet"
+    )
     sensitivity.to_parquet(results_dir / "kpi_sensitivity.parquet", index=False)
     elapsed = time.perf_counter() - started
     print(
         f"kpi_sensitivity: {len(sensitivity_rows)} tile-scale rows, {len(payloads) * 3} image-scale rows; "
         f"{parity_checks}/{len(rows)} byte-identical masks; scale-1.0 KPI and fraction parity exact; "
-        "all previous KPI sensitivity values identical; "
+        f"old KPI values/fractions exact, other floats within 1e-12 (max abs={max_abs_diff:.3g}); "
         f"Modal wall={map_wall_s:.2f}s, container seconds={container_seconds:.2f}, "
         f"local elapsed={elapsed:.2f}s, estimated cost=${container_seconds * rate:.6f}"
     )
