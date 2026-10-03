@@ -1,6 +1,6 @@
 # Data audit (S1)
 
-Generated 2026-10-03T13:59:50+00:00 by `python -m qc audit` (config `configs/v1.yaml` @ `1bec114301c3`, git `c007beb`). Source tables: `results/audit/files.csv` (per TIFF) and `results/audit/images.csv` (per 8-char sample id).
+Generated 2026-10-03T14:43:43+00:00 by `python -m qc audit` (config `configs/v1.yaml` @ `1bec114301c3`, git `b07dd65`). Source tables: `results/audit/files.csv` (per TIFF) and `results/audit/images.csv` (per 8-char sample id).
 
 ## Images per batch
 
@@ -8,24 +8,24 @@ Generated 2026-10-03T13:59:50+00:00 by `python -m qc audit` (config `configs/v1.
 |:--------|---------:|--------:|
 | Batch_1 |        7 |      21 |
 | Batch_2 |        7 |      21 |
-| Batch_3 |       17 |      50 |
+| Batch_3 |       17 |      51 |
 
 ## Channel set per image (count of images)
 
-| batch   |   BSE+ETD |   BSE+ETD+Inlens |   BSE+Inlens+SE |
-|:--------|----------:|-----------------:|----------------:|
-| Batch_1 |         0 |                7 |               0 |
-| Batch_2 |         0 |                6 |               1 |
-| Batch_3 |         1 |               13 |               3 |
+| batch   |   BSE+ETD+Inlens |   BSE+Inlens+SE |
+|:--------|-----------------:|----------------:|
+| Batch_1 |                7 |               0 |
+| Batch_2 |                6 |               1 |
+| Batch_3 |               14 |               3 |
 
-Images missing a channel: 1. Images whose channels have inconsistent shapes: 0.
+Images missing a channel: 0. Images whose channels have inconsistent shapes: 0.
 
 ## Geometry and encoding
 
 - Width: 6960 to 7000 px; height: 1612 to 2316 px.
 - dtype ['uint8'], samples per pixel [np.int64(3)], compression ['LZW'], software ['tifffile.py'].
-- RGB channels identical in 54/92 files (read channel 0 only).
-- Files where the last 2 columns differ between RGB channels (coloured edge line): 18; first 2 columns differ (left edge line): 20 -> border crop 8 px applies to all.
+- RGB channels identical in 54/93 files (read channel 0 only).
+- Files where the last 2 columns differ between RGB channels (coloured edge line): 18; first 2 columns differ (left edge line): 21 -> border crop 8 px applies to all.
 
 ## Resolution tag
 
@@ -43,7 +43,7 @@ Counts of the TIFF `XResolution` tag across files:
 | 126997984/125 |       6 |
 | 127001488/125 |       6 |
 | 126998952/125 |       6 |
-| 25400152/25   |       5 |
+| 25400152/25   |       6 |
 | 25399552/25   |       3 |
 | 127000848/125 |       3 |
 
@@ -67,7 +67,7 @@ Consistent across all files: **no**. If the tag were intentional it would mean 2
 | ('Batch_2', 'SE')     |   73.6 |  31.3 |   0   | 158   |
 | ('Batch_3', 'BSE')    |   58.8 |  21.2 |   7.1 | 125.7 |
 | ('Batch_3', 'ETD')    |   74   |  31.7 |   5.7 | 162.9 |
-| ('Batch_3', 'Inlens') |  105   |  51.8 |  15.1 | 242   |
+| ('Batch_3', 'Inlens') |  105.3 |  52.6 |  15.9 | 242.8 |
 | ('Batch_3', 'SE')     |   74   |  33.4 |   0   | 164   |
 
 ## Unconfirmed facts (see docs/READ/Questions for Polaron.md)
