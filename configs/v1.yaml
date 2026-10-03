@@ -41,12 +41,30 @@ kpis:
 embeddings:
   backbone: dinov2_vits14
   hub_repo: facebookresearch/dinov2
+  hub_ref: 7764ea0f912e53c92e82eb78a2a1631e92725fc8
+  weights_url: https://dl.fbaipublicfiles.com/dinov2/dinov2_vits14/dinov2_vits14_pretrain.pth
+  weights_sha256: b938bf1bc15cd2ec0feacfe3a1bb553fe8ea9ca46a7e1d8d00217f29aef60cd9
+  channels: [BSE, Inlens, ETD, SE]
   input_px: 518
   pooling: mean_patch
   device: auto
 
+kpi_extra:
+  crack_aspect_min: 5.0
+  tpc_max_r_px: 256
+  flake_percolation_flag: 0.5
+
+registration:
+  max_shift_px: 1.0
+  max_rotation_deg: 0.1
+  max_scale_dev: 0.002
+
+charging:
+  glow_channel: Inlens
+  glow_percentile: 95
+
 stats:
-  reference_batch: auto                 # auto = batch with most images; override when Polaron names one
+  reference_batch: Batch_3               # Polaron-stated baseline
   null_splits: 200
   permutations: 2000
   bands: {within: 0.95, outside: 0.99}
