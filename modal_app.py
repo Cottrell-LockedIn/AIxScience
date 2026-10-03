@@ -84,6 +84,50 @@ def kpi_sensitivity_image(payload: dict) -> dict:
     }
 
 
+@app.function(
+    image=common_image,
+    cpu=2,
+    memory=4096,
+    volumes={"/mnt/data": data_volume},
+    timeout=30 * 60,
+    max_containers=20,
+)
+def feature_sensitivity_chunk(payload: dict) -> dict:
+    from concurrent.futures import ThreadPoolExecutor
+    from qc import features
+
+    started = time.perf_counter()
+    params = payload["params"]
+
+    def process(row):
+        return features._feature_tile_sensitivity_work(
+            (row, "/mnt/data/tiles", "/mnt/data/masks", params)
+        )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        results = list(executor.map(process, payload["rows"]))
+    return {
+        "chunk_id": payload["chunk_id"],
+        "masks": results,
+        "n_tiles": len(results),
+        "mask_parity_checks": sum(result["mask_parity_checks"] for result in results),
+        "wall_s": time.perf_counter() - started,
+    }
+
+
+@app.function(
+    image=common_image,
+    cpu=2,
+    memory=4096,
+    timeout=30 * 60,
+    max_containers=20,
+)
+def feature_image_sensitivity(payload: dict) -> dict:
+    from qc import features
+
+    return features._feature_image_sensitivity_work(payload)
+
+
 def _append_modal_run(
     cfg: dict,
     function: str,
@@ -243,7 +287,7 @@ def _run_kpi_sensitivity() -> None:
     sensitivity.to_parquet(results_dir / "kpi_sensitivity.parquet", index=False)
     elapsed = time.perf_counter() - started
     print(
-        f"kpi_sensitivity: {len(sensitivity_rows)} tile-scale rows, {len(payloads) * 3} image-scale rows; "
+        f"kpi_sensitivity: {len(sensitivity_rows)} tile-scale rows, {len(image)} image-scale rows; "
         f"{parity_checks}/{len(rows)} byte-identical masks; scale-1.0 KPI and fraction parity exact; "
         f"old KPI values/fractions exact, other floats within 1e-12 (max abs={max_abs_diff:.3g}); "
         f"Modal wall={map_wall_s:.2f}s, container seconds={container_seconds:.2f}, "
@@ -316,6 +360,311 @@ def _run_kpi_local_benchmark() -> None:
     )
 
 
+def _feature_sensitivity_setup(cfg: dict):
+    import pandas as pd
+    from qc import features, kpi, segment
+
+    results_dir = _config.ROOT / "results"
+    tiles_dir = _config.resolve(cfg["data"]["tiles_dir"])
+    masks_dir = _config.resolve(cfg["data"].get("masks_dir", "data/masks"))
+    index = pd.read_parquet(tiles_dir / "index.parquet")
+    index = index.loc[index["channel"] == "BSE"]
+    thresholds = pd.read_parquet(results_dir / "thresholds_per_tile.parquet")
+    rows = kpi.join_thresholds(thresholds, index, cfg)
+    rows = rows.merge(
+        index[["tile_id", "img_h", "img_w"]],
+        on="tile_id",
+        how="left",
+        validate="one_to_one",
+    )
+    if len(rows) != len(index):
+        raise RuntimeError(f"expected {len(index)} BSE rows, got {len(rows)} threshold rows")
+
+    segmentation_params = segment.params(cfg["segmentation"])
+    records = rows.sort_values(["batch", "sample_id", "y", "x"]).to_dict("records")
+    chunk_size = 10
+    label_payloads = [
+        {
+            "chunk_id": chunk_id,
+            "rows": records[start:start + chunk_size],
+            "params": segmentation_params,
+        }
+        for chunk_id, start in enumerate(range(0, len(records), chunk_size))
+    ]
+    feature_cfg, feature_hash = features._feature_config()
+    thickness_cfg = feature_cfg["local_thickness"]
+    feature_params = {
+        "min_object_px": int(cfg["segmentation"]["min_object_px"]),
+        "thickness_exact_radius_max_px": float(thickness_cfg["exact_radius_max_px"]),
+        "thickness_growth": float(thickness_cfg["radius_growth"]),
+        "heterogeneity_window_px": int(feature_cfg["heterogeneity"]["window_px"]),
+        "pixel_size_nm_if_true": float(feature_cfg["pixel_size_nm_if_true"]),
+    }
+    return {
+        "results_dir": results_dir,
+        "tiles_dir": tiles_dir,
+        "masks_dir": masks_dir,
+        "rows": rows,
+        "label_payloads": label_payloads,
+        "feature_cfg": feature_cfg,
+        "feature_hash": feature_hash,
+        "feature_params": feature_params,
+        "segmentation_params": segmentation_params,
+    }
+
+
+def _build_feature_image_payloads(
+    rows,
+    label_results: list[dict],
+    feature_params: dict,
+    unanalysed_value: int,
+) -> list[dict]:
+    mask_map = {}
+    for chunk in label_results:
+        for tile in chunk["masks"]:
+            for item in tile["mask_pngs"]:
+                mask_map[(tile["tile_id"], item["scale"])] = item["png"]
+
+    payloads = []
+    for (batch, sample_id), group in rows.groupby(["batch", "sample_id"], sort=True):
+        group = group.sort_values(["y", "x"], kind="stable")
+        first = group.iloc[0]
+        tile_rows = group[["tile_id", "y", "x"]].to_dict("records")
+        for scale in (0.9, 1.0, 1.1):
+            masks = []
+            for row in tile_rows:
+                key = (row["tile_id"], scale)
+                if key not in mask_map:
+                    raise RuntimeError(f"missing sensitivity mask for {key}")
+                masks.append({"tile_id": row["tile_id"], "png": mask_map[key]})
+            payloads.append(
+                {
+                    "batch": batch,
+                    "sample_id": sample_id,
+                    "scale": scale,
+                    "image_shape": (int(first["img_h"]), int(first["img_w"])),
+                    "unanalysed_value": unanalysed_value,
+                    "rows": tile_rows,
+                    "mask_pngs": masks,
+                    "feature_params": feature_params,
+                }
+            )
+    return payloads
+
+
+def _assert_feature_scale_one(
+    rows: list[dict],
+    baseline_path: Path,
+) -> None:
+    import numpy as np
+    import pandas as pd
+    from qc import features
+
+    baseline = pd.read_parquet(baseline_path).set_index("sample_id")
+    exact_columns = {
+        "F01_c0_area_fraction",
+        "F02_c2_area_fraction",
+        "F05_c2_count_density_per_Mpx",
+        "F10_c0_fraction_iqr_512px",
+        "F11_c2_perimeter_fraction_adjacent_c0",
+    }
+    feature_columns = [
+        *features.FEATURE_COLUMNS,
+        "F03_c2_eqdiam_median_nm_if25",
+        "F04_c2_eqdiam_p90_nm_if25",
+        "F08_c0_local_thickness_median_nm_if25",
+    ]
+    for row in rows:
+        if row["scale"] != 1.0:
+            continue
+        for column in feature_columns:
+            actual = row[column]
+            expected = baseline.at[row["sample_id"], column]
+            if pd.isna(actual) and pd.isna(expected):
+                continue
+            matches = (
+                actual == expected
+                if column in exact_columns
+                else np.isclose(actual, expected, rtol=1e-12, atol=0)
+            )
+            if not matches:
+                raise AssertionError(
+                    f"scale-1.0 feature mismatch for {row['sample_id']} {column}: "
+                    f"{actual} != {expected}"
+                )
+
+
+def _run_features_sensitivity() -> None:
+    import numpy as np
+    import pandas as pd
+    from qc import features
+
+    cfg = _config.load()
+    setup = _feature_sensitivity_setup(cfg)
+    rows = setup["rows"]
+    label_payloads = setup["label_payloads"]
+    feature_params = setup["feature_params"]
+    overall_started = time.perf_counter()
+
+    label_started = time.perf_counter()
+    label_results = list(feature_sensitivity_chunk.map(label_payloads))
+    label_wall_s = time.perf_counter() - label_started
+    label_container_seconds = float(sum(result["wall_s"] for result in label_results))
+    cpu_rate = 2 * 0.0000131 + 4 * 0.00000222
+    _append_modal_run(
+        cfg,
+        "features_sensitivity_labels",
+        len(label_payloads),
+        label_wall_s,
+        "Modal CPU (2 cores, 4 GiB)",
+        label_container_seconds * cpu_rate,
+    )
+    parity_checks = sum(result["mask_parity_checks"] for result in label_results)
+    if parity_checks != len(rows):
+        raise RuntimeError(f"feature mask parity checks {parity_checks} != {len(rows)}")
+
+    feature_payloads = _build_feature_image_payloads(
+        rows,
+        label_results,
+        feature_params,
+        int(setup["feature_cfg"]["stitch"]["unanalysed_value"]),
+    )
+    image_started = time.perf_counter()
+    image_results = list(feature_image_sensitivity.map(feature_payloads))
+    image_wall_s = time.perf_counter() - image_started
+    image_container_seconds = float(sum(result["wall_s"] for result in image_results))
+    _append_modal_run(
+        cfg,
+        "features_sensitivity_images",
+        len(feature_payloads),
+        image_wall_s,
+        "Modal CPU (2 cores, 4 GiB)",
+        image_container_seconds * cpu_rate,
+    )
+    feature_rows = [
+        {key: value for key, value in result.items() if key != "wall_s"}
+        for result in image_results
+    ]
+    if len(feature_rows) != 93:
+        raise RuntimeError(f"expected 93 image-scale feature rows, got {len(feature_rows)}")
+    _assert_feature_scale_one(
+        feature_rows,
+        setup["results_dir"] / "features_per_image.parquet",
+    )
+    output = pd.DataFrame(feature_rows).sort_values(
+        ["batch", "sample_id", "scale"], kind="stable"
+    )
+    output["phase_identity"] = features.PHASE_IDENTITY
+    output["features_config_hash"] = setup["feature_hash"]
+    output = _config.stamp(output, cfg)
+    output.to_parquet(setup["results_dir"] / "features_sensitivity.parquet", index=False)
+
+    overall_wall_s = time.perf_counter() - overall_started
+    total_cost = (
+        label_container_seconds + image_container_seconds
+    ) * cpu_rate
+    print(
+        f"features_sensitivity: {len(label_payloads)} ten-tile label inputs, "
+        f"{parity_checks}/{len(rows)} scale-1.0 byte-identical masks; "
+        f"{len(feature_rows)} image-scale rows; scale-1.0 features matched baseline; "
+        f"Modal wall={overall_wall_s:.2f}s (labels={label_wall_s:.2f}s, "
+        f"images={image_wall_s:.2f}s), estimated cost=${total_cost:.6f}"
+    )
+
+
+def _run_features_local_benchmark() -> None:
+    import numpy as np
+    import pandas as pd
+    from qc import features
+
+    cfg = _config.load()
+    setup = _feature_sensitivity_setup(cfg)
+    rows = setup["rows"]
+    label_tasks = [
+        (
+            payload["chunk_id"],
+            payload["rows"],
+            str(setup["tiles_dir"]),
+            str(setup["masks_dir"]),
+            payload["params"],
+        )
+        for payload in setup["label_payloads"]
+    ]
+    started = time.perf_counter()
+    with ProcessPoolExecutor(max_workers=8) as executor:
+        label_results = list(
+            executor.map(features._feature_sensitivity_chunk_work, label_tasks, chunksize=1)
+        )
+    parity_checks = sum(result["mask_parity_checks"] for result in label_results)
+    feature_payloads = _build_feature_image_payloads(
+        rows,
+        label_results,
+        setup["feature_params"],
+        int(setup["feature_cfg"]["stitch"]["unanalysed_value"]),
+    )
+    with ProcessPoolExecutor(max_workers=8) as executor:
+        image_results = list(
+            executor.map(
+                features._feature_image_sensitivity_work,
+                feature_payloads,
+                chunksize=1,
+            )
+        )
+    wall_s = time.perf_counter() - started
+    local_rows = [
+        {key: value for key, value in result.items() if key != "wall_s"}
+        for result in image_results
+    ]
+    remote = pd.read_parquet(
+        setup["results_dir"] / "features_sensitivity.parquet"
+    ).set_index(["sample_id", "scale"])
+    exact_columns = {
+        "F01_c0_area_fraction",
+        "F02_c2_area_fraction",
+        "F05_c2_count_density_per_Mpx",
+        "F10_c0_fraction_iqr_512px",
+        "F11_c2_perimeter_fraction_adjacent_c0",
+    }
+    feature_columns = [
+        *features.FEATURE_COLUMNS,
+        "F03_c2_eqdiam_median_nm_if25",
+        "F04_c2_eqdiam_p90_nm_if25",
+        "F08_c0_local_thickness_median_nm_if25",
+    ]
+    max_abs_diff = 0.0
+    for row in local_rows:
+        for column in feature_columns:
+            local_value = row[column]
+            remote_value = remote.at[(row["sample_id"], row["scale"]), column]
+            if pd.isna(local_value) and pd.isna(remote_value):
+                continue
+            if column in exact_columns:
+                matches = local_value == remote_value
+            else:
+                matches = np.isclose(local_value, remote_value, rtol=1e-12, atol=0)
+                max_abs_diff = max(max_abs_diff, abs(local_value - remote_value))
+            if not matches:
+                raise AssertionError(
+                    f"local/Modal feature mismatch for {row['sample_id']} "
+                    f"scale={row['scale']} {column}: {local_value} != {remote_value}"
+                )
+
+    _append_modal_run(
+        cfg,
+        "features_sensitivity_local",
+        len(setup["label_payloads"]) + len(feature_payloads),
+        wall_s,
+        "local-cpu (8 cores)",
+        0.0,
+        "local CPU benchmark (8 worker processes); no Modal charge",
+    )
+    print(
+        f"features_sensitivity_local: {len(feature_payloads)} image-scale rows; "
+        f"{parity_checks}/{len(rows)} byte-identical masks; feature values matched Modal "
+        f"within 1e-12 (max abs={max_abs_diff:.3g}); 8-core local wall={wall_s:.2f}s"
+    )
+
+
 @app.local_entrypoint()
 def main(task: str = "kpi"):
     if task == "kpi":
@@ -323,5 +672,11 @@ def main(task: str = "kpi"):
         return
     if task == "kpi-local":
         _run_kpi_local_benchmark()
+        return
+    if task == "features":
+        _run_features_sensitivity()
+        return
+    if task == "features-local":
+        _run_features_local_benchmark()
         return
     raise ValueError(f"unsupported task {task!r}")
