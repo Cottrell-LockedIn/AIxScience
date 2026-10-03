@@ -25,10 +25,31 @@ Status: working note (T+1 day). Every methodological choice we will be asked to 
 | 19 | Modal used for compute, not for data | Embeddings for 4329 tiles, LOIO x LOGO x config matrix, robustness panels; it cannot fix n = 31 | `docs/READ/Modal Recommended Workflow.md` |
 | 20 | Tile grid covers 100 % of every image | Edge-anchored last tile; verified 93/93 image-channel fields fully covered after 8 px crop (found by review, fixed in PR #1) | `src/qc/tiles.py`; PR #1 |
 
-## Figures / numbers still needed for the deck (TODO)
-- LOIO vs LOGO accuracy, with and without artefact covariates (S7).
-- Feature stability table: bootstrap rank stability and threshold-perturbation sensitivity for the 10 features (validation harness, child session).
-- Per-feature confound screen: correlation with noise/sharpness/group (validation harness).
-- Which of the 10 features survive -> the kept list, with the drop reasons.
+## Numbers now available (config hash `de199d6c8d69`, `results/validate/`)
+
+All from `python -m qc validate` (PR #2 harness) on the 11 pre-registered features alone (`results/validate/features_f01_f11/`) unless stated; n = 31 images, seed 0, 1000 bootstraps, 10 000 permutations.
+
+| Claim on stage | Number | File |
+|---|---|---|
+| LOIO vs LOGO, no acquisition covariates (logistic regression, fold-fitted scaling) | accuracy 0.45 (LOIO) vs 0.32 (LOGO); chance (majority) 0.55 | `loio_logo.csv` |
+| Same, with the 6 acquisition covariates added | 0.65 (LOIO) vs 0.68 (LOGO) | `loio_logo.csv` |
+| Reading | material features alone do not predict batch; the only predictive signal is acquisition (noise, sharpness, mean grey). This is the artefact-ablation result the brief asked for | |
+| Keep / drop / investigate under the pre-declared rule | 0 keep, 0 drop, 11 investigate | `decisions.csv` |
+| Acquisition-confounded (group association stronger than batch, p_group < 0.05) | F05 count density (p 0.0003), F06 Clark-Evans R (p 0.007, rho +0.53 with mean grey); F09 anisotropy borderline (p ~0.05, rho +0.55 with horizontal-stripe score) | `confound.csv` |
+| Bootstrap rank stability (>= 0.7 required) | F06 0.75; F01 0.69; F03 0.63; F07 0.56; F02 0.54; F05 0.44; F04 0.43; F11 0.39; F10 0.24; F09 0.22; F08 undefined (median pinned at 26 px in all batches) | `stability.csv` |
+| Degenerate | F11 Si-void interface fraction ~0.001 (max 0.004); F03 Si median diameter 7.6-8.5 px, set by the 20 px min-object floor | PR #3 report |
+| Batch effects after BH correction (median shift / Batch_3 MAD) | none with q < 0.05; best is F04 p90 Si diameter, Batch_2 vs Batch_3, -1.17 MAD after residualising on covariates, q = 0.15 | `batch_tests.csv` |
+| Old KPI table (8 columns) for comparison | 8 investigate; LOIO 0.58 / LOGO 0.45 without covariates, 0.61 / 0.58 with | `results/validate/kpi_per_image/` |
+| Threshold sensitivity (+/-10 %) on class fractions | moves them by 1.2-1.7 Batch_3 MAD, i.e. more than any batch gap; no sensitivity row exists yet for F03-F11 (NEXT_STEPS item 2) | `stability.csv` |
+| Reference LOO | the same 3 Batch_3 images flagged (`vc2whyaq`, `ufdvpb81`, `hzumfsms`) | `reference_loo.csv` |
+| Multi-Otsu failure tiles | 31/1443 tiles with t1 < 60 carry class-2 fraction 0.29 vs ~0.08; image-level rho(mean t1, F02) = -0.59 | `docs/FEATURE_DOSSIER.md` |
+
+Honest one-liner for the deck: "We pre-registered 11 consultant-approved measurements, built the validation harness first, and found that none separates the batches once acquisition is controlled; what does separate them is the microscope session. The next lever is segmentation stability, not more features."
+
+## Figures still needed for the deck (TODO; `scripts/presentation_figs.py`, NEXT_STEPS item 8)
+- LOIO vs LOGO bars, with and without covariates (numbers above).
+- Feature stability table + confound heat-map (from `stability.csv`, `confound.csv`).
+- Kept / investigate / dropped table with reasons (`decisions.csv`).
 - Reference LOO plot with the 3 flagged Batch_3 images and their overlays.
 - One representative crop per batch with mask overlay, provenance tag in the caption.
+- Failure-mode coverage table (which of the consultant's 22 modes we screen, proxy or cannot; `docs/FAILURE_MODE_MAP.md` when it lands).

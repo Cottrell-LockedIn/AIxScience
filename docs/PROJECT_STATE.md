@@ -1,7 +1,7 @@
 # Project State
 
-Updated: 2026-10-03, ~T+8h (Devin cloud session 1)
-Phase: v1 S1-S5 implemented and run on all 31 images; PR #1 `v1 S1-S5 reality check` open on `stage/s1-s5-reality-check`, awaiting review and consultant checkpoint C1
+Updated: 2026-10-03, ~T+1d (Devin cloud session 1, part 2)
+Phase: S1-S5 + 11 pre-registered features + validation harness + evidence base folded into PR #1 on `stage/s1-s5-reality-check`; consultant sign-off received; no feature passes the pre-declared keep rule yet (see `NEXT_STEPS.md`)
 Submission repository: github.com/Cottrell-LockedIn/AIxScience (private, org), local clone at `code/AIxScience_Msia`. Scaffold pushed to `main` at commit c9943d0 (T+6h). Planning docs mirrored under `docs/` in the repo.
 
 ## Current decision
@@ -65,6 +65,16 @@ Before the unseen batch arrives, record:
 - Review fixes (Devin Review on PR #1): edge-anchored tiles for full field-of-view coverage, fallback for tiles with <3 grey levels, config-hash/position check before joining masks in `qc kpi`, SHA-256 recomputed in audit, nullable pixel-size tag. All S2-S5 outputs regenerated; conclusions unchanged (13 acquisition groups, not 15, after recount).
 - Unresolved risks: batch/session confound (noise, sharpness, res-tag groups); multi-Otsu instability on tiles without class-2 particles; pixel size and phase identity unconfirmed.
 - Exact next action: consultant checkpoint C1 on overlays/figures and the five questions in PR #1; then wave 1 (S5 embeddings on Modal, S6, S7 with artefact ablation + leave-one-group-out, S8, S9).
+
+### 2026-10-03 cloud session 1, part 2 (consultant approval -> features, validation, evidence, fold)
+
+- Completed: consultant approved the sign-off sheet (Parts A/B). Four child sessions ran in parallel and were folded into `stage/s1-s5-reality-check`: PR #2 validation harness (`src/qc/validate.py`, `qc validate`), PR #3 feature blocks (`src/qc/features.py`, `qc features`, `configs/features_v1.yaml`), PR #4 feature dossier (`docs/FEATURE_DOSSIER.md`, 33 DOIs), PR #5 evidence base (`docs/EVIDENCE_BASE.md`, `docs/evidence/claims.csv` 72 claims, `references.bib` 109 DOIs). `main` commit 50b375f (config class_names, Polaron-confirmed phase names) merged in; all results regenerated under config hash `de199d6c8d69` (previously `1bec114301c3`). Tests: 29 passing.
+- Evidence: `results/validate/features_f01_f11/` (11 features alone), `results/validate/features_by_image/` (all columns), `results/validate/kpi_per_image/` (old KPIs); numbers summarised in `docs/PRESENTATION_JUSTIFICATION.md`.
+- Decisions: (1) pre-declared keep/drop rule (rank stability >= 0.7, not acquisition-confounded, threshold sensitivity < 0.5 Batch_3 MAD) applied -> 0 keep / 11 investigate; no feature is frozen into the verdict yet. (2) F11 (Si-void interface) and F03 (Si median diameter) are degenerate as defined; kept in the table as pre-registered, flagged uninformative. (3) Bright-phase (class 2) evidence routes to `investigate` + EDS request only, never alone to `outside bounds`: the consultant handoff (`docs/READ/Consultant Failure Modes Handoff.md`) records composition as unconfirmed and bright particles as unidentified (possible contamination, charging, relief), while Polaron states silicon; both positions recorded. (4) Evidence base corrected two numbers in the earlier rulebook draft (Si wt% range and porosity window were not in the cited abstracts) -> direction-only rules. (5) Consultant failure-mode importance weights are routing hints, not score multipliers. (6) Cycling-induced modes are out of scope (fresh electrode).
+- Rejected: training on agent-generated 84-feature labels as accept/reject ground truth (labels unavailable anyway; would only be valid for segmentation/defect candidates).
+- Reviewer verdict: pending (fresh-context review of PR #1 after the fold).
+- Unresolved risks: no feature passes the keep rule; acquisition group predicts batch better than material features (LOGO 0.32 vs 0.68 with covariates); per-tile multi-Otsu failure on particle-free tiles drives F02-F05; BSE<->In-Lens<->ETD registration and charging-bright fraction pending (child session); failure-mode map / `docs/RULEBOOK.md` pending (child session).
+- Exact next action: `docs/NEXT_STEPS.md` items 1-4 (segmentation challenger, sensitivity rows for all features, charging covariate, re-run harness and freeze the kept list), then defects, verdict + ledger, Modal matrix, presentation figures, `v1-frozen` tag before any held-back image.
 
 Record for each entry:
 
