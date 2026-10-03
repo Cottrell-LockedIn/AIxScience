@@ -1,6 +1,6 @@
 # Data audit (S1)
 
-Generated 2026-10-03T14:54:06+00:00 by `python -m qc audit` (config `configs/v1.yaml` @ `1bec114301c3`, git `bb277e7`). Source tables: `results/audit/files.csv` (per TIFF) and `results/audit/images.csv` (per 8-char sample id).
+Generated 2026-10-03T17:17:39+00:00 by `python -m qc audit` (config `configs/v1.yaml` @ `de199d6c8d69`, git `f1ea178`). Source tables: `results/audit/files.csv` (per TIFF) and `results/audit/images.csv` (per 8-char sample id).
 
 ## Images per batch
 

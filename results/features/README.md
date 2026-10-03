@@ -2,7 +2,7 @@
 
 Phase identity: **stated by Polaron, not image-verified** (class 2 bright = silicon, class 1 mid = graphite, class 0 dark = void/pore; Si vs SiOx indistinguishable in BSE; binder / conductive additive lumped into class 0 or 1; no chemistry claims beyond the three stated identities).
 
-Produced by `python -m qc features` with `configs/v1.yaml@1bec114301c3`, `configs/features_v1.yaml@a03b4b7c5a70`, git `d593ac3`; 31 images, 1443 BSE tiles, 75 s wall.
+Produced by `python -m qc features` with `configs/v1.yaml@de199d6c8d69`, `configs/features_v1.yaml@a03b4b7c5a70`, git `f1ea178`; 31 images, 1443 BSE tiles, 75 s wall.
 
 Units are px / px^2 / fractions. `*_nm_if25` columns are px x 25 and are only meaningful if the unconfirmed 25 nm/px pixel size is true. The image (8-char `sample_id`) is the independent unit (n = 31); `features_by_tile.parquet` rows are pseudo-replicates for diagnostics only.
 

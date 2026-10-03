@@ -1,6 +1,6 @@
 # Validation of `kpi_per_image`
 
-Inputs: results/kpi_per_image.parquet (sha256 bbf2e8cd28d2), covariates from results/artefacts_per_image.parquet, acquisition groups from results/audit/images.csv, threshold sensitivity from results/kpi_sensitivity.parquet. Config 1bec114301c3, git d593ac3, seed 0, 1000 bootstrap resamples, 10000 permutations.
+Inputs: results/kpi_per_image.parquet (sha256 e377d9950dea), covariates from results/artefacts_per_image.parquet, acquisition groups from results/audit/images.csv, threshold sensitivity from results/kpi_sensitivity.parquet. Config de199d6c8d69, git f1ea178, seed 0, 1000 bootstrap resamples, 10000 permutations.
 
 ## Headline
 
