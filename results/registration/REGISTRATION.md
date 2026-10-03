@@ -1,6 +1,6 @@
 # Detector pixel registration (BSE vs Inlens, BSE vs ETD/SE)
 
-Produced by `python -m qc register` with `configs/v1.yaml@1bec114301c3`, git `790c1ef`. n = 31 images (independent unit), 62 detector pairs.
+Produced by `python -m qc register` with `configs/v1.yaml@de199d6c8d69`, git `20e3371`. n = 31 images (independent unit), 62 detector pairs.
 
 Method: phase correlation (`skimage.registration.phase_cross_correlation`, normalization=phase, x10 upsampling) on 768 px non-overlapping windows (all rows that fit x up to 6 columns), BSE as reference, Hann taper. Shift (dy, dx) in px of the cropped frame = shift to apply to the SE image to align it with BSE. Peak sharpness = peak-to-sidelobe ratio (PSR) of the phase-correlation surface; windows with PSR < 10.0 are ignored. Scale / rotation: similarity transform fitted to the window shift field.
 

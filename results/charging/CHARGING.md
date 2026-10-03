@@ -1,7 +1,7 @@
 # Charging / topography glow in the class-2 (bright BSE) mask
 
 Phase identity: class 2 bright = silicon, class 1 mid = graphite, class 0 dark = void/pore, **stated by Polaron, not image-verified**.
-Produced by `python -m qc charging` with `configs/v1.yaml@1bec114301c3`, git `790c1ef`; n = 31 pixel-registered images (independent unit; 0 skipped as not registered). Units px; 25 nm/px unconfirmed.
+Produced by `python -m qc charging` with `configs/v1.yaml@de199d6c8d69`, git `20e3371`; n = 31 pixel-registered images (independent unit; 0 skipped as not registered). Units px; 25 nm/px unconfirmed.
 
 ## Method
 
