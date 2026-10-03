@@ -56,6 +56,19 @@ def validate(features: str = typer.Option(..., "--features", help="image-level f
 
 
 @app.command()
+def classify(features: str = typer.Option("results/features/features_f01_f11.parquet", "--features", help="image-level feature table"),
+             out: str | None = typer.Option(None, "--out"),
+             heldout: str | None = typer.Option(None, "--heldout", help="table of new images (sample_id + feature columns) to score with the frozen model"),
+             seed: int = typer.Option(0, "--seed"), n_perm: int = typer.Option(200, "--n-perm"),
+             rf: bool = typer.Option(False, "--rf", help="also fit a random forest"),
+             config: str = typer.Option("configs/v1.yaml", "--config", "-c")) -> None:
+    """Batch identification per feature family (LOIO/LOGO + permutation null), drivers, OOD screen vs each batch, held-out path (results/classify/)."""
+    cfg = _config.load(config)
+    typer.echo(f"[qc] classify  config={cfg['_path']}@{cfg['_hash']}  git={_config.git_sha()}")
+    importlib.import_module("qc.classify").run(cfg, features, out, heldout=heldout, seed=seed, n_perm=n_perm, rf=rf)
+
+
+@app.command()
 def register(config: str = typer.Option("configs/v1.yaml", "--config", "-c")) -> None:
     """Check BSE / Inlens / ETD-SE pixel registration per image (results/registration/)."""
     _run("registration", config)

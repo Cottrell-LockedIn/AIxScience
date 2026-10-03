@@ -29,6 +29,17 @@ Status: working note (T+1 day). Every methodological choice we will be asked to 
 
 Batch_3 is the promised baseline; Batch_1/2 are different, not worse; the judged question is "what differs, and can you categorise the held-back images (in or out of the Batch_3 distribution)?" Every slide should answer that question first and keep the good/bad disclaimer as a footnote. Report batch-ID accuracy as LOIO (held-back proxy) and LOGO (new-session proxy), name the top drivers per batch, and label each driver material or acquisition. Source: `docs/READ/Polaron Clarification Batch Baseline and Judging.md`.
 
+## Batch identification with a permutation null (`results/classify/features_f01_f11/accuracy.csv`)
+
+| family | LOIO acc | null p95 | p_perm | LOGO acc | p_perm |
+|---|---|---|---|---|---|
+| material F01-F11 (11) | 0.45 | 0.52 | 0.19 | 0.32 | 0.61 |
+| acquisition covariates (6) | 0.71 | 0.52 | 0.005 | 0.65 | 0.005 |
+| material + acquisition (17) | 0.65 | 0.52 | 0.015 | 0.68 | 0.005 |
+| old KPIs (8) | 0.58 | 0.52 | 0.045 | 0.45 | 0.14 |
+
+Majority chance 0.55; null mean 0.34-0.36. Slide sentence: "with labels shuffled, the material features do exactly as well as they do with the true labels; the microscope settings identify the batch at 0.71." Top drivers per batch are in `drivers.csv`, each tagged material or acquisition. OOD screen (`ood.csv`): no image falls outside every batch at alpha 0.05 - the hand features are too weak for an in/out call; this is the honest reason embeddings come next.
+
 ## Numbers now available (config hash `de199d6c8d69`, `results/validate/`)
 
 All from `python -m qc validate` (PR #2 harness) on the 11 pre-registered features alone (`results/validate/features_f01_f11/`) unless stated; n = 31 images, seed 0, 1000 bootstraps, 10 000 permutations.

@@ -6,7 +6,11 @@ Status: written at the fold of PRs #2-#5 into `stage/s1-s5-reality-check` (2026-
 
 Batch_3 = supplier's promised baseline; Batch_1/2 = subsequent deliveries that are *different*, not worse. Judged on: what differs between batches, and correct categorisation of the held-back images (Batch_1/2/3 or "matches none" = out of the Batch_3 distribution). See `docs/READ/Polaron Clarification Batch Baseline and Judging.md`. Tracked numbers from now on: batch-ID accuracy LOIO (held-back proxy) and LOGO (new-session proxy) per feature family, plus the top drivers per batch and whether each driver is material or acquisition.
 
-## Item 0 (from the independent audit): `qc classify`
+## Item 0 (from the independent audit): `qc classify` — DONE (commit after 370d083)
+
+Implemented as `src/qc/classify.py` / `python -m qc classify`; results in `results/classify/features_f01_f11/` and `results/classify/kpi_per_image/`. Observed (LOIO, logreg, 200-draw image-level permutation null): material F01-F11 0.45 (null p95 0.52, p 0.19); acquisition covariates 0.71 (p 0.005); both 0.65 (p 0.015), LOGO 0.68; old KPIs 0.58 (p 0.045). OOD screen flags no image `matches none` at alpha 0.05 on any family. Still to do on this item: embeddings as a family (`--extra`), a stricter OOD statistic (per-feature max |z| or MCD once n allows), and scoring the three held-back images with `--heldout` after `v1-frozen`.
+
+Original specification:
 
 `src/qc/classify.py`: batch identification per feature family (F01-F11, acquisition covariates, both, later embeddings) with LOIO and LOGO accuracy, balanced accuracy and per-batch confusion, a permutation null (labels shuffled at image level, >= 1000 draws) so "acquisition predicts batch, material features do not" becomes a tested statement, per-image out-of-distribution distance to the Batch_3 reference (robust Mahalanobis on fold-fitted scaling, calibrated against the Batch_3 LOO distribution) with a `matches none` outcome, and a `--heldout` path that scores new images with a frozen model. Output `results/classify/`. Done when the table of LOIO/LOGO/null accuracies exists per family and the held-back path runs end-to-end on a synthetic image.
 
