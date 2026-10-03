@@ -1,0 +1,155 @@
+{
+ "subject": {
+  "kind": "image",
+  "id": "kbdh4tri",
+  "batch": "Batch_3",
+  "n_images": 1
+ },
+ "verdict": {
+  "label": "within_bounds",
+  "rule": "no line fired, inside the Batch_3 distribution, covariates balanced -> within bounds for the quantities tested",
+  "closed_set": {
+   "predicted_batch": "Batch_3",
+   "confidence": 0.9987872715431944,
+   "note": "family acquisition; assumes the image is from one of the known batches"
+  },
+  "open_set": {
+   "nearest_batch": "Batch_3",
+   "distance_to_each_batch": {
+    "Batch_1": 25.14017947030421,
+    "Batch_2": 11.33556598297109,
+    "Batch_3": 0.7893314470718306
+   },
+   "null_band_95": 0.05,
+   "matches_known_batch": true
+  }
+ },
+ "acquisition": {
+  "covariates": {
+   "noise_sigma": {
+    "value": 30.29826153846154,
+    "training_p05": 30.003642307692306,
+    "training_p95": 44.741731730769224,
+    "flag": false
+   },
+   "sharpness": {
+    "value": 1015.3877016703287,
+    "training_p05": 1010.8783276509016,
+    "training_p95": 2207.609102010727,
+    "flag": false
+   },
+   "curtaining_score": {
+    "value": 0.024361682625173648,
+    "training_p05": 0.020836496963073367,
+    "training_p95": 0.02689641123509152,
+    "flag": false
+   },
+   "hstripe_score": {
+    "value": 0.03931427345765096,
+    "training_p05": 0.03394241058458475,
+    "training_p95": 0.043844032504800054,
+    "flag": false
+   },
+   "edge_charging_inlens": {
+    "value": 0.1802494692755017,
+    "training_p05": -3.3214160196562577,
+    "training_p95": 2.799724316037394,
+    "flag": false
+   },
+   "mean_grey": {
+    "value": 64.23643532777444,
+    "training_p05": 54.295962003561165,
+    "training_p95": 64.54878140107179,
+    "flag": false
+   }
+  },
+  "acquisition_drift_suspected": false,
+  "detectors_present": [
+   "BSE",
+   "ETD",
+   "Inlens"
+  ],
+  "pixel_size_confirmed": false
+ },
+ "evidence": {
+  "drivers": [
+   {
+    "name": "F01_c0_area_fraction",
+    "units": "robust z vs Batch_3 (MAD)",
+    "value": -1.7210713137361644,
+    "reference_median": 0.0,
+    "effect_size": -1.7210713137361644,
+    "direction": "lower",
+    "threshold_sensitivity": 0.0146814085949482
+   },
+   {
+    "name": "F08_c0_local_thickness_median_px",
+    "units": "robust z vs Batch_3 (MAD)",
+    "value": -1.3463873957314778,
+    "reference_median": 0.0,
+    "effect_size": -1.3463873957314778,
+    "direction": "lower",
+    "threshold_sensitivity": 1.9092788696289065
+   },
+   {
+    "name": "F06_c2_clark_evans_R",
+    "units": "robust z vs Batch_3 (MAD)",
+    "value": 0.8633011575897315,
+    "reference_median": 0.0,
+    "effect_size": 0.8633011575897315,
+    "direction": "higher",
+    "threshold_sensitivity": 0.0671820657008309
+   },
+   {
+    "name": "F05_c2_count_density_per_Mpx",
+    "units": "robust z vs Batch_3 (MAD)",
+    "value": 0.744486477835058,
+    "reference_median": 0.0,
+    "effect_size": 0.744486477835058,
+    "direction": "higher",
+    "threshold_sensitivity": 106.70070639622978
+   },
+   {
+    "name": "F07_c2_solidity_area_weighted_median",
+    "units": "robust z vs Batch_3 (MAD)",
+    "value": -0.6430661918548999,
+    "reference_median": 0.0,
+    "effect_size": -0.6430661918548999,
+    "direction": "lower",
+    "threshold_sensitivity": 0.0639781057365149
+   }
+  ],
+  "lines_fired": {}
+ },
+ "uncertainty": {
+  "sampling": "n = 1 image; reference n = 16 Batch_3 images, leave-self-out",
+  "segmentation": "threshold sensitivity per driver in evidence.drivers",
+  "decision_margin": "p vs Batch_3 LOO null = 0.938 (alpha 0.05)",
+  "robustness": "closed-set prediction agreed by 6 of 6 families"
+ },
+ "routing": {
+  "stakeholder": "none",
+  "reason": "no line fired, inside the Batch_3 distribution, covariates balanced -> within bounds for the quantities tested"
+ },
+ "next_action": "consistent with the promised Batch_3 baseline for the quantities tested (closed-set Batch_3, confidence 1.00); accept for these quantities; cannot-decide list attached",
+ "caveats": [
+  "phase_identity: stated by Polaron, not image-verified (no EDS; Si vs SiOx indistinguishable)",
+  "adhesion to the current collector and delamination (interface not in the field of view)",
+  "electrical resistance and electrochemical performance (not image quantities)",
+  "moisture, residual solvent, binder distribution (not resolvable in BSE)",
+  "3D porosity, tortuosity and connectivity (2D sections only)",
+  "coating thickness, edge burrs, stripes (coating edge not in frame)",
+  "14 of the consultant's 22 failure modes are unobservable in this data (docs/FAILURE_MODE_MAP.md)"
+ ],
+ "pipeline": {
+  "config_path": "configs/v1.yaml",
+  "config_hash": "de199d6c8d69",
+  "git_sha": "f381663",
+  "timestamp_utc": "2026-10-03T20:31:13+00:00",
+  "frozen": false,
+  "exploratory": true,
+  "model_revisions": {
+   "closed_set_family": "acquisition"
+  }
+ }
+}

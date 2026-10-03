@@ -51,5 +51,24 @@ def test_ledger_append_only_and_schema(tmp_path):
     from qc import config as _config
     d = verdict.decide_image("s", "Batch_3", _pred(), _ood(), _z(), confounded={}, cov_block={}, n_flags=0, flag_names=[],
                              fam="material", agree=(1, 1), sens={})
+    assert verdict.CANNOT_DECIDE[0].startswith("phase_identity: stated by Polaron, not image-verified")
     d["pipeline"] = {"git_sha": "x", "config_path": "c", "config_hash": "h", "timestamp_utc": "t", "frozen": False}
     verdict.validate_schema(d, _config.ROOT / "schema" / "verdict.schema.json")
+
+
+def test_batch_verdict_has_reason_sentence_and_stats_evidence():
+    from qc import config as _config
+
+    doc = verdict.batch_verdict(
+        "Batch_1",
+        [{"verdict": {"label": "investigate", "open_set": {"matches_known_batch": True}},
+          "evidence": {"lines_fired": {}}, "acquisition": {"acquisition_drift_suspected": False}}],
+        {"git_sha": "x", "config_path": "c", "config_hash": "h", "timestamp_utc": "t", "frozen": False},
+    )
+    refs = doc["evidence"]["stats_pair_tests"]
+    assert len(refs) == 5
+    assert {ref["pair"] for ref in refs} == {"Batch_1 vs Batch_3"}
+    assert all(ref["path"] == f"results/stats/{ref['table']}/pair_tests.csv" for ref in refs)
+    assert doc["routing"]["reason"].startswith("The Batch_1 batch is labeled investigate because ")
+    assert doc["routing"]["reason"].endswith(".")
+    verdict.validate_schema(doc, _config.ROOT / "schema" / "verdict.schema.json")

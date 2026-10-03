@@ -41,8 +41,10 @@ Z_LINE = 3.0
 DRIFT_MIN_FLAGS = 2
 LINE_FAMILIES = {"class-0 geometry": ("F01", "F08", "F09", "F10"),
                  "class-2 statistics": ("F02", "F03", "F04", "F05", "F06", "F07", "F11")}
+STATS_TABLES = ("features_f01_f11", "kpi_per_image", "dinov2_vits14_bse_by_image",
+                "dinov2_vits14_inlens_by_image", "dinov2_vits14_setype_by_image")
 CANNOT_DECIDE = [
-    "chemistry / phase identity (no EDS; class names stated by Polaron, not image-verified; Si vs SiOx indistinguishable)",
+    "phase_identity: stated by Polaron, not image-verified (no EDS; Si vs SiOx indistinguishable)",
     "adhesion to the current collector and delamination (interface not in the field of view)",
     "electrical resistance and electrochemical performance (not image quantities)",
     "moisture, residual solvent, binder distribution (not resolvable in BSE)",
@@ -209,16 +211,29 @@ def batch_verdict(batch: str, docs: list[dict[str, Any]], pipeline: dict[str, An
         label, rule, stake = "investigate", f"lines in >= half the images: {two or 'none'}; matches-none {none_ct}/{n}; investigate {labels.count('investigate')}/{n}", "materials_expert_review"
     else:
         label, rule, stake = "within_bounds", f"{labels.count('within_bounds')}/{n} images within bounds, no family fires in >= half", "none"
+    evidence = {"drivers": [], "images_outside_reference": f"{out_ref}/{n}", "lines_fired_counts": fired}
+    evidence["stats_pair_tests"] = stats_pair_test_refs(batch)
     return {"subject": {"kind": "batch", "id": batch, "batch": batch, "n_images": n},
             "verdict": {"label": label, "rule": rule},
             "pipeline": pipeline, "acquisition": {"acquisition_drift_suspected": bool(drift >= n / 2)},
-            "evidence": {"drivers": [], "images_outside_reference": f"{out_ref}/{n}", "lines_fired_counts": fired},
+            "evidence": evidence,
             "uncertainty": {"sampling": f"n = {n} images", "segmentation": "see image verdicts",
                             "decision_margin": f"{none_ct}/{n} images match no known batch"},
-            "routing": {"stakeholder": stake, "reason": rule},
+            "routing": {"stakeholder": stake, "reason": f"The {batch} batch is labeled {label} because {rule.rstrip('.')}."},
             "next_action": ("batch-level label is a screening outcome; the human disposition (accept / reject / hold) is "
                             "entered with `qc decide` once downstream evidence (cell test, EDS, CoA) exists"),
             "caveats": CANNOT_DECIDE}
+
+
+def stats_pair_test_refs(batch: str) -> list[dict[str, str]]:
+    if batch == REFERENCE_BATCH:
+        pairs = ("Batch_1 vs Batch_3", "Batch_2 vs Batch_3")
+    elif batch in {"Batch_1", "Batch_2"}:
+        pairs = (f"{batch} vs {REFERENCE_BATCH}",)
+    else:
+        return []
+    return [{"table": table, "path": f"results/stats/{table}/pair_tests.csv", "pair": pair}
+            for table in STATS_TABLES for pair in pairs]
 
 
 # -------------------------------------------------------------------------------------------------------- driver
@@ -297,7 +312,7 @@ def run(cfg: dict[str, Any], classify_dir: str = "results/classify/features_f01_
                          "next_action": d["next_action"][:110]} for s, d in docs.items()])
     tab.to_csv(out_dir / "verdicts.csv", index=False)
     lines = [f"# Verdicts (screening labels, not dispositions) - closed-set family `{fam}`, {'frozen' if frozen else 'exploratory'}", "",
-             f"Provenance: git={pipeline['git_sha']} config={cfg['_hash']} run={run_id}", "",
+             f"Provenance: git={pipeline['git_sha']} config={cfg['_hash']} run={run_id}", CANNOT_DECIDE[0], "",
              "Label counts per batch:", "", tab.groupby(["batch", "label"]).size().unstack(fill_value=0).to_markdown(), "",
              "Batch-level:", "", *[f"- **{b}**: `{d['verdict']['label']}` - {d['verdict']['rule']} -> {d['routing']['stakeholder']}" for b, d in bdocs.items()], "",
              "Per image (`next_action` truncated; full text in `images/<id>.json`):", "", tab.to_markdown(index=False), "",

@@ -1,0 +1,79 @@
+{
+ "subject": {
+  "kind": "batch",
+  "id": "Batch_2",
+  "batch": "Batch_2",
+  "n_images": 7
+ },
+ "verdict": {
+  "label": "investigate",
+  "rule": "acquisition drift in 4/7 images -> at most investigate (R-COV)"
+ },
+ "pipeline": {
+  "config_path": "configs/v1.yaml",
+  "config_hash": "de199d6c8d69",
+  "git_sha": "f381663",
+  "timestamp_utc": "2026-10-03T20:31:13+00:00",
+  "frozen": false,
+  "exploratory": true,
+  "model_revisions": {
+   "closed_set_family": "acquisition"
+  }
+ },
+ "acquisition": {
+  "acquisition_drift_suspected": true
+ },
+ "evidence": {
+  "drivers": [],
+  "images_outside_reference": "4/7",
+  "lines_fired_counts": {
+   "class-2 statistics": 1
+  },
+  "stats_pair_tests": [
+   {
+    "table": "features_f01_f11",
+    "path": "results/stats/features_f01_f11/pair_tests.csv",
+    "pair": "Batch_2 vs Batch_3"
+   },
+   {
+    "table": "kpi_per_image",
+    "path": "results/stats/kpi_per_image/pair_tests.csv",
+    "pair": "Batch_2 vs Batch_3"
+   },
+   {
+    "table": "dinov2_vits14_bse_by_image",
+    "path": "results/stats/dinov2_vits14_bse_by_image/pair_tests.csv",
+    "pair": "Batch_2 vs Batch_3"
+   },
+   {
+    "table": "dinov2_vits14_inlens_by_image",
+    "path": "results/stats/dinov2_vits14_inlens_by_image/pair_tests.csv",
+    "pair": "Batch_2 vs Batch_3"
+   },
+   {
+    "table": "dinov2_vits14_setype_by_image",
+    "path": "results/stats/dinov2_vits14_setype_by_image/pair_tests.csv",
+    "pair": "Batch_2 vs Batch_3"
+   }
+  ]
+ },
+ "uncertainty": {
+  "sampling": "n = 7 images",
+  "segmentation": "see image verdicts",
+  "decision_margin": "0/7 images match no known batch"
+ },
+ "routing": {
+  "stakeholder": "microscopy_team",
+  "reason": "The Batch_2 batch is labeled investigate because acquisition drift in 4/7 images -> at most investigate (R-COV)."
+ },
+ "next_action": "batch-level label is a screening outcome; the human disposition (accept / reject / hold) is entered with `qc decide` once downstream evidence (cell test, EDS, CoA) exists",
+ "caveats": [
+  "phase_identity: stated by Polaron, not image-verified (no EDS; Si vs SiOx indistinguishable)",
+  "adhesion to the current collector and delamination (interface not in the field of view)",
+  "electrical resistance and electrochemical performance (not image quantities)",
+  "moisture, residual solvent, binder distribution (not resolvable in BSE)",
+  "3D porosity, tortuosity and connectivity (2D sections only)",
+  "coating thickness, edge burrs, stripes (coating edge not in frame)",
+  "14 of the consultant's 22 failure modes are unobservable in this data (docs/FAILURE_MODE_MAP.md)"
+ ]
+}

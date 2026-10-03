@@ -120,7 +120,20 @@
             "interpretation": {"type": "string"}
           }
         },
-        "representative_tiles": {"type": "array", "items": {"type": "string"}}
+        "representative_tiles": {"type": "array", "items": {"type": "string"}},
+        "stats_pair_tests": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["table", "path", "pair"],
+            "properties": {
+              "table": {"type": "string"},
+              "path": {"type": "string"},
+              "pair": {"type": "string"}
+            },
+            "additionalProperties": false
+          }
+        }
       }
     },
     "uncertainty": {

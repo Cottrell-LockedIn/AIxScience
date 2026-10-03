@@ -1,0 +1,165 @@
+{
+ "subject": {
+  "kind": "image",
+  "id": "5n1q8atc",
+  "batch": "Batch_1",
+  "n_images": 1
+ },
+ "verdict": {
+  "label": "investigate",
+  "rule": "R-COV / G2: 3 acquisition covariates outside Batch_3 p05-p95 -> at most investigate",
+  "closed_set": {
+   "predicted_batch": "Batch_1",
+   "confidence": 0.6001847998636124,
+   "note": "family acquisition; assumes the image is from one of the known batches"
+  },
+  "open_set": {
+   "nearest_batch": "Batch_2",
+   "distance_to_each_batch": {
+    "Batch_1": 4.357307830242658,
+    "Batch_2": 3.259625584368562,
+    "Batch_3": 4.109498507773765
+   },
+   "null_band_95": 0.05,
+   "matches_known_batch": true
+  }
+ },
+ "acquisition": {
+  "covariates": {
+   "noise_sigma": {
+    "value": 49.75263461538461,
+    "training_p05": 30.024550769230768,
+    "training_p95": 44.68898538461538,
+    "flag": true
+   },
+   "sharpness": {
+    "value": 2680.0939883452197,
+    "training_p05": 1011.2933929443359,
+    "training_p95": 2202.772404003143,
+    "flag": true
+   },
+   "curtaining_score": {
+    "value": 0.023667605782707577,
+    "training_p05": 0.020882500448550428,
+    "training_p95": 0.026882334385877605,
+    "flag": false
+   },
+   "hstripe_score": {
+    "value": 0.026200304590813885,
+    "training_p05": 0.03399848760066397,
+    "training_p95": 0.04374793595380988,
+    "flag": true
+   },
+   "edge_charging_inlens": {
+    "value": -0.9308598300304266,
+    "training_p05": -3.2994487056576043,
+    "training_p95": 2.660257156094418,
+    "flag": false
+   },
+   "mean_grey": {
+    "value": 59.90637289560758,
+    "training_p05": 54.386002089427066,
+    "training_p95": 64.49364165770702,
+    "flag": false
+   }
+  },
+  "acquisition_drift_suspected": true,
+  "detectors_present": [
+   "BSE",
+   "ETD",
+   "Inlens"
+  ],
+  "pixel_size_confirmed": false
+ },
+ "evidence": {
+  "drivers": [
+   {
+    "name": "F11_c2_perimeter_fraction_adjacent_c0",
+    "units": "robust z vs Batch_3 (MAD)",
+    "value": 5.450268052103517,
+    "reference_median": 0.0,
+    "effect_size": 5.450268052103517,
+    "direction": "higher",
+    "threshold_sensitivity": 0.0002820661493899
+   },
+   {
+    "name": "F07_c2_solidity_area_weighted_median",
+    "units": "robust z vs Batch_3 (MAD)",
+    "value": -4.1054580906997336,
+    "reference_median": 0.0,
+    "effect_size": -4.1054580906997336,
+    "direction": "lower",
+    "threshold_sensitivity": 0.0639781057365149
+   },
+   {
+    "name": "F09_c0_chord_anisotropy_h_over_v",
+    "units": "robust z vs Batch_3 (MAD)",
+    "value": -3.7745267127400264,
+    "reference_median": 0.0,
+    "effect_size": -3.7745267127400264,
+    "direction": "lower",
+    "threshold_sensitivity": 0.0100114510093505
+   },
+   {
+    "name": "F01_c0_area_fraction",
+    "units": "robust z vs Batch_3 (MAD)",
+    "value": -3.6457145240165056,
+    "reference_median": 0.0,
+    "effect_size": -3.6457145240165056,
+    "direction": "lower",
+    "threshold_sensitivity": 0.0146814085949482
+   },
+   {
+    "name": "F02_c2_area_fraction",
+    "units": "robust z vs Batch_3 (MAD)",
+    "value": 3.5596372906004556,
+    "reference_median": 0.0,
+    "effect_size": 3.5596372906004556,
+    "direction": "higher",
+    "threshold_sensitivity": 0.0402930951810117
+   }
+  ],
+  "lines_fired": {
+   "class-0 geometry": [
+    "F01_c0_area_fraction",
+    "F09_c0_chord_anisotropy_h_over_v"
+   ],
+   "class-2 statistics": [
+    "F02_c2_area_fraction",
+    "F07_c2_solidity_area_weighted_median",
+    "F11_c2_perimeter_fraction_adjacent_c0"
+   ]
+  }
+ },
+ "uncertainty": {
+  "sampling": "n = 1 image; reference n = 17 Batch_3 images, leave-self-out",
+  "segmentation": "threshold sensitivity per driver in evidence.drivers",
+  "decision_margin": "p vs Batch_3 LOO null = 0.000 (alpha 0.05)",
+  "robustness": "closed-set prediction agreed by 4 of 6 families"
+ },
+ "routing": {
+  "stakeholder": "microscopy_team",
+  "reason": "R-COV / G2: 3 acquisition covariates outside Batch_3 p05-p95 -> at most investigate"
+ },
+ "next_action": "re-image or confirm acquisition settings: 3 covariates outside the Batch_3 range (noise_sigma, sharpness, hstripe_score); differences cannot be attributed to the material until acquisition is balanced",
+ "caveats": [
+  "phase_identity: stated by Polaron, not image-verified (no EDS; Si vs SiOx indistinguishable)",
+  "adhesion to the current collector and delamination (interface not in the field of view)",
+  "electrical resistance and electrochemical performance (not image quantities)",
+  "moisture, residual solvent, binder distribution (not resolvable in BSE)",
+  "3D porosity, tortuosity and connectivity (2D sections only)",
+  "coating thickness, edge burrs, stripes (coating edge not in frame)",
+  "14 of the consultant's 22 failure modes are unobservable in this data (docs/FAILURE_MODE_MAP.md)"
+ ],
+ "pipeline": {
+  "config_path": "configs/v1.yaml",
+  "config_hash": "de199d6c8d69",
+  "git_sha": "f381663",
+  "timestamp_utc": "2026-10-03T20:31:13+00:00",
+  "frozen": false,
+  "exploratory": true,
+  "model_revisions": {
+   "closed_set_family": "acquisition"
+  }
+ }
+}
