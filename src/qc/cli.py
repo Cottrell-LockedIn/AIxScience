@@ -60,12 +60,43 @@ def classify(features: str = typer.Option("results/features/features_f01_f11.par
              out: str | None = typer.Option(None, "--out"),
              heldout: str | None = typer.Option(None, "--heldout", help="table of new images (sample_id + feature columns) to score with the frozen model"),
              seed: int = typer.Option(0, "--seed"), n_perm: int = typer.Option(200, "--n-perm"),
+             n_jobs: int = typer.Option(-1, "--n-jobs", help="parallel worker processes for permutations"),
              rf: bool = typer.Option(False, "--rf", help="also fit a random forest"),
+             table_family: str = typer.Option("material", "--table-family", help="label for the table's columns: material | embedding | ..."),
              config: str = typer.Option("configs/v1.yaml", "--config", "-c")) -> None:
     """Batch identification per feature family (LOIO/LOGO + permutation null), drivers, OOD screen vs each batch, held-out path (results/classify/)."""
     cfg = _config.load(config)
     typer.echo(f"[qc] classify  config={cfg['_path']}@{cfg['_hash']}  git={_config.git_sha()}")
-    importlib.import_module("qc.classify").run(cfg, features, out, heldout=heldout, seed=seed, n_perm=n_perm, rf=rf)
+    importlib.import_module("qc.classify").run(cfg, features, out, heldout=heldout, seed=seed, n_perm=n_perm, rf=rf,
+                                               table_family=table_family, n_jobs=n_jobs)
+
+
+@app.command()
+def embed(channels: str = typer.Option("BSE,Inlens,ETD,SE", "--channels"), batch_size: int = typer.Option(32, "--batch-size"),
+          config: str = typer.Option("configs/v1.yaml", "--config", "-c")) -> None:
+    """Frozen DINOv2 ViT-S/14 tile embeddings mean-pooled per image and channel (results/embeddings/)."""
+    cfg = _config.load(config)
+    typer.echo(f"[qc] embed  config={cfg['_path']}@{cfg['_hash']}  git={_config.git_sha()}")
+    importlib.import_module("qc.embed").run(cfg, channels, batch_size)
+
+
+@app.command()
+def verdict(classify_dir: str = typer.Option("results/classify/features_f01_f11", "--classify"),
+            embedding_dir: str = typer.Option("results/classify/dinov2_vits14_bse_by_image", "--embedding"),
+            frozen: bool = typer.Option(False, "--frozen", help="set only after the v1 freeze"),
+            config: str = typer.Option("configs/v1.yaml", "--config", "-c")) -> None:
+    """Per-image and per-batch verdict JSON (schema-validated), recommended next action, append-only ledger (results/verdict/)."""
+    cfg = _config.load(config)
+    typer.echo(f"[qc] verdict  config={cfg['_path']}@{cfg['_hash']}  git={_config.git_sha()}")
+    importlib.import_module("qc.verdict").run(cfg, classify_dir, embedding_dir, frozen=frozen)
+
+
+@app.command()
+def decide(subject: str = typer.Option(..., "--id"), disposition: str = typer.Option(..., "--disposition"),
+           by: str = typer.Option(..., "--by"), note: str = typer.Option("", "--note"),
+           config: str = typer.Option("configs/v1.yaml", "--config", "-c")) -> None:
+    """Append a human disposition (accepted | rejected | hold) for an image or batch to the ledger."""
+    importlib.import_module("qc.verdict").decide(_config.load(config), subject, disposition, by, note)
 
 
 @app.command()

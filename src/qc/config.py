@@ -36,9 +36,9 @@ def stamp(df, cfg: dict[str, Any]):
     """Add the provenance columns every result file must carry."""
     df = df.copy()
     df["config_hash"] = cfg["_hash"]
-    df["git_sha"] = git_sha()
+    df["git_sha"] = cfg.get("_git_sha") or git_sha()
     return df
 
 
 def provenance(cfg: dict[str, Any]) -> dict[str, str]:
-    return {"config_path": cfg["_path"], "config_hash": cfg["_hash"], "git_sha": git_sha()}
+    return {"config_path": cfg["_path"], "config_hash": cfg["_hash"], "git_sha": cfg.get("_git_sha") or git_sha()}

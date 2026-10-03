@@ -28,31 +28,57 @@ its permutation null and the majority-chance baseline; no good/bad claim follows
 """
 from __future__ import annotations
 
+import os
 import sys
 from pathlib import Path
 from typing import Any, Iterable
 
 import numpy as np
 import pandas as pd
+from joblib import Parallel, delayed
+
+try:
+    from threadpoolctl import threadpool_limits
+except ImportError:  # pragma: no cover - scikit-learn normally installs threadpoolctl
+    threadpool_limits = None
 
 from qc import config as _config
 from qc.validate import (COVARIATES, REFERENCE_BATCH, _model, assemble, grouped_folds, mad, read_table, sha256)
 
 OOD_ALPHA = 0.05  # an image is "in distribution" of a batch if its distance is not beyond that batch's LOO (1-alpha) quantile
+PCA_MIN_FEATURES = 20  # tables wider than this (embeddings) get a fold-fitted PCA before the classifier
+PCA_COMPONENTS = 8
+OOD_COMPONENTS = 5  # whitened-PCA Mahalanobis: components fitted on the reference rows of each comparison
+
+
+def model_for(kind: str, seed: int, n_features: int, pca: int = PCA_COMPONENTS):
+    """validate._model (imputer -> scaler -> clf), with a fold-fitted PCA inserted for wide tables."""
+    from sklearn.decomposition import PCA
+    m = _model(kind, seed)
+    if n_features > PCA_MIN_FEATURES and pca:
+        m.steps.insert(2, ("pca", PCA(n_components=pca, random_state=seed)))
+    return m
+
+
+def _std_coef(m) -> np.ndarray:
+    """Standardised coefficients per original feature (k, n_features); through the PCA loadings when present."""
+    coef = m[-1].coef_
+    return coef @ m.named_steps["pca"].components_ if "pca" in m.named_steps else coef
 
 
 # ---------------------------------------------------------------------------------------------------- families
-def families(df: pd.DataFrame, feats: list[str], extra: dict[str, list[str]] | None = None) -> dict[str, list[str]]:
+def families(df: pd.DataFrame, feats: list[str], extra: dict[str, list[str]] | None = None,
+             table_family: str = "material") -> dict[str, list[str]]:
     covs = [c for c in COVARIATES if c in df.columns]
-    fam = {"material": list(feats), "acquisition": covs, "material+acquisition": list(feats) + covs}
+    fam = {table_family: list(feats), "acquisition": covs, f"{table_family}+acquisition": list(feats) + covs}
     for name, cols in (extra or {}).items():
         fam[name] = list(cols)
         fam[f"{name}+acquisition"] = list(cols) + covs
     return {k: v for k, v in fam.items() if v}
 
 
-def tag(col: str) -> str:
-    return "acquisition" if col in COVARIATES else "material"
+def tag(col: str, table_family: str = "material") -> str:
+    return "acquisition" if col in COVARIATES else table_family
 
 
 # -------------------------------------------------------------------------------------------------- classifier
@@ -64,13 +90,13 @@ def oof_predict(X: np.ndarray, y: np.ndarray, units: pd.Series, kind: str, seed:
     coefs = []
     for train, test in grouped_folds(units):
         assert not set(train) & set(test)
-        m = _model(kind, seed).fit(X[train], y[train])
+        m = model_for(kind, seed, X.shape[1]).fit(X[train], y[train])
         pred[test] = m.predict(X[test])
         p = m.predict_proba(X[test])
         for j, c in enumerate(m.classes_):
             proba[test, classes.index(c)] = p[:, j]
         if kind == "logreg":
-            coefs.append(m[-1].coef_)  # inputs are standardised by the pipeline scaler, so coefficients are comparable
+            coefs.append(_std_coef(m))  # inputs are standardised by the pipeline scaler, so coefficients are comparable
     return pred, proba, coefs
 
 
@@ -80,19 +106,33 @@ def _scores(pred: np.ndarray, y: np.ndarray, classes: list[str]) -> dict[str, fl
             **{f"recall_{c}": float((pred[y == c] == c).mean()) for c in classes}}
 
 
-def permutation_null(X: np.ndarray, y: np.ndarray, units: pd.Series, kind: str, seed: int, classes: list[str],
-                     n_perm: int, rng: np.random.Generator) -> np.ndarray:
-    """Accuracy under image-level label shuffling (the whole image, i.e. all its detector views, keeps one label)."""
-    null = np.empty(n_perm)
-    for i in range(n_perm):
-        yp = rng.permutation(y)
+def _permutation_score(seed_i: int, X: np.ndarray, y: np.ndarray, units: pd.Series, kind: str, seed: int,
+                       classes: list[str]) -> float:
+    def score() -> float:
+        yp = np.random.default_rng(seed_i).permutation(y)
         pred, _, _ = oof_predict(X, yp, units, kind, seed, classes)
-        null[i] = (pred == yp).mean()
-    return null
+        return float((pred == yp).mean())
+
+    if threadpool_limits is None:
+        return score()
+    with threadpool_limits(limits=1):
+        return score()
 
 
-def batch_id(df: pd.DataFrame, fams: dict[str, list[str]], seed: int, n_perm: int, models: Iterable[str] = ("logreg",)
-             ) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def permutation_null(X: np.ndarray, y: np.ndarray, units: pd.Series, kind: str, seed: int, classes: list[str],
+                     n_perm: int, rng: np.random.Generator, n_jobs: int = -1) -> np.ndarray:
+    """Accuracy under image-level label shuffling (the whole image, i.e. all its detector views, keeps one label)."""
+    seeds = rng.integers(0, 2**32 - 1, size=n_perm)
+    if threadpool_limits is None:
+        for variable in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
+            os.environ[variable] = "1"
+    return np.asarray(Parallel(n_jobs=n_jobs)(
+        delayed(_permutation_score)(int(seed_i), X, y, units, kind, seed, classes) for seed_i in seeds
+    ))
+
+
+def batch_id(df: pd.DataFrame, fams: dict[str, list[str]], seed: int, n_perm: int, models: Iterable[str] = ("logreg",),
+             table_family: str = "material", n_jobs: int = -1) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     rng = np.random.default_rng(seed)
     y = df["batch"].to_numpy()
     classes = sorted(pd.unique(y))
@@ -103,10 +143,12 @@ def batch_id(df: pd.DataFrame, fams: dict[str, list[str]], seed: int, n_perm: in
         for kind in models:
             for split, units in (("LOIO", df["sample_id"]), ("LOGO", df["acq_group"])):
                 pred, proba, coefs = oof_predict(X, y, units, kind, seed, classes)
-                null = permutation_null(X, y, units, kind, seed, classes, n_perm, rng) if n_perm else np.array([np.nan])
+                null = permutation_null(X, y, units, kind, seed, classes, n_perm, rng, n_jobs) if n_perm else np.array([np.nan])
                 sc = _scores(pred, y, classes)
                 acc_rows.append({"family": fam, "model": kind, "split": split, "n_images": len(y),
-                                 "n_folds": len(pd.unique(units)), "n_features": len(cols), **sc, "chance_majority": chance,
+                                 "n_folds": len(pd.unique(units)), "n_features": len(cols),
+                                 "pca_components": PCA_COMPONENTS if len(cols) > PCA_MIN_FEATURES else 0,
+                                 **sc, "chance_majority": chance,
                                  "null_mean": float(np.mean(null)) if n_perm else np.nan,
                                  "null_p95": float(np.percentile(null, 95)) if n_perm else np.nan,
                                  "p_perm": float((1 + np.sum(null >= sc["accuracy"] - 1e-12)) / (len(null) + 1)) if n_perm else np.nan,
@@ -119,7 +161,7 @@ def batch_id(df: pd.DataFrame, fams: dict[str, list[str]], seed: int, n_perm: in
                     C = np.mean(np.stack(coefs), axis=0)  # (k, n_cols); binary logreg gives (1, n_cols)
                     for j, col in enumerate(cols):
                         for k, c in enumerate(classes if C.shape[0] > 1 else classes[-1:]):
-                            drv_rows.append({"family": fam, "feature": col, "driver_type": tag(col), "batch": c,
+                            drv_rows.append({"family": fam, "feature": col, "driver_type": tag(col, table_family), "batch": c,
                                              "coef_std": float(C[k, j]), "abs_coef_std": float(abs(C[k, j]))})
     drv = pd.DataFrame(drv_rows)
     if len(drv):
@@ -129,18 +171,45 @@ def batch_id(df: pd.DataFrame, fams: dict[str, list[str]], seed: int, n_perm: in
 
 
 # ---------------------------------------------------------------------------------------------------------- OOD
-def robust_distance(x: np.ndarray, ref: np.ndarray) -> float:
-    """RMS robust z of x against the reference rows (median / MAD per column; NaN-safe; constant columns skipped)."""
-    med = np.nanmedian(ref, axis=0)
-    m = np.array([mad(ref[:, j]) for j in range(ref.shape[1])])
-    ok = np.isfinite(x) & np.isfinite(med) & (m > 0)
-    if not ok.any():
-        return np.nan
-    z = (x[ok] - med[ok]) / m[ok]
-    return float(np.sqrt(np.mean(z ** 2)))
+class RefModel:
+    """Distance model fitted on reference rows only: median imputation, robust (median/MAD) scaling, PCA with k
+    components; distance = RMS of the whitened scores plus the residual norm scaled by the reference residual spread.
+    With k = 0 (or too few rows) it degrades to the RMS robust z over the scaled features."""
+
+    def __init__(self, ref: np.ndarray, k: int = OOD_COMPONENTS):
+        self.med = np.nanmedian(ref, axis=0)
+        self.med = np.where(np.isfinite(self.med), self.med, 0.0)
+        R = np.where(np.isfinite(ref), ref, self.med)
+        self.scale = np.array([mad(R[:, j]) for j in range(R.shape[1])])
+        self.ok = self.scale > 0
+        Z = ((R - self.med) / np.where(self.ok, self.scale, 1.0))[:, self.ok]
+        self.k = int(min(k, Z.shape[0] - 2, Z.shape[1])) if Z.shape[0] > 3 else 0
+        if self.k > 0:
+            self.mu = Z.mean(axis=0)
+            U, S, Vt = np.linalg.svd(Z - self.mu, full_matrices=False)
+            self.V = Vt[: self.k].T
+            self.lam = (S[: self.k] ** 2) / (Z.shape[0] - 1)
+            resid = (Z - self.mu) - (Z - self.mu) @ self.V @ self.V.T
+            self.resid_scale = float(np.sqrt(np.mean(np.sum(resid ** 2, axis=1)))) or 1.0
+
+    def distance(self, x: np.ndarray) -> float:
+        if not self.ok.any():
+            return np.nan
+        z = ((np.where(np.isfinite(x), x, self.med) - self.med) / np.where(self.ok, self.scale, 1.0))[self.ok]
+        if self.k == 0:
+            return float(np.sqrt(np.mean(z ** 2)))
+        c = z - self.mu
+        scores = (c @ self.V) / np.sqrt(self.lam)
+        resid = np.linalg.norm(c - (c @ self.V) @ self.V.T) / self.resid_scale
+        return float(np.sqrt((np.sum(scores ** 2) + resid ** 2) / (self.k + 1)))
+
+
+def robust_distance(x: np.ndarray, ref: np.ndarray, k: int = OOD_COMPONENTS) -> float:
+    return RefModel(ref, k).distance(x)
 
 
 def batch_loo_distances(X: np.ndarray, idx: np.ndarray) -> np.ndarray:
+    """Leave-one-out null for a batch: each member scored against a model fitted on the other members."""
     return np.array([robust_distance(X[i], X[np.setdiff1d(idx, [i])]) for i in idx])
 
 
@@ -218,6 +287,9 @@ def write_report(out: Path, name: str, acc: pd.DataFrame, drv: pd.DataFrame, ood
     batches = sorted(ood["batch"].unique())
     summ = ood.groupby(["family", "batch"]).agg(n=("sample_id", "size"), matches_none=("matches_none", "sum"),
                                                 in_reference=("in_reference", "sum")).reset_index()
+    summ["outside_reference_rate"] = 1 - summ["in_reference"] / summ["n"]
+    summ["reading"] = np.where(summ["batch"] == REFERENCE_BATCH, "false-alarm rate (LOO; ~alpha by construction)",
+                               f"detection rate: images of this batch outside the {REFERENCE_BATCH} distribution")
     top = (drv[drv["rank_in_batch"] <= 3][["family", "batch", "rank_in_batch", "feature", "driver_type", "coef_std"]]
            if len(drv) else pd.DataFrame())
     lines = [f"# Batch identification and OOD screen: `{name}`", "",
@@ -233,7 +305,8 @@ def write_report(out: Path, name: str, acc: pd.DataFrame, drv: pd.DataFrame, ood
              _md(acc[["family", "model", "split", "n_features", "accuracy", "balanced_accuracy", "chance_majority",
                       "null_mean", "null_p95", "p_perm"] + [f"recall_{b}" for b in batches]]),
              "", "## Top-3 drivers per batch (LOIO, logreg)", "", _md(top) if len(top) else "n/a",
-             "", f"## Out-of-distribution screen (robust RMS z to each batch, alpha = {OOD_ALPHA})", "",
+             "", f"## Out-of-distribution screen (whitened-PCA Mahalanobis to each batch, {OOD_COMPONENTS} components fitted on the "
+             f"reference rows, calibrated on that batch's leave-one-out distances, alpha = {OOD_ALPHA})", "",
              _md(summ),
              "", "Per image: `ood.csv` (`in_distribution_of`, `matches_none`, `in_reference`)."]
     if held is not None:
@@ -244,10 +317,11 @@ def write_report(out: Path, name: str, acc: pd.DataFrame, drv: pd.DataFrame, ood
 
 def run_tables(features: pd.DataFrame, artefacts: pd.DataFrame, images: pd.DataFrame, seed: int = 0, n_perm: int = 200,
                models: Iterable[str] = ("logreg",), heldout: pd.DataFrame | None = None,
-               extra: dict[str, list[str]] | None = None) -> dict[str, pd.DataFrame]:
+               extra: dict[str, list[str]] | None = None, table_family: str = "material",
+               n_jobs: int = -1) -> dict[str, pd.DataFrame]:
     df, feats = assemble(features, artefacts, images)
-    fams = families(df, feats, extra)
-    acc, pred, drv = batch_id(df, fams, seed, n_perm, models)
+    fams = families(df, feats, extra, table_family)
+    acc, pred, drv = batch_id(df, fams, seed, n_perm, models, table_family, n_jobs)
     ood = ood_table(df, fams)
     out = {"assembled": df, "accuracy": acc, "predictions": pred, "drivers": drv, "ood": ood, "_fams": fams}
     if heldout is not None:
@@ -257,7 +331,8 @@ def run_tables(features: pd.DataFrame, artefacts: pd.DataFrame, images: pd.DataF
 
 def run(cfg: dict[str, Any], features: str = "results/features/features_f01_f11.parquet", out: str | None = None,
         artefacts: str = "results/artefacts_per_image.parquet", images: str = "results/audit/images.csv",
-        heldout: str | None = None, seed: int = 0, n_perm: int = 200, rf: bool = False) -> Path:
+        heldout: str | None = None, seed: int = 0, n_perm: int = 200, rf: bool = False,
+        table_family: str = "material", n_jobs: int = -1) -> Path:
     fpath = _config.resolve(features)
     name = fpath.stem
     out_dir = _config.resolve(out) if out else _config.ROOT / "results" / "classify" / name
@@ -273,14 +348,17 @@ def run(cfg: dict[str, Any], features: str = "results/features/features_f01_f11.
         cov = covariate_table(held_art)
         held = held.merge(cov[cov["sample_id"].isin(held["sample_id"])], on="sample_id", how="left")
     tabs = run_tables(read_table(fpath), read_table(_config.resolve(artefacts)), read_table(_config.resolve(images)),
-                      seed=seed, n_perm=n_perm, models=("logreg", "rf") if rf else ("logreg",), heldout=held)
+                      seed=seed, n_perm=n_perm, models=("logreg", "rf") if rf else ("logreg",), heldout=held,
+                      table_family=table_family, n_jobs=n_jobs)
     for key in ("accuracy", "predictions", "drivers", "ood") + (("heldout",) if held is not None else ()):
         _config.stamp(tabs[key], cfg).to_csv(out_dir / f"{key}.csv", index=False)
     prov = {**_config.provenance(cfg), "features": str(fpath.relative_to(_config.ROOT)) if fpath.is_relative_to(_config.ROOT) else str(fpath),
             "features_sha256": sha256(fpath)[:12], "seed": seed, "n_perm": n_perm, "heldout": heldout or "none"}
     write_report(out_dir, name, tabs["accuracy"], tabs["drivers"], tabs["ood"], tabs.get("heldout"), prov)
     a = tabs["accuracy"].set_index(["family", "split"])["accuracy"]
-    print(f"classify: {len(tabs['assembled'])} images, families={list(tabs['_fams'])} -> {out_dir.relative_to(_config.ROOT)}/ "
-          f"LOIO material {a.get(('material', 'LOIO'), np.nan):.2f} / acquisition {a.get(('acquisition', 'LOIO'), np.nan):.2f} "
-          f"/ both {a.get(('material+acquisition', 'LOIO'), np.nan):.2f}", file=sys.stderr)
+    tf = table_family
+    output_name = out_dir.relative_to(_config.ROOT) if out_dir.is_relative_to(_config.ROOT) else out_dir
+    print(f"classify: {len(tabs['assembled'])} images, families={list(tabs['_fams'])} -> {output_name}/ "
+          f"LOIO {tf} {a.get((tf, 'LOIO'), np.nan):.2f} / acquisition {a.get(('acquisition', 'LOIO'), np.nan):.2f} "
+          f"/ both {a.get((f'{tf}+acquisition', 'LOIO'), np.nan):.2f}", file=sys.stderr)
     return out_dir
