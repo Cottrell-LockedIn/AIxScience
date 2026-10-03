@@ -1,7 +1,7 @@
 # Project State
 
-Updated: 2026-10-03, T+1h (Devin)
-Phase: event started; FRAMEWORK.md v2 written after Polaron kickoff; awaiting team review
+Updated: 2026-10-03, ~T+8h (Devin cloud session 1)
+Phase: v1 S1-S5 implemented and run on all 31 images; PR #1 `v1 S1-S5 reality check` open on `stage/s1-s5-reality-check`, awaiting review and consultant checkpoint C1
 Submission repository: github.com/Cottrell-LockedIn/AIxScience (private, org), local clone at `code/AIxScience_Msia`. Scaffold pushed to `main` at commit c9943d0 (T+6h). Planning docs mirrored under `docs/` in the repo.
 
 ## Current decision
@@ -19,8 +19,8 @@ Agent context remaining (Devin Desktop, this session): unknown (tool does not ex
 
 | Workstream | Owner | Status | Reviewer | Context remaining |
 |---|---|---|---|---|
-| Dataset and acquisition audit | Unassigned | Not started | Required | Unknown |
-| KPI and segmentation lane | Unassigned | Not started | Required | Unknown |
+| Dataset and acquisition audit (S1-S3) | Devin cloud session 1 | Done, in PR #1 | Required | n/a |
+| KPI and segmentation lane (S4 v1 + reality check) | Devin cloud session 1 | Done, in PR #1; S4 challenger needed (per-tile multi-Otsu unstable on particle-free tiles) | Required | n/a |
 | Batch-drift statistics | Unassigned | Not started | Required | Unknown |
 | Frozen-feature challenger | Unassigned | Not started | Required | Unknown |
 | Modal workload | Unassigned | Not started | Required | Unknown |
@@ -37,7 +37,9 @@ From the Polaron kickoff (`READ/Polaron Kickoff Discussion.md`):
 
 Inspected at T+1.5 (`READ/Dataset First Look.md`): 7 / 7 / 17 fields of view, 3 detector channels each (BSE, Inlens, ETD|SE), 7000 px wide, ~1.7 GB, public Drive. Likely graphite anode with a high-Z particle phase; BSE gives 3-class contrast. Pixel size probably 25 nm (TIFF tag, unconfirmed).
 
-Still unknown: pixel size confirmation; identity of the bright phase; whether a baseline batch is named; whether held-back images may come from a new batch.
+Audited (`docs/DATA_AUDIT.md`, `results/audit/REALITY_CHECK.md`, PR #1): 31 images / 92 TIFFs; widths 6960-7000 px; one image (`xgj4xftb`) has no Inlens; 13 distinct XResolution tags, all ~25.000 nm/px, written by tifffile (unconfirmed); coloured edge line on left (20 files) or right (18 files), covered by the 8 px crop. Class fractions do not separate batches beyond within-batch spread and +/-10 % threshold sensitivity. Noise and sharpness do separate (Batch_3 much less noisy); images form 15 (height, res-tag) groups with near-identical noise, 5 spanning 2-3 batches: acquisition sessions appear to cut across batch labels.
+
+Still unknown: whether the (height, res-tag) groups are sessions or specimens; pixel size confirmation; identity of the bright phase; whether a baseline batch is named; whether held-back images may come from a new batch.
 
 ## Freeze record
 
@@ -54,7 +56,16 @@ Before the unseen batch arrives, record:
 
 ## Handover log
 
-Record:
+### 2026-10-03 cloud session 1 (S1-S5)
+
+- Completed: `audit.py`, `tiles.py`, `artefacts.py`, `segment.py`, `kpi.py`, `scripts/reality_check.py`, tests (9 passing); all stages run on 31 images (audit 12 s, tiles 12 s, artefacts 44 s, segment 50 s, kpi 65 s on 8 CPU cores). Results under `results/` with `config_hash` + `git_sha`.
+- Evidence: PR #1 (figures + Report-back), `results/audit/REALITY_CHECK.md`, `docs/DATA_AUDIT.md`, `results/audit/overlays/`.
+- Decisions: tile 1024/512 per config (FRAMEWORK 2b still says 512, doc discrepancy open); per-image KPI = mean over tiles; curtaining measured on the k_y~0 FFT band (vertical image stripes) with the orthogonal band kept as control; hole filling limited to holes < 20 px so enclosed bright particles survive.
+- Reviewer verdict: pending (fresh-context review required per AGENTS.md).
+- Unresolved risks: batch/session confound (noise, sharpness, res-tag groups); multi-Otsu instability on tiles without class-2 particles; pixel size and phase identity unconfirmed.
+- Exact next action: consultant checkpoint C1 on overlays/figures and the five questions in PR #1; then wave 1 (S5 embeddings on Modal, S6, S7 with artefact ablation + leave-one-group-out, S8, S9).
+
+Record for each entry:
 
 - completed work;
 - evidence and source links;
