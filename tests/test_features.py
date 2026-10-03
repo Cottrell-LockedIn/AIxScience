@@ -1,6 +1,10 @@
 """Synthetic-mask tests for the Tier-1 feature table (src/qc/features.py). Known answers, no real data."""
+import json
+
 import numpy as np
 import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
 import pytest
 from skimage.draw import disk
 
@@ -184,3 +188,32 @@ def test_batch_medians_table():
     assert list(bm["feature"]) == cols
     assert (bm["median_Batch_1"] == 1.0).all() and (bm["median_Batch_3"] == 3.5).all()
     assert bm["n_images_Batch_1"].iloc[0] == 3 and bm["n_images_Batch_3"].iloc[0] == 2
+
+
+def test_compact_image_feature_table_schema_and_provenance(tmp_path):
+    reg = F.load_registry()
+    columns = ["sample_id", "batch", *(f["column"] for f in reg["features"])]
+    img = pd.DataFrame({
+        "sample_id": pd.Series(["sample01"], dtype="string"),
+        "batch": pd.Series(["Batch_1"], dtype="string"),
+        **{column: np.array([float(i)], dtype=np.float64) for i, column in enumerate(columns[2:])},
+        "diagnostic": [1],
+    })
+
+    compact = F.image_feature_table(img, reg)
+    assert list(compact.columns) == columns
+    assert compact.dtypes.equals(img[columns].dtypes)
+
+    cfg = {"_path": "configs/v1.yaml", "_hash": "cfg123", "_git_sha": "abc123"}
+    path = tmp_path / "features_f01_f11.parquet"
+    F.write_parquet(compact, path, reg, cfg)
+    table = pq.read_table(path)
+    assert table.column_names == columns
+    assert table.schema.field("sample_id").type == pa.large_string()
+    assert table.schema.field("batch").type == pa.large_string()
+    assert all(table.schema.field(c).type == pa.float64() for c in columns[2:])
+    assert json.loads(table.schema.metadata[b"provenance"]) == {
+        "config_path": "configs/v1.yaml",
+        "config_hash": "cfg123",
+        "git_sha": "abc123",
+    }

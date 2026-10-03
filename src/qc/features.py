@@ -6,7 +6,9 @@ provenance) is `configs/features_v1.yaml`; column names come from there.
 
 Reads:  data/tiles/index.parquet, results/thresholds_per_tile.parquet (for the stale-input guard and mask paths),
         data/masks/<batch>/<sample_id>/<tile_id>.png
-Writes: results/features/features_by_image.parquet + .csv   (one row per image: sample_id, batch, F01..F11,
+Writes: results/features/features_f01_f11.parquet          (one row per image: sample_id, batch, F01..F11;
+                                                            provenance in Parquet metadata)
+        results/features/features_by_image.parquet + .csv   (one row per image: sample_id, batch, F01..F11,
                                                               diagnostics, n_tiles, config_hash, features_config_hash, git_sha)
         results/features/features_by_tile.parquet            (same features per 1024 px tile; tiles are pseudo-replicates)
         results/features/features_batch_medians.csv          (per-batch median and IQR per feature, n images)
@@ -333,6 +335,12 @@ def batch_medians(img: pd.DataFrame, reg: dict[str, Any]) -> pd.DataFrame:
     return out.reset_index(drop=True)
 
 
+def image_feature_table(img: pd.DataFrame, reg: dict[str, Any]) -> pd.DataFrame:
+    """The compact image-level F01-F11 table consumed by validation, classification and verdict."""
+    columns = ["sample_id", "batch", *(f["column"] for f in reg["features"])]
+    return img.loc[:, columns].copy()
+
+
 def write_parquet(df: pd.DataFrame, path: Path, reg: dict[str, Any], cfg: dict[str, Any]) -> None:
     table = pa.Table.from_pandas(df, preserve_index=False)
     meta = {b"phase_identity": PHASE_IDENTITY.encode(),
@@ -367,7 +375,8 @@ def write_readme(path: Path, reg: dict[str, Any], cfg: dict[str, Any], img: pd.D
              "", "## Registry", "", "| id | column | class | unit | definition | provenance |", "|---|---|---|---|---|---|"]
     for f in reg["features"]:
         lines.append(f"| {f['id']} | `{f['column']}` | {f['class']} | {f['unit']} | {f['definition']} | {f['provenance']} |")
-    lines += ["", "Files: `features_by_image.parquet` / `.csv`, `features_by_tile.parquet`, `features_batch_medians.csv`. "
+    lines += ["", "Files: `features_f01_f11.parquet`, `features_by_image.parquet` / `.csv`, "
+              "`features_by_tile.parquet`, `features_batch_medians.csv`. "
               "Parquet metadata carries `phase_identity`, `features_config` and `provenance`."]
     path.write_text("\n".join(lines) + "\n")
 
@@ -398,11 +407,13 @@ def run(cfg: dict[str, Any]) -> None:
     per_tile["features_config_hash"] = reg["_hash"]
     per_tile["phase_identity"] = PHASE_IDENTITY
 
+    write_parquet(image_feature_table(img, reg), res / "features_f01_f11.parquet", reg, cfg)
     write_parquet(img, res / "features_by_image.parquet", reg, cfg)
     img.to_csv(res / "features_by_image.csv", index=False)
     write_parquet(per_tile, res / "features_by_tile.parquet", reg, cfg)
     batch_medians(img, reg).to_csv(res / "features_batch_medians.csv", index=False)
     elapsed = time.perf_counter() - t_start
     write_readme(res / "README.md", reg, cfg, img, elapsed)
-    print(f"features: {len(img)} images, {len(per_tile)} tiles -> results/features/ (features_by_image.parquet/.csv, "
-          f"features_by_tile.parquet, features_batch_medians.csv, README.md) in {elapsed:.0f} s")
+    print(f"features: {len(img)} images, {len(per_tile)} tiles -> results/features/ (features_f01_f11.parquet, "
+          f"features_by_image.parquet/.csv, features_by_tile.parquet, features_batch_medians.csv, README.md) "
+          f"in {elapsed:.0f} s")
