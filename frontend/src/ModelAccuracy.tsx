@@ -40,10 +40,10 @@ export default function ModelAccuracy({ onBack }: { onBack?: () => void }) {
     <section className="accuracy-warning" role="note"><CircleHelp size={19}/><p><strong>Read this first.</strong> These are batch-match validation results, not a defect probability, lot-release decision, or guarantee on new material.</p></section>
 
     <section className="accuracy-kpis" aria-label="Core validation metrics">
-      <Metric title="LOIO accuracy" value={`${(loio.accuracy * 100).toFixed(1)}%`} note={`${loio.accuracy_label} · 95% Wilson ${(loio.wilson95[0] * 100).toFixed(0)}–${(loio.wilson95[1] * 100).toFixed(0)}%`} />
-      <Metric title="Majority reference" value={loio.majority_baseline.label} note="Always predict Batch 3" />
-      <Metric title="Permutation p-value" value={`p = ${loio.permutation.p.toFixed(3)}`} note={`${loio.permutation.n || '—'} fixed permutations`} />
-      <Metric title="Balanced accuracy" value={loio.balanced_accuracy == null ? '—' : `${(loio.balanced_accuracy * 100).toFixed(1)}%`} note={`${loio.n_images} images · tiles not independent`} />
+      <Metric title="Correct batch matches" technical="LOIO accuracy" value={`${(loio.accuracy * 100).toFixed(1)}%`} note={`${loio.accuracy_label}. Tested one image at a time; uncertainty range: 95% Wilson ${(loio.wilson95[0] * 100).toFixed(0)}–${(loio.wilson95[1] * 100).toFixed(0)}%.`} />
+      <Metric title="Simple reference to beat" technical="Majority-class baseline" value={loio.majority_baseline.label} note="Always choose Batch 3, the most common batch in this saved test set." />
+      <Metric title="Evidence above shuffled labels" technical="Permutation p-value" value={`p = ${loio.permutation.p.toFixed(3)}`} note={`${loio.permutation.n || '—'} label shuffles. This is evidence against random label matching, not the chance a match is correct.`} />
+      <Metric title="Average score across batches" technical="Balanced accuracy" value={loio.balanced_accuracy == null ? '—' : `${(loio.balanced_accuracy * 100).toFixed(1)}%`} note={`${loio.n_images} images. Each batch contributes equally; tiles from one image are not independent.`} />
     </section>
 
     <section className="accuracy-grid">
@@ -66,5 +66,5 @@ export default function ModelAccuracy({ onBack }: { onBack?: () => void }) {
   </section>
 }
 
-function Metric({ title, value, note }: { title: string; value: string; note: string }) { return <article className="metric"><span>{title}</span><strong>{value}</strong><small>{note}</small></article> }
+function Metric({ title, technical, value, note }: { title: string; technical: string; value: string; note: string }) { return <article className="metric"><span>{title}</span><small className="metric-technical">{technical}</small><strong>{value}</strong><small>{note}</small></article> }
 function BarRows({ values }: { values: Record<string, Ratio> }) { return <div className="accuracy-bars">{Object.entries(values).map(([name, value]) => <div className="accuracy-bar" key={name}><div><span>{label(name)}</span><strong>{value.label}</strong></div><i aria-label={`${label(name)}: ${value.label}`}><b style={{ width: `${percentage(value.correct, value.total)}%` }} /></i></div>)}</div> }

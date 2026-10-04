@@ -8,6 +8,8 @@ import './Results.mask.css'
 import './Results.polish.css'
 import KpiGuidance from './KpiGuidance'
 import ModelOutput from './ModelOutput'
+import StakeholderTrace from './StakeholderTrace'
+import { riskCatalog, type RiskGuide } from './riskCatalog'
 
 const MaterialScene = lazy(() => import('./MaterialScene'))
 
@@ -62,6 +64,7 @@ export default function Results({ data, criteria = [], review, onNew }: Props) {
   const [selectedCriterion, setSelectedCriterion] = useState<string | null>(null)
   const [detailsOpen, setDetailsOpen] = useState(false)
   const [expanded, setExpanded] = useState(false)
+  const [selectedRiskId, setSelectedRiskId] = useState('P01')
 
   useEffect(() => {
     const sync = () => { const search = new URLSearchParams(window.location.search); setView((views.some((x) => x.id === search.get('view')) ? search.get('view') : 'overview') as View); setFieldId(search.get('field') || fields[0]?.id || '') }
@@ -71,6 +74,12 @@ export default function Results({ data, criteria = [], review, onNew }: Props) {
     const next = new URLSearchParams(window.location.search); next.set('view', view); if (field?.id) next.set('field', field.id)
     window.history.replaceState({}, '', `${window.location.pathname}?${next.toString()}${window.location.hash}`)
   }, [view, field?.id])
+  useEffect(() => {
+    const f10 = criteria.find((item) => item.id === 'F10' && item.enabled !== false)
+    const raw = field?.features?.F10
+    const preferP03 = !!f10 && typeof raw === 'number' && Number.isFinite(raw) && raw * (f10.scale ?? 1) > (f10.max ?? Infinity)
+    setSelectedRiskId(preferP03 ? 'P03' : 'P01')
+  }, [field?.id, criteria])
 
   const navigate = (nextView: View, nextFieldId = field?.id || '') => {
     const next = new URLSearchParams(window.location.search)
@@ -103,6 +112,7 @@ export default function Results({ data, criteria = [], review, onNew }: Props) {
       : outside ? `${outside} selected ${outside === 1 ? 'check is' : 'checks are'} outside the chosen range.`
         : 'This screening result needs a reviewed policy before it can be accepted.'
   const issueBands = useMemo(() => buildIssues(field, measured, selectedReview), [field, measured, selectedReview])
+  const selectedRisk = riskCatalog.find((risk) => risk.id === selectedRiskId) || riskCatalog[0]
   const exportFile = (kind: 'json' | 'csv') => {
     const raw = kind === 'json' ? JSON.stringify({ data, criteria, review }, null, 2) : toCsv(field, measured, { modelRevision, criteriaRevision: 'v1 local controls', review: selectedReview })
     const blob = new Blob([raw], { type: kind === 'json' ? 'application/json' : 'text/csv' })
@@ -126,13 +136,13 @@ export default function Results({ data, criteria = [], review, onNew }: Props) {
     <section id="top" className={`results__content ${view === 'model' ? 'results__content--model' : ''}`} aria-live="polite">
       <div className="results__copy">
         {view === 'overview' && <Overview field={field} measured={measured} selectedCriterion={selectedCriterion} setSelectedCriterion={setSelectedCriterion} verdictReason={verdictReason} outside={outside} unavailable={unavailable} topProbability={topProbability} probabilities={probabilities} criteriaVersion="v1 local controls" />}
-        {view === 'investigate' && <Investigate issues={issueBands} field={field} criteria={criteria} />}
+        {view === 'investigate' && <Investigate issues={issueBands} field={field} criteria={criteria} selectedRiskId={selectedRisk.id} onRiskSelect={(risk: RiskGuide) => setSelectedRiskId(risk.id)} />}
         {view === 'material' && <MaterialDetails field={field} metadata={data.metadata} detailsOpen={detailsOpen} setDetailsOpen={setDetailsOpen} />}
         {view === 'model' && <ModelOutput field={field} run={run} />}
       </div>
       {view !== 'model' && <aside className="results__visual" aria-label="Evidence visual">
-        <div className="visual-topline"><span>{view === 'material' ? 'Separated analysis layers' : view === 'investigate' ? 'Evidence path' : 'Evidence lens'}</span><button onClick={() => setExpanded(!expanded)} aria-pressed={expanded}><Expand size={16} />{expanded ? 'Restore view' : 'Expand visual'}</button></div>
-        {view === 'material' ? (field.mask?.originalCroppedPreviewUrl || preview) ? <Suspense fallback={<div className="visual-unavailable"><p>Preparing material view…</p></div>}><MaterialScene imageUrl={field.mask?.originalCroppedPreviewUrl || preview!} fieldId={field.id} layers={field.mask?.layers || []} /></Suspense> : <UnavailableImage channel={imageChannel} /> : view === 'investigate' ? <EvidenceTree issues={issueBands} field={field} /> : <EvidenceLens imageUrl={preview} channel={imageChannel} criterion={measured.find((item) => item.criterion.id === selectedCriterion)?.criterion} field={field} />}
+        <div className="visual-topline"><span>{view === 'material' ? 'Separated analysis layers' : view === 'investigate' ? 'Stakeholder trace' : 'Evidence lens'}</span><button onClick={() => setExpanded(!expanded)} aria-pressed={expanded}><Expand size={16} />{expanded ? 'Restore view' : 'Expand visual'}</button></div>
+        {view === 'material' ? (field.mask?.originalCroppedPreviewUrl || preview) ? <Suspense fallback={<div className="visual-unavailable"><p>Preparing material view…</p></div>}><MaterialScene imageUrl={field.mask?.originalCroppedPreviewUrl || preview!} fieldId={field.id} layers={field.mask?.layers || []} /></Suspense> : <UnavailableImage channel={imageChannel} /> : view === 'investigate' ? <StakeholderTrace risk={selectedRisk} field={field} criteria={criteria} /> : <EvidenceLens imageUrl={preview} channel={imageChannel} criterion={measured.find((item) => item.criterion.id === selectedCriterion)?.criterion} field={field} />}
       </aside>}
     </section>
 
@@ -149,8 +159,8 @@ function Overview({ field, measured, selectedCriterion, setSelectedCriterion, ve
   </>
 }
 
-function Investigate({ issues, field, criteria }: { issues: any[]; field: ResultField; criteria: Criterion[] }) {
-  return <><section className="investigate-intro"><span className="screening-label">Workflow priority</span><h1>What to inspect next</h1><p>These are review priorities based on recorded evidence. They do not assign cause or blame.</p></section><div className="issue-list">{issues.map((issue, index) => <article className="issue-band" key={issue.title}><span className="issue-index">{String(index + 1).padStart(2, '0')}</span><div><h2>{issue.title}</h2><dl><div><dt>Review with</dt><dd>{issue.owner}</dd></div><div><dt>Evidence</dt><dd>{issue.evidence}</dd></div><div><dt>Why this matters</dt><dd>{issue.reason}</dd></div><div><dt>Next action</dt><dd>{issue.next}</dd></div></dl></div></article>)}</div><section className="driver-section"><h2>Recorded model signals</h2>{field.drivers?.length ? field.drivers.slice(0, 3).map((driver) => <div className="driver" key={driver.name}><Sparkles size={16} /><p><strong>{featureLabels[driver.name.split('_')[0]] || driver.name.replace('embedding PC', 'Image-pattern signal')}</strong> {/embedding/i.test(driver.name) ? 'This image pattern helped match the field to a known batch. It may reflect microscope settings as well as the material.' : 'This measurement supported the batch match. Review its mask before relying on it; it does not establish a defect.'}</p></div>) : <p className="empty-copy">No model drivers were supplied.</p>}</section><KpiGuidance field={field} criteria={criteria} /></>
+function Investigate({ issues, field, criteria, selectedRiskId, onRiskSelect }: { issues: any[]; field: ResultField; criteria: Criterion[]; selectedRiskId: string; onRiskSelect: (risk: RiskGuide) => void }) {
+  return <><section className="investigate-intro"><span className="screening-label">Workflow priority</span><h1>What to inspect next</h1><p>These are review priorities based on recorded evidence. They do not assign cause or blame.</p></section><div className="issue-list">{issues.map((issue, index) => <article className="issue-band" key={issue.title}><span className="issue-index">{String(index + 1).padStart(2, '0')}</span><div><h2>{issue.title}</h2><dl><div><dt>Review with</dt><dd>{issue.owner}</dd></div><div><dt>Evidence</dt><dd>{issue.evidence}</dd></div><div><dt>Why this matters</dt><dd>{issue.reason}</dd></div><div><dt>Next action</dt><dd>{issue.next}</dd></div></dl></div></article>)}</div><section className="driver-section"><h2>Recorded model signals</h2>{field.drivers?.length ? field.drivers.slice(0, 3).map((driver) => <div className="driver" key={driver.name}><Sparkles size={16} /><p><strong>{featureLabels[driver.name.split('_')[0]] || driver.name.replace('embedding PC', 'Image-pattern signal')}</strong> {/embedding/i.test(driver.name) ? 'This image pattern helped match the field to a known batch. It may reflect microscope settings as well as the material.' : 'This measurement supported the batch match. Review its mask before relying on it; it does not establish a defect.'}</p></div>) : <p className="empty-copy">No model drivers were supplied.</p>}</section><KpiGuidance field={field} criteria={criteria} selectedRiskId={selectedRiskId} onRiskSelect={onRiskSelect} /></>
 }
 
 function MaterialDetails({ field, metadata, detailsOpen, setDetailsOpen }: { field: ResultField; metadata?: Record<string, string>; detailsOpen: boolean; setDetailsOpen: (value: boolean) => void }) {

@@ -14,6 +14,10 @@ Model Accuracy is a separate workspace tab. It reads the trainer's committed `re
 
 The 11 native KPI values link to the supplied scientist's 14 manufacturing/formation patterns and 14 future-service scenarios. Selected criteria and supporting features are separate. Sources, required evidence, investigation roles, caveats and recommended checks remain visible; no numerical failure probability is assigned. Unknown evidence is not a pass. Aspect ratio is not measured in v1. Scale conversion is restricted to the attested source hash.
 
+Investigate now connects the selected pattern's recorded measurements to its possible mechanism, named investigation teams and required checks. The 12 role definitions come from the scientist's handoff; see `STAKEHOLDER_TRACEABILITY.md`. R08 microscopy validation supports every pattern, separately from the pattern's named investigation owners. Dashed connections indicate hypotheses and investigation routes, not demonstrated fault. Selecting a different manufacturing or future-service pattern updates the diagram.
+
+Measurement labels use plain English, retain the exact technical definition and explain units in a shared expandable guide. Model Output and Model Accuracy distinguish an image's batch probability from model-wide validation intervals and permutation-test results. Native engine values and source artifacts remain unchanged.
+
 ## Verification and limits
 
 A real browser TIFF upload ran successfully through the engine, CPU fallback, review and results. Run 1656d9bdb6dd4dc29914304a060a4442 uses a training-source image to verify plumbing, not independent accuracy. Model refit max coefficient difference was 1.37e-14 (limit 1e-9). The official held-out artifact was not rerun.
