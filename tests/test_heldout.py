@@ -1,12 +1,12 @@
-import sys
 import json
+import sys
 
 import numpy as np
 import pandas as pd
 import pytest
 from PIL import Image
 
-from qc import heldout, features, config, tiles
+from qc import config, features, heldout, tiles
 
 
 def _mock_git(monkeypatch, frozen=False):
@@ -123,6 +123,7 @@ def test_exploratory_output_is_timestamped_under_exploratory_dir(tmp_path):
     assert output.parent == heldout._config.ROOT / heldout.EXPLORATORY_DIR
     assert output.name.startswith("heldout_")
     assert output.suffix == ".json"
+
 
 def test_exploratory_accepts_custom_output(tmp_path, monkeypatch):
     monkeypatch.setattr(heldout._config, "ROOT", tmp_path)
