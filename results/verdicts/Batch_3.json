@@ -1,0 +1,700 @@
+{
+  "subject": {
+    "kind": "batch",
+    "id": "Batch_3",
+    "batch": "Batch_3",
+    "n_images": 17,
+    "n_tiles": 767,
+    "file_hashes": {
+      "0grcilhi": "17b8f934fbb4f6904fcf12c7624c58f017f62b5633c856ad159bf6bd2cd9b95a",
+      "71vgq3fw": "6e39035f9fec96c1b3728c7e4a482f9e3aa07802eb0afbb15c01deb01f1b7113",
+      "9luzk4jm": "4017bd17628b2d29634e767a623cebd9ec6e5996cee2d3aaa9e7265fc58482a7",
+      "cfe5vt7s": "14f1a08a2d3eaf2b5687b0055b630e7a49eea96c093c260302938aa3e1640193",
+      "hawkfj64": "7cc8fc9616c960e182c4b1de208909e8eed67c6a1b7454b2c7e0d34e4a569f34",
+      "hzumfsms": "c06fe783ed9d03d847262839e62c99e76549b0c6a18b3d10045cab3b0e0873ef",
+      "kbdh4tri": "9fa862772440db2644c55dceda66a4aa38830275f2e984775bf28b50d4f95573",
+      "mgxahqnk": "e13bcd2ac2f815bfed7903c60e4c8b42bd42287496daf7290c3ae04f5a4bd528",
+      "pl8uabbv": "9d2977711be2306806e1e2e496278a18832f8a9d09bc9fb1fbe15a4f0ad1ef34",
+      "ptg8lmto": "fd390172b2dd51530e2dbc6825ffa7c41ad7c423ddb97a741c82f89d176a943d",
+      "tuy3zymq": "8bae4640c792d627325f1616056a80afc19fb834d4cad62f12897d2399c0529b",
+      "ufdvpb81": "cef47de25c068b0f7ba255da3c28ccd9d100ad22069186bc5542c54aee8d2362",
+      "utfgcjfa": "4e62e17fbfa089f410ac8e4026c0878ae7f27c54d231a350dd958b40c96002dd",
+      "vc2whyaq": "75e04a6c86abfdedd4d06ad83d017bc60def52b56f1bc520a4f59a65932c07ce",
+      "x77cy643": "b05c4ac6ddc0eae01a98ff89c7171971625d062e95bccb1ba0f1a1971722a388",
+      "x7u69zsw": "bfe4d2d302ccb04929f4ea92be03b76b93fb38421c13268007a6fff33166d954",
+      "xgj4xftb": "f19ecf7f3a5eafdc60ebda36d54660c3aa7c595a17b9994f363fdfa293ae6c61"
+    }
+  },
+  "verdict": {
+    "label": "investigate",
+    "rule": "each Batch_3 image is scored against the other 16 (robust z as in G4). Batch_3 is never outside_bounds; it is investigate if any Batch_3 image is a leave-one-out outlier on features from ≥ 2 families, otherwise within_bounds.",
+    "reason": "Batch_3 has 3 of 17 images with leave-one-out outliers across at least two families; drivers are c1_flake_eqdiam_median_px on mgxahqnk (robust z=11.9), c2_eqdiam_median_px on vc2whyaq (robust z=10.8), c1_flake_eqdiam_median_px on cfe5vt7s (robust z=8.38), F08_c0_local_thickness_median_px on 0grcilhi (robust z=8.36), F10_c0_fraction_iqr_512px on hzumfsms (robust z=8.28) at robust |z| > 3.5.",
+    "justification": {
+      "rule": "each Batch_3 image is scored against the other 16 (robust z as in G4). Batch_3 is never outside_bounds; it is investigate if any Batch_3 image is a leave-one-out outlier on features from ≥ 2 families, otherwise within_bounds.",
+      "numbers": {
+        "n_images": 17,
+        "n_reference_loo_outliers": 14,
+        "n_images_with_outliers_in_at_least_two_families": 3
+      },
+      "evidence": [
+        {
+          "file": "results/stats/acquisition_drift.csv",
+          "selector": "pair == 'Batch_1_vs_Batch_3'",
+          "numbers": {
+            "pair": "Batch_1_vs_Batch_3",
+            "drift": false,
+            "drifting_covariates": "[]"
+          }
+        },
+        {
+          "file": "results/stats/reference_loo.csv",
+          "selector": "table == 'kpi' and feature == 'frac_c0' and sample_id == 'hzumfsms'",
+          "numbers": {
+            "sample_id": "hzumfsms",
+            "family": "phase_fraction",
+            "robust_z": 3.6694488959534906,
+            "outlier": true
+          }
+        },
+        {
+          "file": "results/stats/reference_loo.csv",
+          "selector": "table == 'kpi' and feature == 'c2_eqdiam_median_px' and sample_id == 'ufdvpb81'",
+          "numbers": {
+            "sample_id": "ufdvpb81",
+            "family": "silicon_particle",
+            "robust_z": 6.725063571618882,
+            "outlier": true
+          }
+        },
+        {
+          "file": "results/stats/reference_loo.csv",
+          "selector": "table == 'kpi' and feature == 'c2_eqdiam_median_px' and sample_id == 'vc2whyaq'",
+          "numbers": {
+            "sample_id": "vc2whyaq",
+            "family": "silicon_particle",
+            "robust_z": 10.825024435360117,
+            "outlier": true
+          }
+        },
+        {
+          "file": "results/stats/reference_loo.csv",
+          "selector": "table == 'kpi' and feature == 'c2_tpc_length_px' and sample_id == 'tuy3zymq'",
+          "numbers": {
+            "sample_id": "tuy3zymq",
+            "family": "silicon_particle",
+            "robust_z": -3.918974241605634,
+            "outlier": true
+          }
+        },
+        {
+          "file": "results/stats/reference_loo.csv",
+          "selector": "table == 'kpi' and feature == 'c1_flake_eqdiam_median_px' and sample_id == 'cfe5vt7s'",
+          "numbers": {
+            "sample_id": "cfe5vt7s",
+            "family": "graphite_morphology",
+            "robust_z": 8.37774344403538,
+            "outlier": true
+          }
+        }
+      ]
+    }
+  },
+  "pipeline": {
+    "git_sha": "de8b1e4",
+    "config_path": "configs/v1.yaml",
+    "config_hash": "45629944e398",
+    "timestamp_utc": "2026-10-04T00:31:33.287417Z",
+    "frozen": false,
+    "exploratory": true,
+    "model_revisions": {
+      "dinov2_hub_ref": "7764ea0f912e53c92e82eb78a2a1631e92725fc8",
+      "dinov2_weights_sha256": "b938bf1bc15cd2ec0feacfe3a1bb553fe8ea9ca46a7e1d8d00217f29aef60cd9",
+      "stats_config_hash": "e718e5866dea",
+      "features_config_hash": "a03b4b7c5a70"
+    }
+  },
+  "acquisition": {
+    "detectors_present": [
+      "BSE",
+      "ETD",
+      "Inlens",
+      "SE"
+    ],
+    "pixel_size_nm": null,
+    "pixel_size_confirmed": false,
+    "covariates": {
+      "curtaining_score_BSE": {
+        "value": 0.022981473911753,
+        "training_p05": 0.0208825004485504,
+        "training_p95": 0.0268823343858776,
+        "flag": false,
+        "justification": {
+          "rule": "Flag a batch covariate when its median is strictly outside the Batch_3 5th–95th percentile range.",
+          "numbers": {
+            "value": 0.022981473911753,
+            "training_p05": 0.0208825004485504,
+            "training_p95": 0.0268823343858776,
+            "flag": false
+          },
+          "evidence": [
+            {
+              "file": "results/stats/covariate_contrasts.csv",
+              "selector": "feature == 'curtaining_score_BSE' and pair == 'Batch_1_vs_Batch_3'",
+              "numbers": {
+                "median_a": 0.0217342519765007,
+                "median_b": 0.022981473911753,
+                "reference_p05": 0.0208825004485504,
+                "reference_p95": 0.0268823343858776,
+                "p_bh": 0.4055472263868066
+              }
+            }
+          ]
+        }
+      },
+      "edge_charging_BSE": {
+        "value": 0.0388326710003426,
+        "training_p05": -0.9825392962671846,
+        "training_p95": 0.8011266757115294,
+        "flag": false,
+        "justification": {
+          "rule": "Flag a batch covariate when its median is strictly outside the Batch_3 5th–95th percentile range.",
+          "numbers": {
+            "value": 0.0388326710003426,
+            "training_p05": -0.9825392962671846,
+            "training_p95": 0.8011266757115294,
+            "flag": false
+          },
+          "evidence": [
+            {
+              "file": "results/stats/covariate_contrasts.csv",
+              "selector": "feature == 'edge_charging_BSE' and pair == 'Batch_1_vs_Batch_3'",
+              "numbers": {
+                "median_a": 0.621777777517249,
+                "median_b": 0.0388326710003426,
+                "reference_p05": -0.9825392962671846,
+                "reference_p95": 0.8011266757115294,
+                "p_bh": 0.2494752623688156
+              }
+            }
+          ]
+        }
+      },
+      "edge_charging_Inlens": {
+        "value": -1.124139151890157,
+        "training_p05": -3.2994487056576043,
+        "training_p95": 2.660257156094418,
+        "flag": false,
+        "justification": {
+          "rule": "Flag a batch covariate when its median is strictly outside the Batch_3 5th–95th percentile range.",
+          "numbers": {
+            "value": -1.124139151890157,
+            "training_p05": -3.2994487056576043,
+            "training_p95": 2.660257156094418,
+            "flag": false
+          },
+          "evidence": [
+            {
+              "file": "results/stats/covariate_contrasts.csv",
+              "selector": "feature == 'edge_charging_Inlens' and pair == 'Batch_1_vs_Batch_3'",
+              "numbers": {
+                "median_a": -0.9308598300304266,
+                "median_b": -1.124139151890157,
+                "reference_p05": -3.2994487056576043,
+                "reference_p95": 2.660257156094418,
+                "p_bh": 1.0
+              }
+            }
+          ]
+        }
+      },
+      "height": {
+        "value": 2060.0,
+        "training_p05": 1612.0,
+        "training_p95": 2124.8,
+        "flag": false,
+        "justification": {
+          "rule": "Flag a batch covariate when its median is strictly outside the Batch_3 5th–95th percentile range.",
+          "numbers": {
+            "value": 2060.0,
+            "training_p05": 1612.0,
+            "training_p95": 2124.8,
+            "flag": false
+          },
+          "evidence": [
+            {
+              "file": "results/stats/covariate_contrasts.csv",
+              "selector": "feature == 'height' and pair == 'Batch_1_vs_Batch_3'",
+              "numbers": {
+                "median_a": 2148.0,
+                "median_b": 2060.0,
+                "reference_p05": 1612.0,
+                "reference_p95": 2124.8,
+                "p_bh": 0.2494752623688156
+              }
+            }
+          ]
+        }
+      },
+      "hstripe_score_BSE": {
+        "value": 0.0378814836859203,
+        "training_p05": 0.0339984876006639,
+        "training_p95": 0.0437479359538098,
+        "flag": false,
+        "justification": {
+          "rule": "Flag a batch covariate when its median is strictly outside the Batch_3 5th–95th percentile range.",
+          "numbers": {
+            "value": 0.0378814836859203,
+            "training_p05": 0.0339984876006639,
+            "training_p95": 0.0437479359538098,
+            "flag": false
+          },
+          "evidence": [
+            {
+              "file": "results/stats/covariate_contrasts.csv",
+              "selector": "feature == 'hstripe_score_BSE' and pair == 'Batch_1_vs_Batch_3'",
+              "numbers": {
+                "median_a": 0.03450791085997,
+                "median_b": 0.0378814836859203,
+                "reference_p05": 0.0339984876006639,
+                "reference_p95": 0.0437479359538098,
+                "p_bh": 0.2494752623688156
+              }
+            }
+          ]
+        }
+      },
+      "nm_per_px_if_tag_true": {
+        "value": 25.0001448827294,
+        "training_p05": 24.99920160030165,
+        "training_p95": 25.000548043509863,
+        "flag": false,
+        "justification": {
+          "rule": "Flag a batch covariate when its median is strictly outside the Batch_3 5th–95th percentile range.",
+          "numbers": {
+            "value": 25.0001448827294,
+            "training_p05": 24.99920160030165,
+            "training_p95": 25.000548043509863,
+            "flag": false
+          },
+          "evidence": [
+            {
+              "file": "results/stats/covariate_contrasts.csv",
+              "selector": "feature == 'nm_per_px_if_tag_true' and pair == 'Batch_1_vs_Batch_3'",
+              "numbers": {
+                "median_a": 25.00005511823176,
+                "median_b": 25.0001448827294,
+                "reference_p05": 24.99920160030165,
+                "reference_p95": 25.000548043509863,
+                "p_bh": 0.4604364484424454
+              }
+            }
+          ]
+        }
+      },
+      "noise_sigma_BSE": {
+        "value": 37.711261538461535,
+        "training_p05": 30.024550769230768,
+        "training_p95": 44.68898538461538,
+        "flag": false,
+        "justification": {
+          "rule": "Flag a batch covariate when its median is strictly outside the Batch_3 5th–95th percentile range.",
+          "numbers": {
+            "value": 37.711261538461535,
+            "training_p05": 30.024550769230768,
+            "training_p95": 44.68898538461538,
+            "flag": false
+          },
+          "evidence": [
+            {
+              "file": "results/stats/covariate_contrasts.csv",
+              "selector": "feature == 'noise_sigma_BSE' and pair == 'Batch_1_vs_Batch_3'",
+              "numbers": {
+                "median_a": 46.30273846153846,
+                "median_b": 37.711261538461535,
+                "reference_p05": 30.024550769230768,
+                "reference_p95": 44.68898538461538,
+                "p_bh": 0.2494752623688156
+              }
+            }
+          ]
+        }
+      },
+      "sharpness_BSE": {
+        "value": 1639.8736931238418,
+        "training_p05": 1011.293392944336,
+        "training_p95": 2202.772404003143,
+        "flag": false,
+        "justification": {
+          "rule": "Flag a batch covariate when its median is strictly outside the Batch_3 5th–95th percentile range.",
+          "numbers": {
+            "value": 1639.8736931238418,
+            "training_p05": 1011.293392944336,
+            "training_p95": 2202.772404003143,
+            "flag": false
+          },
+          "evidence": [
+            {
+              "file": "results/stats/covariate_contrasts.csv",
+              "selector": "feature == 'sharpness_BSE' and pair == 'Batch_1_vs_Batch_3'",
+              "numbers": {
+                "median_a": 2348.618320611807,
+                "median_b": 1639.8736931238418,
+                "reference_p05": 1011.293392944336,
+                "reference_p95": 2202.772404003143,
+                "p_bh": 0.2494752623688156
+              }
+            }
+          ]
+        }
+      }
+    },
+    "acquisition_drift_suspected": false,
+    "drift_justification": {
+      "rule": "**Acquisition drift** for a pair = any covariate with BH-adjusted p < 0.05.",
+      "numbers": {
+        "acquisition_drift_suspected": false,
+        "drifting_covariates": "[]",
+        "reference_batch": "Batch_3"
+      },
+      "evidence": [
+        {
+          "file": "results/stats/acquisition_drift.csv",
+          "selector": "pair == 'Batch_1_vs_Batch_3'",
+          "numbers": {
+            "pair": "Batch_1_vs_Batch_3",
+            "drift": false,
+            "drifting_covariates": "[]"
+          }
+        }
+      ]
+    }
+  },
+  "evidence": {
+    "drivers": [
+      {
+        "name": "c1_flake_eqdiam_median_px",
+        "sample_id": "mgxahqnk",
+        "units": "px",
+        "value": 23.201721489545587,
+        "reference_median": 7.279236515979129,
+        "effect_size": 11.940499043258797,
+        "direction": "higher",
+        "prevalence_images_outside_band": "1/17",
+        "family": "graphite_morphology",
+        "status": "drop",
+        "threshold_sensitivity": 1.219431699536336,
+        "justification": {
+          "rule": "each Batch_3 image is scored against the other 16 (robust z as in G4). Batch_3 is never outside_bounds; it is investigate if any Batch_3 image is a leave-one-out outlier on features from ≥ 2 families, otherwise within_bounds.",
+          "numbers": {
+            "robust_z": 11.940499043258797,
+            "outlier": true,
+            "sample_id": "mgxahqnk",
+            "threshold_sensitivity": 1.219431699536336
+          },
+          "evidence": [
+            {
+              "file": "results/stats/reference_loo.csv",
+              "selector": "table == 'kpi' and feature == 'c1_flake_eqdiam_median_px' and sample_id == 'mgxahqnk'",
+              "numbers": {
+                "sample_id": "mgxahqnk",
+                "value": 23.201721489545587,
+                "median_other16": 7.279236515979129,
+                "scale_other16": 1.3334857208129636,
+                "robust_z": 11.940499043258797,
+                "outlier": true
+              }
+            },
+            {
+              "file": "results/stats/feature_status.csv",
+              "selector": "table == 'kpi' and feature == 'c1_flake_eqdiam_median_px'",
+              "numbers": {
+                "status": "drop",
+                "family": "graphite_morphology"
+              }
+            },
+            {
+              "file": "results/stats/gates.csv",
+              "selector": "table == 'kpi' and feature == 'c1_flake_eqdiam_median_px' and pair == 'Batch_1_vs_Batch_3'",
+              "numbers": {
+                "sens_ratio": 1.219431699536336,
+                "s_f": 1.3694125786163431,
+                "G4": true
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "c2_eqdiam_median_px",
+        "sample_id": "vc2whyaq",
+        "units": "px",
+        "value": 10.281224629916588,
+        "reference_median": 8.259554003424718,
+        "effect_size": 10.825024435360117,
+        "direction": "higher",
+        "prevalence_images_outside_band": "1/17",
+        "family": "silicon_particle",
+        "status": "drop",
+        "threshold_sensitivity": 18.632361566050864,
+        "justification": {
+          "rule": "each Batch_3 image is scored against the other 16 (robust z as in G4). Batch_3 is never outside_bounds; it is investigate if any Batch_3 image is a leave-one-out outlier on features from ≥ 2 families, otherwise within_bounds.",
+          "numbers": {
+            "robust_z": 10.825024435360117,
+            "outlier": true,
+            "sample_id": "vc2whyaq",
+            "threshold_sensitivity": 18.632361566050864
+          },
+          "evidence": [
+            {
+              "file": "results/stats/reference_loo.csv",
+              "selector": "table == 'kpi' and feature == 'c2_eqdiam_median_px' and sample_id == 'vc2whyaq'",
+              "numbers": {
+                "sample_id": "vc2whyaq",
+                "value": 10.281224629916588,
+                "median_other16": 8.259554003424718,
+                "scale_other16": 0.1867589896506885,
+                "robust_z": 10.825024435360117,
+                "outlier": true
+              }
+            },
+            {
+              "file": "results/stats/feature_status.csv",
+              "selector": "table == 'kpi' and feature == 'c2_eqdiam_median_px'",
+              "numbers": {
+                "status": "drop",
+                "family": "silicon_particle"
+              }
+            },
+            {
+              "file": "results/stats/gates.csv",
+              "selector": "table == 'kpi' and feature == 'c2_eqdiam_median_px' and pair == 'Batch_1_vs_Batch_3'",
+              "numbers": {
+                "sens_ratio": 18.632361566050864,
+                "s_f": 0.2021411186079578,
+                "G4": true
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "c1_flake_eqdiam_median_px",
+        "sample_id": "cfe5vt7s",
+        "units": "px",
+        "value": 18.450837771234728,
+        "reference_median": 7.279236515979129,
+        "effect_size": 8.37774344403538,
+        "direction": "higher",
+        "prevalence_images_outside_band": "1/17",
+        "family": "graphite_morphology",
+        "status": "drop",
+        "threshold_sensitivity": 1.219431699536336,
+        "justification": {
+          "rule": "each Batch_3 image is scored against the other 16 (robust z as in G4). Batch_3 is never outside_bounds; it is investigate if any Batch_3 image is a leave-one-out outlier on features from ≥ 2 families, otherwise within_bounds.",
+          "numbers": {
+            "robust_z": 8.37774344403538,
+            "outlier": true,
+            "sample_id": "cfe5vt7s",
+            "threshold_sensitivity": 1.219431699536336
+          },
+          "evidence": [
+            {
+              "file": "results/stats/reference_loo.csv",
+              "selector": "table == 'kpi' and feature == 'c1_flake_eqdiam_median_px' and sample_id == 'cfe5vt7s'",
+              "numbers": {
+                "sample_id": "cfe5vt7s",
+                "value": 18.450837771234728,
+                "median_other16": 7.279236515979129,
+                "scale_other16": 1.3334857208129636,
+                "robust_z": 8.37774344403538,
+                "outlier": true
+              }
+            },
+            {
+              "file": "results/stats/feature_status.csv",
+              "selector": "table == 'kpi' and feature == 'c1_flake_eqdiam_median_px'",
+              "numbers": {
+                "status": "drop",
+                "family": "graphite_morphology"
+              }
+            },
+            {
+              "file": "results/stats/gates.csv",
+              "selector": "table == 'kpi' and feature == 'c1_flake_eqdiam_median_px' and pair == 'Batch_1_vs_Batch_3'",
+              "numbers": {
+                "sens_ratio": 1.219431699536336,
+                "s_f": 1.3694125786163431,
+                "G4": true
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "F08_c0_local_thickness_median_px",
+        "sample_id": "0grcilhi",
+        "units": "px",
+        "value": 38.4,
+        "reference_median": 26.0,
+        "effect_size": 8.36368541750978,
+        "direction": "higher",
+        "prevalence_images_outside_band": "1/17",
+        "family": "void_morphology",
+        "status": "investigate",
+        "threshold_sensitivity": 0.6744907594765952,
+        "justification": {
+          "rule": "each Batch_3 image is scored against the other 16 (robust z as in G4). Batch_3 is never outside_bounds; it is investigate if any Batch_3 image is a leave-one-out outlier on features from ≥ 2 families, otherwise within_bounds.",
+          "numbers": {
+            "robust_z": 8.36368541750978,
+            "outlier": true,
+            "sample_id": "0grcilhi",
+            "threshold_sensitivity": 0.6744907594765952
+          },
+          "evidence": [
+            {
+              "file": "results/stats/reference_loo.csv",
+              "selector": "table == 'features' and feature == 'F08_c0_local_thickness_median_px' and sample_id == '0grcilhi'",
+              "numbers": {
+                "sample_id": "0grcilhi",
+                "value": 38.4,
+                "median_other16": 26.0,
+                "scale_other16": 1.4826,
+                "robust_z": 8.36368541750978,
+                "outlier": true
+              }
+            },
+            {
+              "file": "results/stats/feature_status.csv",
+              "selector": "table == 'features' and feature == 'F08_c0_local_thickness_median_px'",
+              "numbers": {
+                "status": "investigate",
+                "family": "void_morphology"
+              }
+            },
+            {
+              "file": "results/stats/gates.csv",
+              "selector": "table == 'features' and feature == 'F08_c0_local_thickness_median_px' and pair == 'Batch_1_vs_Batch_3'",
+              "numbers": {
+                "sens_ratio": 0.6744907594765952,
+                "s_f": 2.9652,
+                "G4": true
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "F10_c0_fraction_iqr_512px",
+        "sample_id": "hzumfsms",
+        "units": "fraction",
+        "value": 0.0989255905151367,
+        "reference_median": 0.0474166870117187,
+        "effect_size": 8.28329249888367,
+        "direction": "higher",
+        "prevalence_images_outside_band": "1/17",
+        "family": "void_morphology",
+        "status": "investigate",
+        "threshold_sensitivity": 0.7587679010258006,
+        "justification": {
+          "rule": "each Batch_3 image is scored against the other 16 (robust z as in G4). Batch_3 is never outside_bounds; it is investigate if any Batch_3 image is a leave-one-out outlier on features from ≥ 2 families, otherwise within_bounds.",
+          "numbers": {
+            "robust_z": 8.28329249888367,
+            "outlier": true,
+            "sample_id": "hzumfsms",
+            "threshold_sensitivity": 0.7587679010258006
+          },
+          "evidence": [
+            {
+              "file": "results/stats/reference_loo.csv",
+              "selector": "table == 'features' and feature == 'F10_c0_fraction_iqr_512px' and sample_id == 'hzumfsms'",
+              "numbers": {
+                "sample_id": "hzumfsms",
+                "value": 0.0989255905151367,
+                "median_other16": 0.0474166870117187,
+                "scale_other16": 0.0062184093475341,
+                "robust_z": 8.28329249888367,
+                "outlier": true
+              }
+            },
+            {
+              "file": "results/stats/feature_status.csv",
+              "selector": "table == 'features' and feature == 'F10_c0_fraction_iqr_512px'",
+              "numbers": {
+                "status": "investigate",
+                "family": "void_morphology"
+              }
+            },
+            {
+              "file": "results/stats/gates.csv",
+              "selector": "table == 'features' and feature == 'F10_c0_fraction_iqr_512px' and pair == 'Batch_1_vs_Batch_3'",
+              "numbers": {
+                "sens_ratio": 0.7587679010258006,
+                "s_f": 0.0069706134796142,
+                "G4": true
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "embedding": {
+      "backbone": "dinov2_vits14",
+      "energy_distance": 0.0,
+      "mmd": 0.0,
+      "permutation_p": 1.0,
+      "energy_p_bh": 1.0,
+      "mmd2_p_bh": 1.0,
+      "energy_band_position": "diagonal",
+      "mmd2_band_position": "diagonal",
+      "n_permutations": 2000,
+      "justification": {
+        "rule": "Batch_3 is the reference; diagonal embedding distances are descriptive and do not determine its leave-one-out verdict.",
+        "numbers": {
+          "energy_distance": 0.0,
+          "energy_p_bh": 1.0,
+          "mmd2": 0.0,
+          "mmd2_p_bh": 1.0,
+          "n_permutations": 2000
+        },
+        "evidence": [
+          {
+            "file": "results/stats/distance_matrix.csv",
+            "selector": "table == 'emb_BSE' and statistic == 'energy' and batch_a == 'Batch_3' and batch_b == 'Batch_3' and residualised == False",
+            "numbers": {
+              "value": 0.0,
+              "p_bh": 1.0,
+              "band_position": "diagonal"
+            }
+          },
+          {
+            "file": "results/stats/distance_matrix.csv",
+            "selector": "table == 'emb_BSE' and statistic == 'mmd2' and batch_a == 'Batch_3' and batch_b == 'Batch_3' and residualised == False",
+            "numbers": {
+              "value": 0.0,
+              "p_bh": 1.0,
+              "band_position": "diagonal"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "uncertainty": {
+    "sampling": "n=17 images; resampling unit is image, not tile.",
+    "segmentation": "maximum feature threshold-sensitivity ratio=18.63.",
+    "decision_margin": "top reference robust |z| minus 3.5=8.44; G4=reference LOO rule.",
+    "robustness": "maximum reported bootstrap rank stability=0.731; G4 outcome=reference LOO rule."
+  },
+  "routing": {
+    "stakeholder": "materials_expert_review",
+    "reason": "The result requires material-level review under the preregistered investigate rule."
+  },
+  "next_action": "Review the listed image-level evidence with an independent materials expert.",
+  "caveats": [
+    "phase_identity: stated by Polaron, not image-verified",
+    "Units are px; pixel size is unconfirmed and pixel_size_nm is null.",
+    "BSE cannot distinguish Si from SiOx.",
+    "Exploratory; not frozen.",
+    "Independent review pending."
+  ]
+}

@@ -1,0 +1,753 @@
+{
+  "subject": {
+    "kind": "batch",
+    "id": "Batch_2",
+    "batch": "Batch_2",
+    "n_images": 7,
+    "n_tiles": 338,
+    "file_hashes": {
+      "3806gxp0": "806d025a34c813c44a6626c882c5358456304dd58d978aa474b42e55f7bfce20",
+      "avn74qx1": "e1113d827cf083c93edd1e67765777398408899461f99e31130710833c2b35de",
+      "b3esycq1": "01e83352c90c1a77bf2e8d216651d2b1cb747257b22b4cbc2e8c7c4ccaa485d5",
+      "epqdaau9": "7e7bcdf0bdaf9d1eb3d148d514c21deb06ae4c634b979a3323c2147998ee00d2",
+      "i9jiqjwl": "9636159933edf7b2f5bdf709c6472a3124e44ec710b80296283d9a8e65c96f60",
+      "r17byphk": "2071683d1b7591ef34e03aa2707081b923c51451ee7165323af93f253a904172",
+      "rxax5ozo": "e1cffb1b6a62f7aa6a10a48cc52a8ef18833929a858c5c6692e5c5bd7558f2c9"
+    }
+  },
+  "verdict": {
+    "label": "investigate",
+    "rule": "everything else. Signals from features that failed any gate can only give investigate.",
+    "reason": "none is significant among feature contrasts; top |z| contrasts are F03_c2_eqdiam_median_px (z=-1.36, band=within, BH p=0.958), c2_eqdiam_median_px (z=0.802, band=within, BH p=0.958), c1_flake_aspect_median (z=-0.785, band=within, BH p=0.958), F06_c2_clark_evans_R (z=-0.74, band=within, BH p=0.958), F11_c2_perimeter_fraction_adjacent_c0 (z=0.723, band=within, BH p=0.958); no difference beyond the null band in feature contrasts was supported at BH p < 0.05; different from Batch_3 in BSE embedding tests (energy=0.0404 (band=outside, BH p=0.0124) and MMD²=0.122 (band=outside, BH p=0.0124)).",
+    "justification": {
+      "rule": "everything else. Signals from features that failed any gate can only give investigate.",
+      "numbers": {
+        "n_images": 7,
+        "n_feature_lines": 0,
+        "n_distinct_line_families": 1,
+        "n_feature_signals_beyond_band95": 0,
+        "n_embedding_signals_beyond_band95": 2,
+        "acquisition_drift_suspected": false
+      },
+      "evidence": [
+        {
+          "file": "results/stats/acquisition_drift.csv",
+          "selector": "pair == 'Batch_2_vs_Batch_3'",
+          "numbers": {
+            "pair": "Batch_2_vs_Batch_3",
+            "drift": false,
+            "drifting_covariates": "[]"
+          }
+        },
+        {
+          "file": "results/stats/feature_contrasts.csv",
+          "selector": "table == 'features' and feature == 'F03_c2_eqdiam_median_px' and pair == 'Batch_2_vs_Batch_3'",
+          "numbers": {
+            "z": -1.3556272295944092,
+            "p_bh": 0.957512315270936,
+            "band99": 4.109002888872817,
+            "band_position": "within"
+          }
+        },
+        {
+          "file": "results/stats/feature_status.csv",
+          "selector": "table == 'features' and feature == 'F03_c2_eqdiam_median_px'",
+          "numbers": {
+            "status": "drop",
+            "family": "silicon_particle"
+          }
+        },
+        {
+          "file": "results/stats/distance_matrix.csv",
+          "selector": "table == 'emb_BSE' and statistic == 'energy' and batch_a == 'Batch_2' and batch_b == 'Batch_3' and residualised == False",
+          "numbers": {
+            "value": 0.0403824865745699,
+            "p_bh": 0.0123688155922038,
+            "band99": 0.0375033036097751,
+            "band_position": "outside"
+          }
+        },
+        {
+          "file": "results/stats/distance_matrix.csv",
+          "selector": "table == 'emb_BSE' and statistic == 'mmd2' and batch_a == 'Batch_2' and batch_b == 'Batch_3' and residualised == False",
+          "numbers": {
+            "value": 0.1224536265873461,
+            "p_bh": 0.0123688155922038,
+            "band99": 0.1165901054955168,
+            "band_position": "outside"
+          }
+        },
+        {
+          "file": "results/stats/embedding_gates.csv",
+          "selector": "channel == 'BSE' and pair == 'Batch_2_vs_Batch_3'",
+          "numbers": {
+            "G1": true,
+            "G2": true,
+            "G4": true,
+            "outlier_ids": null
+          }
+        }
+      ]
+    }
+  },
+  "pipeline": {
+    "git_sha": "de8b1e4",
+    "config_path": "configs/v1.yaml",
+    "config_hash": "45629944e398",
+    "timestamp_utc": "2026-10-04T00:31:33.287417Z",
+    "frozen": false,
+    "exploratory": true,
+    "model_revisions": {
+      "dinov2_hub_ref": "7764ea0f912e53c92e82eb78a2a1631e92725fc8",
+      "dinov2_weights_sha256": "b938bf1bc15cd2ec0feacfe3a1bb553fe8ea9ca46a7e1d8d00217f29aef60cd9",
+      "stats_config_hash": "e718e5866dea",
+      "features_config_hash": "a03b4b7c5a70"
+    }
+  },
+  "acquisition": {
+    "detectors_present": [
+      "BSE",
+      "ETD",
+      "Inlens",
+      "SE"
+    ],
+    "pixel_size_nm": null,
+    "pixel_size_confirmed": false,
+    "covariates": {
+      "curtaining_score_BSE": {
+        "value": 0.0219289254953321,
+        "training_p05": 0.0208825004485504,
+        "training_p95": 0.0268823343858776,
+        "flag": false,
+        "justification": {
+          "rule": "Flag a batch covariate when its median is strictly outside the Batch_3 5th–95th percentile range.",
+          "numbers": {
+            "value": 0.0219289254953321,
+            "training_p05": 0.0208825004485504,
+            "training_p95": 0.0268823343858776,
+            "flag": false
+          },
+          "evidence": [
+            {
+              "file": "results/stats/covariate_contrasts.csv",
+              "selector": "feature == 'curtaining_score_BSE' and pair == 'Batch_2_vs_Batch_3'",
+              "numbers": {
+                "median_a": 0.0219289254953321,
+                "median_b": 0.022981473911753,
+                "reference_p05": 0.0208825004485504,
+                "reference_p95": 0.0268823343858776,
+                "p_bh": 0.4055472263868066
+              }
+            }
+          ]
+        }
+      },
+      "edge_charging_BSE": {
+        "value": 0.4223618929128893,
+        "training_p05": -0.9825392962671846,
+        "training_p95": 0.8011266757115294,
+        "flag": false,
+        "justification": {
+          "rule": "Flag a batch covariate when its median is strictly outside the Batch_3 5th–95th percentile range.",
+          "numbers": {
+            "value": 0.4223618929128893,
+            "training_p05": -0.9825392962671846,
+            "training_p95": 0.8011266757115294,
+            "flag": false
+          },
+          "evidence": [
+            {
+              "file": "results/stats/covariate_contrasts.csv",
+              "selector": "feature == 'edge_charging_BSE' and pair == 'Batch_2_vs_Batch_3'",
+              "numbers": {
+                "median_a": 0.4223618929128893,
+                "median_b": 0.0388326710003426,
+                "reference_p05": -0.9825392962671846,
+                "reference_p95": 0.8011266757115294,
+                "p_bh": 0.4466002292971161
+              }
+            }
+          ]
+        }
+      },
+      "edge_charging_Inlens": {
+        "value": -3.757323261860989,
+        "training_p05": -3.2994487056576043,
+        "training_p95": 2.660257156094418,
+        "flag": true,
+        "justification": {
+          "rule": "Flag a batch covariate when its median is strictly outside the Batch_3 5th–95th percentile range.",
+          "numbers": {
+            "value": -3.757323261860989,
+            "training_p05": -3.2994487056576043,
+            "training_p95": 2.660257156094418,
+            "flag": true
+          },
+          "evidence": [
+            {
+              "file": "results/stats/covariate_contrasts.csv",
+              "selector": "feature == 'edge_charging_Inlens' and pair == 'Batch_2_vs_Batch_3'",
+              "numbers": {
+                "median_a": -3.757323261860989,
+                "median_b": -1.124139151890157,
+                "reference_p05": -3.2994487056576043,
+                "reference_p95": 2.660257156094418,
+                "p_bh": 0.2494752623688156
+              }
+            }
+          ]
+        }
+      },
+      "height": {
+        "value": 2080.0,
+        "training_p05": 1612.0,
+        "training_p95": 2124.8,
+        "flag": false,
+        "justification": {
+          "rule": "Flag a batch covariate when its median is strictly outside the Batch_3 5th–95th percentile range.",
+          "numbers": {
+            "value": 2080.0,
+            "training_p05": 1612.0,
+            "training_p95": 2124.8,
+            "flag": false
+          },
+          "evidence": [
+            {
+              "file": "results/stats/covariate_contrasts.csv",
+              "selector": "feature == 'height' and pair == 'Batch_2_vs_Batch_3'",
+              "numbers": {
+                "median_a": 2080.0,
+                "median_b": 2060.0,
+                "reference_p05": 1612.0,
+                "reference_p95": 2124.8,
+                "p_bh": 0.4055472263868066
+              }
+            }
+          ]
+        }
+      },
+      "hstripe_score_BSE": {
+        "value": 0.0362682795793851,
+        "training_p05": 0.0339984876006639,
+        "training_p95": 0.0437479359538098,
+        "flag": false,
+        "justification": {
+          "rule": "Flag a batch covariate when its median is strictly outside the Batch_3 5th–95th percentile range.",
+          "numbers": {
+            "value": 0.0362682795793851,
+            "training_p05": 0.0339984876006639,
+            "training_p95": 0.0437479359538098,
+            "flag": false
+          },
+          "evidence": [
+            {
+              "file": "results/stats/covariate_contrasts.csv",
+              "selector": "feature == 'hstripe_score_BSE' and pair == 'Batch_2_vs_Batch_3'",
+              "numbers": {
+                "median_a": 0.0362682795793851,
+                "median_b": 0.0378814836859203,
+                "reference_p05": 0.0339984876006639,
+                "reference_p95": 0.0437479359538098,
+                "p_bh": 0.368815592203898
+              }
+            }
+          ]
+        }
+      },
+      "nm_per_px_if_tag_true": {
+        "value": 24.999707090046066,
+        "training_p05": 24.99920160030165,
+        "training_p95": 25.000548043509863,
+        "flag": false,
+        "justification": {
+          "rule": "Flag a batch covariate when its median is strictly outside the Batch_3 5th–95th percentile range.",
+          "numbers": {
+            "value": 24.999707090046066,
+            "training_p05": 24.99920160030165,
+            "training_p95": 25.000548043509863,
+            "flag": false
+          },
+          "evidence": [
+            {
+              "file": "results/stats/covariate_contrasts.csv",
+              "selector": "feature == 'nm_per_px_if_tag_true' and pair == 'Batch_2_vs_Batch_3'",
+              "numbers": {
+                "median_a": 24.999707090046066,
+                "median_b": 25.0001448827294,
+                "reference_p05": 24.99920160030165,
+                "reference_p95": 25.000548043509863,
+                "p_bh": 0.2494752623688156
+              }
+            }
+          ]
+        }
+      },
+      "noise_sigma_BSE": {
+        "value": 44.36395384615384,
+        "training_p05": 30.024550769230768,
+        "training_p95": 44.68898538461538,
+        "flag": false,
+        "justification": {
+          "rule": "Flag a batch covariate when its median is strictly outside the Batch_3 5th–95th percentile range.",
+          "numbers": {
+            "value": 44.36395384615384,
+            "training_p05": 30.024550769230768,
+            "training_p95": 44.68898538461538,
+            "flag": false
+          },
+          "evidence": [
+            {
+              "file": "results/stats/covariate_contrasts.csv",
+              "selector": "feature == 'noise_sigma_BSE' and pair == 'Batch_2_vs_Batch_3'",
+              "numbers": {
+                "median_a": 44.36395384615384,
+                "median_b": 37.711261538461535,
+                "reference_p05": 30.024550769230768,
+                "reference_p95": 44.68898538461538,
+                "p_bh": 0.2494752623688156
+              }
+            }
+          ]
+        }
+      },
+      "sharpness_BSE": {
+        "value": 2186.63425333072,
+        "training_p05": 1011.293392944336,
+        "training_p95": 2202.772404003143,
+        "flag": false,
+        "justification": {
+          "rule": "Flag a batch covariate when its median is strictly outside the Batch_3 5th–95th percentile range.",
+          "numbers": {
+            "value": 2186.63425333072,
+            "training_p05": 1011.293392944336,
+            "training_p95": 2202.772404003143,
+            "flag": false
+          },
+          "evidence": [
+            {
+              "file": "results/stats/covariate_contrasts.csv",
+              "selector": "feature == 'sharpness_BSE' and pair == 'Batch_2_vs_Batch_3'",
+              "numbers": {
+                "median_a": 2186.63425333072,
+                "median_b": 1639.8736931238418,
+                "reference_p05": 1011.293392944336,
+                "reference_p95": 2202.772404003143,
+                "p_bh": 0.2494752623688156
+              }
+            }
+          ]
+        }
+      }
+    },
+    "acquisition_drift_suspected": false,
+    "drift_justification": {
+      "rule": "**Acquisition drift** for a pair = any covariate with BH-adjusted p < 0.05.",
+      "numbers": {
+        "acquisition_drift_suspected": false,
+        "drifting_covariates": "[]",
+        "reference_batch": "Batch_3"
+      },
+      "evidence": [
+        {
+          "file": "results/stats/acquisition_drift.csv",
+          "selector": "pair == 'Batch_2_vs_Batch_3'",
+          "numbers": {
+            "pair": "Batch_2_vs_Batch_3",
+            "drift": false,
+            "drifting_covariates": "[]"
+          }
+        }
+      ]
+    }
+  },
+  "evidence": {
+    "drivers": [
+      {
+        "name": "F03_c2_eqdiam_median_px",
+        "units": "px",
+        "value": 7.978845608028654,
+        "reference_median": 8.136857890256438,
+        "effect_size": -1.3556272295944092,
+        "direction": "lower",
+        "prevalence_images_outside_band": "1/7",
+        "threshold_sensitivity": 6.198183929427679,
+        "p_bh": 0.957512315270936,
+        "band_position": "within",
+        "band99": 4.109002888872817,
+        "status": "drop",
+        "family": "silicon_particle",
+        "justification": {
+          "rule": "Select feature contrasts with BH p < 0.05 ordered by absolute z; if none is significant, select the five largest absolute z values.",
+          "numbers": {
+            "z": -1.3556272295944092,
+            "p_bh": 0.957512315270936,
+            "band99": 4.109002888872817,
+            "band_position": "within",
+            "status": "drop",
+            "family": "silicon_particle"
+          },
+          "evidence": [
+            {
+              "file": "results/stats/feature_contrasts.csv",
+              "selector": "table == 'features' and feature == 'F03_c2_eqdiam_median_px' and pair == 'Batch_2_vs_Batch_3'",
+              "numbers": {
+                "median_a": 7.978845608028654,
+                "median_b": 8.136857890256438,
+                "z": -1.3556272295944092,
+                "p_bh": 0.957512315270936,
+                "band99": 4.109002888872817,
+                "band_position": "within",
+                "prevalence_images_outside_band": "1/7",
+                "sens_ratio": 6.198183929427679
+              }
+            },
+            {
+              "file": "results/stats/feature_status.csv",
+              "selector": "table == 'features' and feature == 'F03_c2_eqdiam_median_px'",
+              "numbers": {
+                "status": "drop",
+                "family": "silicon_particle"
+              }
+            },
+            {
+              "file": "results/stats/gates.csv",
+              "selector": "table == 'features' and feature == 'F03_c2_eqdiam_median_px' and pair == 'Batch_2_vs_Batch_3'",
+              "numbers": {
+                "G1": false,
+                "G2": true,
+                "G3": false,
+                "G4": true,
+                "G5": true,
+                "rank_stability": 0.537,
+                "status_pair": "drop"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "c2_eqdiam_median_px",
+        "units": "px",
+        "value": 8.421690029395204,
+        "reference_median": 8.259573417047646,
+        "effect_size": 0.8019972060309772,
+        "direction": "higher",
+        "prevalence_images_outside_band": "2/7",
+        "threshold_sensitivity": 18.632361566050864,
+        "p_bh": 0.957512315270936,
+        "band_position": "within",
+        "band99": 2.088481683411847,
+        "status": "drop",
+        "family": "silicon_particle",
+        "justification": {
+          "rule": "Select feature contrasts with BH p < 0.05 ordered by absolute z; if none is significant, select the five largest absolute z values.",
+          "numbers": {
+            "z": 0.8019972060309772,
+            "p_bh": 0.957512315270936,
+            "band99": 2.088481683411847,
+            "band_position": "within",
+            "status": "drop",
+            "family": "silicon_particle"
+          },
+          "evidence": [
+            {
+              "file": "results/stats/feature_contrasts.csv",
+              "selector": "table == 'kpi' and feature == 'c2_eqdiam_median_px' and pair == 'Batch_2_vs_Batch_3'",
+              "numbers": {
+                "median_a": 8.421690029395204,
+                "median_b": 8.259573417047646,
+                "z": 0.8019972060309772,
+                "p_bh": 0.957512315270936,
+                "band99": 2.088481683411847,
+                "band_position": "within",
+                "prevalence_images_outside_band": "2/7",
+                "sens_ratio": 18.632361566050864
+              }
+            },
+            {
+              "file": "results/stats/feature_status.csv",
+              "selector": "table == 'kpi' and feature == 'c2_eqdiam_median_px'",
+              "numbers": {
+                "status": "drop",
+                "family": "silicon_particle"
+              }
+            },
+            {
+              "file": "results/stats/gates.csv",
+              "selector": "table == 'kpi' and feature == 'c2_eqdiam_median_px' and pair == 'Batch_2_vs_Batch_3'",
+              "numbers": {
+                "G1": false,
+                "G2": true,
+                "G3": false,
+                "G4": true,
+                "G5": true,
+                "rank_stability": 0.391,
+                "status_pair": "drop"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "c1_flake_aspect_median",
+        "units": "dimensionless",
+        "value": 1.921842544563584,
+        "reference_median": 1.9865290108609217,
+        "effect_size": -0.7854961093832447,
+        "direction": "lower",
+        "prevalence_images_outside_band": "0/7",
+        "threshold_sensitivity": 1.4176525743611377,
+        "p_bh": 0.957512315270936,
+        "band_position": "within",
+        "band99": 2.128176044378693,
+        "status": "drop",
+        "family": "graphite_morphology",
+        "justification": {
+          "rule": "Select feature contrasts with BH p < 0.05 ordered by absolute z; if none is significant, select the five largest absolute z values.",
+          "numbers": {
+            "z": -0.7854961093832447,
+            "p_bh": 0.957512315270936,
+            "band99": 2.128176044378693,
+            "band_position": "within",
+            "status": "drop",
+            "family": "graphite_morphology"
+          },
+          "evidence": [
+            {
+              "file": "results/stats/feature_contrasts.csv",
+              "selector": "table == 'kpi' and feature == 'c1_flake_aspect_median' and pair == 'Batch_2_vs_Batch_3'",
+              "numbers": {
+                "median_a": 1.921842544563584,
+                "median_b": 1.9865290108609217,
+                "z": -0.7854961093832447,
+                "p_bh": 0.957512315270936,
+                "band99": 2.128176044378693,
+                "band_position": "within",
+                "prevalence_images_outside_band": "0/7",
+                "sens_ratio": 1.4176525743611377
+              }
+            },
+            {
+              "file": "results/stats/feature_status.csv",
+              "selector": "table == 'kpi' and feature == 'c1_flake_aspect_median'",
+              "numbers": {
+                "status": "drop",
+                "family": "graphite_morphology"
+              }
+            },
+            {
+              "file": "results/stats/gates.csv",
+              "selector": "table == 'kpi' and feature == 'c1_flake_aspect_median' and pair == 'Batch_2_vs_Batch_3'",
+              "numbers": {
+                "G1": false,
+                "G2": true,
+                "G3": false,
+                "G4": true,
+                "G5": false,
+                "rank_stability": 0.422,
+                "status_pair": "drop"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "F06_c2_clark_evans_R",
+        "units": "dimensionless",
+        "value": 0.6779684805694204,
+        "reference_median": 0.7239069285439732,
+        "effect_size": -0.739842898768565,
+        "direction": "lower",
+        "prevalence_images_outside_band": "2/7",
+        "threshold_sensitivity": 1.081973301773193,
+        "p_bh": 0.957512315270936,
+        "band_position": "within",
+        "band99": 1.187932407936724,
+        "status": "drop",
+        "family": "silicon_particle",
+        "justification": {
+          "rule": "Select feature contrasts with BH p < 0.05 ordered by absolute z; if none is significant, select the five largest absolute z values.",
+          "numbers": {
+            "z": -0.739842898768565,
+            "p_bh": 0.957512315270936,
+            "band99": 1.187932407936724,
+            "band_position": "within",
+            "status": "drop",
+            "family": "silicon_particle"
+          },
+          "evidence": [
+            {
+              "file": "results/stats/feature_contrasts.csv",
+              "selector": "table == 'features' and feature == 'F06_c2_clark_evans_R' and pair == 'Batch_2_vs_Batch_3'",
+              "numbers": {
+                "median_a": 0.6779684805694204,
+                "median_b": 0.7239069285439732,
+                "z": -0.739842898768565,
+                "p_bh": 0.957512315270936,
+                "band99": 1.187932407936724,
+                "band_position": "within",
+                "prevalence_images_outside_band": "2/7",
+                "sens_ratio": 1.081973301773193
+              }
+            },
+            {
+              "file": "results/stats/feature_status.csv",
+              "selector": "table == 'features' and feature == 'F06_c2_clark_evans_R'",
+              "numbers": {
+                "status": "drop",
+                "family": "silicon_particle"
+              }
+            },
+            {
+              "file": "results/stats/gates.csv",
+              "selector": "table == 'features' and feature == 'F06_c2_clark_evans_R' and pair == 'Batch_2_vs_Batch_3'",
+              "numbers": {
+                "G1": false,
+                "G2": true,
+                "G3": false,
+                "G4": true,
+                "G5": true,
+                "rank_stability": 0.555,
+                "status_pair": "drop"
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "F11_c2_perimeter_fraction_adjacent_c0",
+        "units": "fraction",
+        "value": 0.0009669309611293,
+        "reference_median": 0.0005640387500436,
+        "effect_size": 0.7227691546667196,
+        "direction": "higher",
+        "prevalence_images_outside_band": "1/7",
+        "threshold_sensitivity": 0.5078018593848397,
+        "p_bh": 0.957512315270936,
+        "band_position": "within",
+        "band99": 1.9409170127583264,
+        "status": "investigate",
+        "family": "silicon_particle",
+        "justification": {
+          "rule": "Select feature contrasts with BH p < 0.05 ordered by absolute z; if none is significant, select the five largest absolute z values.",
+          "numbers": {
+            "z": 0.7227691546667196,
+            "p_bh": 0.957512315270936,
+            "band99": 1.9409170127583264,
+            "band_position": "within",
+            "status": "investigate",
+            "family": "silicon_particle"
+          },
+          "evidence": [
+            {
+              "file": "results/stats/feature_contrasts.csv",
+              "selector": "table == 'features' and feature == 'F11_c2_perimeter_fraction_adjacent_c0' and pair == 'Batch_2_vs_Batch_3'",
+              "numbers": {
+                "median_a": 0.0009669309611293,
+                "median_b": 0.0005640387500436,
+                "z": 0.7227691546667196,
+                "p_bh": 0.957512315270936,
+                "band99": 1.9409170127583264,
+                "band_position": "within",
+                "prevalence_images_outside_band": "1/7",
+                "sens_ratio": 0.5078018593848397
+              }
+            },
+            {
+              "file": "results/stats/feature_status.csv",
+              "selector": "table == 'features' and feature == 'F11_c2_perimeter_fraction_adjacent_c0'",
+              "numbers": {
+                "status": "investigate",
+                "family": "silicon_particle"
+              }
+            },
+            {
+              "file": "results/stats/gates.csv",
+              "selector": "table == 'features' and feature == 'F11_c2_perimeter_fraction_adjacent_c0' and pair == 'Batch_2_vs_Batch_3'",
+              "numbers": {
+                "G1": false,
+                "G2": true,
+                "G3": false,
+                "G4": true,
+                "G5": true,
+                "rank_stability": 0.28,
+                "status_pair": "investigate"
+              }
+            }
+          ]
+        }
+      }
+    ],
+    "embedding": {
+      "backbone": "dinov2_vits14",
+      "energy_distance": 0.0403824865745699,
+      "mmd": 0.1224536265873461,
+      "permutation_p": 0.0123688155922038,
+      "energy_p_bh": 0.0123688155922038,
+      "mmd2_p_bh": 0.0123688155922038,
+      "energy_band_position": "outside",
+      "mmd2_band_position": "outside",
+      "n_permutations": 2000,
+      "justification": {
+        "rule": "Only BSE embeddings count for verdicts; Inlens and ETD are secondary.",
+        "numbers": {
+          "energy_distance": 0.0403824865745699,
+          "energy_p_bh": 0.0123688155922038,
+          "mmd2": 0.1224536265873461,
+          "mmd2_p_bh": 0.0123688155922038,
+          "n_permutations": 2000
+        },
+        "evidence": [
+          {
+            "file": "results/stats/distance_matrix.csv",
+            "selector": "table == 'emb_BSE' and statistic == 'energy' and batch_a == 'Batch_2' and batch_b == 'Batch_3' and residualised == False",
+            "numbers": {
+              "value": 0.0403824865745699,
+              "p_bh": 0.0123688155922038,
+              "band99": 0.0375033036097751,
+              "band_position": "outside"
+            }
+          },
+          {
+            "file": "results/stats/distance_matrix.csv",
+            "selector": "table == 'emb_BSE' and statistic == 'mmd2' and batch_a == 'Batch_2' and batch_b == 'Batch_3' and residualised == False",
+            "numbers": {
+              "value": 0.1224536265873461,
+              "p_bh": 0.0123688155922038,
+              "band99": 0.1165901054955168,
+              "band_position": "outside"
+            }
+          },
+          {
+            "file": "results/stats/embedding_gates.csv",
+            "selector": "channel == 'BSE' and pair == 'Batch_2_vs_Batch_3'",
+            "numbers": {
+              "G1": true,
+              "G2": true,
+              "G4": true,
+              "outlier_ids": null
+            }
+          }
+        ]
+      }
+    }
+  },
+  "uncertainty": {
+    "sampling": "n=7 images; resampling unit is image, not tile.",
+    "segmentation": "maximum feature threshold-sensitivity ratio=18.63.",
+    "decision_margin": "top-feature absolute z minus band99=-2.753; G4=F03_c2_eqdiam_median_px=True.",
+    "robustness": "top-feature bootstrap rank stability=0.537; G4 outcome=F03_c2_eqdiam_median_px=True."
+  },
+  "routing": {
+    "stakeholder": "materials_expert_review",
+    "reason": "The result requires material-level review under the preregistered investigate rule."
+  },
+  "next_action": "Review the listed image-level evidence with an independent materials expert.",
+  "caveats": [
+    "phase_identity: stated by Polaron, not image-verified",
+    "Units are px; pixel size is unconfirmed and pixel_size_nm is null.",
+    "BSE cannot distinguish Si from SiOx.",
+    "Exploratory; not frozen.",
+    "Independent review pending."
+  ]
+}
