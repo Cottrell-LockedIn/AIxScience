@@ -632,6 +632,12 @@ def _stamp(frame: pd.DataFrame, cfg: dict[str, Any], stats_hash: str) -> pd.Data
     return result
 
 
+def _unique_null_bands(rows: list[dict[str, Any]]) -> pd.DataFrame:
+    frame = pd.DataFrame(rows)
+    keys = ["table", "feature", "channel", "statistic", "residualised"]
+    return frame.drop_duplicates(subset=keys, keep="first").reset_index(drop=True)
+
+
 def _record_scalar_row(
     table: str,
     feature: str,
@@ -912,7 +918,7 @@ def run(cfg: dict[str, Any]) -> None:
                 else:
                     feature_rows.append(_record_scalar_row(
                         table_name, feature, family, pair, raw, resid, scale,
-                        np.nan, np.nan, [], {"z": np.nan, "p": np.nan},
+                        np.nan, np.nan, outlier_ids, {"z": np.nan, "p": np.nan},
                         sensitivity_values[(table_name, feature)],
                         sensitivity_values[(table_name, feature)] / scale if scale > 0 else np.nan,
                         "",
@@ -1549,7 +1555,7 @@ def run(cfg: dict[str, Any]) -> None:
     embedding_gates_frame = pd.DataFrame(embedding_gate_rows)
     acquisition_frame = pd.DataFrame(acquisition_rows)
     loo_frame = pd.DataFrame(reference_loo_rows)
-    null_frame = pd.DataFrame(null_band_rows)
+    null_frame = _unique_null_bands(null_band_rows)
     for frame_name, frame in (
         ("distance_matrix", distance_frame),
         ("feature_contrasts", feature_frame),

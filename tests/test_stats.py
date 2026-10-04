@@ -7,6 +7,7 @@ from qc.stats import (
     _make_distance_matrix,
     _plan_subset,
     _pair_name,
+    _unique_null_bands,
     pairwise_distance_matrix,
     permutation_test_z,
     residualize,
@@ -88,6 +89,22 @@ def test_pair_permutation_plan_uses_only_the_requested_pair_images():
 
     assert ids == ["image_a", "image_b"]
     np.testing.assert_array_equal(priorities, [[0.2, 0.8]])
+
+
+def test_null_bands_are_unique_per_statistic_and_table():
+    row = {
+        "table": "kpi",
+        "feature": "",
+        "channel": "",
+        "statistic": "rms_z",
+        "residualised": False,
+        "band95": 1.0,
+        "band99": 2.0,
+    }
+
+    bands = _unique_null_bands([row, row.copy()])
+
+    assert len(bands) == 1
 
 
 def test_duplicate_image_ids_are_rejected():
