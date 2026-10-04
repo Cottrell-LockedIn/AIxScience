@@ -5,7 +5,7 @@ Status: exploratory, output-only, `review_status: unreviewed`. The frozen model 
 `results/v1/heldout.json` is byte-identical. Plan of record: `docs/PRD_MODEL_IMPROVEMENTS.md` section 0.3 on PR #13
 (branch `devin/1791110490-model-improvement-prd`, not on `main` at the time of writing).
 
-review: "CONDITIONAL PASS (independent fresh-context review of PR #14 at 06602eb), conditions applied in __SHA__".
+review: "CONDITIONAL PASS (independent fresh-context review of PR #14 at 06602eb), conditions applied in ff160f3".
 Conditions: (1) imaging sentences name a near-tied measurement (|rho| within 0.05); (2) `p_bh` is stated as BH
 within each PC and a `p_bh_global` column (BH across all 928 cells) was added; (3) PC1 is read as noise/sharpness,
 with the reviewer's check reproduced below; (4) the plan citation points at PR #13. The correlation computation,
