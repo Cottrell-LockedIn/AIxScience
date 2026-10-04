@@ -30,6 +30,9 @@ from app.model_accuracy import router as model_accuracy_router
 
 ROOT = Path(__file__).resolve().parents[1]
 HELDOUT = ROOT / "results" / "v1" / "heldout.json"
+TEST_SET = ROOT / "results" / "v1_1" / "heldout_test_exploratory.json"
+PC_TAGS = ROOT / "results" / "v1" / "pc_tags.json"
+SAVED_MASKS = ROOT / "results" / "v1_1" / "masks"
 VALIDATION_DIR = ROOT / "results" / "v1" / "loio_images"
 VALIDATION_FEATURES = ROOT / "results" / "features_per_image.parquet"
 POLARON_DATASET = Path("/Users/bedelau/Documents/Codex/2026-10-03/i/outputs/polaron_dataset")
@@ -199,8 +202,10 @@ def _normalise(image: dict[str, Any], raw_inputs: dict[str, Any]) -> dict[str, A
     channels = [_file_channel(subject["id"], channel) for channel in acquisition.get("detectors_present", [])]
     reliability = numbers.get("loio_reliability", {})
     drivers = [_plain_driver(value) for value in image.get("evidence", {}).get("drivers", [])]
+    image = _with_pc_sentences(image)
     return {
         "id": subject["id"],
+        "mask": _saved_mask(subject["id"], image.get("evidence", {}).get("segmentation_mask")),
         "channels": channels,
         "features": features,
         "predictedBatch": closed.get("predicted_batch"),
@@ -220,6 +225,69 @@ def _normalise(image: dict[str, Any], raw_inputs: dict[str, Any]) -> dict[str, A
         "phaseIdentity": "stated by Polaron, not image-verified",
         "raw": image,
     }
+
+
+@lru_cache(maxsize=1)
+def _pc_sentences() -> dict[str, str]:
+    """Committed Phase B PC profile sentences (results/v1/pc_tags.json), read-only."""
+    if not PC_TAGS.is_file():
+        return {}
+    pcs = json.loads(PC_TAGS.read_text(encoding="utf-8")).get("pcs", {})
+    return {name: item["sentence"] for name, item in pcs.items() if isinstance(item, dict) and item.get("sentence")}
+
+
+def _with_pc_sentences(image: dict[str, Any]) -> dict[str, Any]:
+    sentences = _pc_sentences()
+    drivers = image.get("evidence", {}).get("drivers")
+    if not sentences or not drivers:
+        return image
+    enriched = [
+        {**driver, "pc_sentence": sentences[driver["name"]]} if driver.get("name") in sentences and "pc_sentence" not in driver else driver
+        for driver in drivers
+    ]
+    return {**image, "evidence": {**image["evidence"], "drivers": enriched}}
+
+
+def _saved_mask_file(field_id: str, kind: str) -> Path | None:
+    if kind not in ("mask", "overlay") or not re.fullmatch(r"[A-Za-z0-9-]+", field_id):
+        return None
+    path = SAVED_MASKS / f"{field_id}_{kind}.png"
+    return path if path.is_file() else None
+
+
+def _saved_mask(field_id: str, evidence: dict[str, Any] | None) -> dict[str, Any] | None:
+    """Committed exploratory masks for the saved runs (results/v1_1/masks); hash-checked on serve."""
+    if not evidence or _saved_mask_file(field_id, "mask") is None:
+        return None
+    overlay = f"/api/saved-mask/{field_id}/overlay" if _saved_mask_file(field_id, "overlay") else None
+    layers = [{"id": "overlay", "label": "Segmentation overlay: void blue, silicon orange, graphite unshaded (Polaron-stated)", "imageUrl": overlay, "verified": True}] if overlay else []
+    return {
+        "maskUrl": f"/api/saved-mask/{field_id}/mask",
+        "overlayUrl": overlay,
+        "layers": layers,
+        "offset": evidence.get("mask_offset_px"),
+        "sha256": evidence.get("mask_sha256"),
+        "width": (evidence.get("mask_shape") or [None, None])[1],
+        "height": (evidence.get("mask_shape") or [None, None])[0],
+        "note": evidence.get("note"),
+    }
+
+
+@app.get("/api/saved-mask/{field_id}/{kind}")
+def saved_mask(field_id: str, kind: str) -> FileResponse:
+    path = _saved_mask_file(field_id, kind)
+    if path is None:
+        raise HTTPException(404, "No committed mask for this saved field.")
+    if kind == "mask":
+        expected = None
+        for source in (HELDOUT, TEST_SET):
+            if source.is_file():
+                for item in json.loads(source.read_text(encoding="utf-8")).get("images", []):
+                    if item["subject"]["id"] == field_id:
+                        expected = item.get("evidence", {}).get("segmentation_mask", {}).get("mask_sha256")
+        if expected and _sha256(path) != expected:
+            raise HTTPException(409, "Committed mask checksum does not match the saved record.")
+    return FileResponse(path, media_type="image/png")
 
 
 def _run_source(run_id: str, field_id: str, channel: str) -> Path:
@@ -375,11 +443,25 @@ def results(dataset: str = "validation") -> dict[str, Any]:
                 "Phase identity: stated by Polaron, not image-verified.",
             ],
         }
+    if dataset == "test":
+        if not TEST_SET.is_file():
+            raise HTTPException(404, "The saved test-set output is not present.")
+        test = json.loads(TEST_SET.read_text(encoding="utf-8"))
+        return {
+            "mode": "Saved test-set output (6 images, frozen v1, exploratory label)",
+            "run": test["run"],
+            "fields": [_normalise(item, test["inputs"].get(item["subject"]["id"], {})) for item in test["images"]],
+            "limitations": [
+                "Frozen v1 model applied once to 6 never-seen images; true batches unknown at the time of the run.",
+                "Batch-match probabilities are not defect probabilities.",
+                "Phase identity: stated by Polaron, not image-verified.",
+            ],
+        }
     if dataset != "heldout":
-        raise HTTPException(422, "dataset must be 'validation' or 'heldout'.")
+        raise HTTPException(422, "dataset must be 'validation', 'heldout' or 'test'.")
     saved = _saved()
     return {
-        "mode": "Saved evaluation",
+        "mode": "Saved official held-out evaluation (3 images)",
         "run": saved["run"],
         "fields": [_normalise(item, saved["inputs"].get(item["subject"]["id"], {})) for item in saved["images"]],
         "limitations": [
