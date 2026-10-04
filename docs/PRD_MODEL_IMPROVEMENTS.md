@@ -11,6 +11,127 @@ into classes 0/1. Lengths are in pixels; the nominal 25 nm/px is unconfirmed.
 Companion document: `docs/SOFTWARE_FEATURES_RECOMMENDATION.md` (what the wrapper should do with these outputs).
 Baseline capabilities: `docs/HANDOFF_MODEL_CAPABILITIES.md`.
 
+## 0. APPROVED SCOPE AND EXECUTION PLAN (read this first)
+
+Approved by the owner on 2026-10-04 with a hard budget of **1 h 30 min** engineering time. Everything here is
+output-only: the frozen prediction (`verdict` block), `v1-frozen`, and the official `results/v1/heldout.json`
+must not change. Items not listed under A or B are **deferred** and must not be started without a new approval.
+
+| # | Item | Budget | Deliverable |
+|---|---|---|---|
+| A | M1 segmentation masks + colour overlays saved per image | ~1 h | PNGs + `evidence` entry + parity tests |
+| B | M9-lite embedding PC correlation profiles + plain-language tags | ~25 min | `results/v1/pc_profiles.csv`, `results/v1/pc_tags.json`, handoff paragraph |
+| - | M8 accuracy card, M5a guideline cards | 0 model-side | wrapper reads `results/v1/loio_summary.json` and renders the M5a card table (see `docs/SOFTWARE_FEATURES_RECOMMENDATION.md` section 0) |
+| - | M2, M3, M4, M5b, M6, M7, M9b, M9c | deferred | none |
+
+### 0.1 Ground rules for the implementing agent
+- Repo `Cottrell-LockedIn/AIxScience`. Branch from `devin/1791110490-model-improvement-prd` (which stacks on
+  `devin/1791106622-model-capabilities-handoff` -> `devin/1791080364-phase-c` -> `main`); name the branch
+  `devin/<unix-ts>-v1.1-masks-pcprofiles`; open a PR against `devin/1791110490-model-improvement-prd`.
+- Read `AGENTS.md`. Phase names carry `phase_identity: stated by Polaron, not image-verified`. Sizes in pixels.
+- Do **not** edit `configs/v1.yaml` or `configs/features_v1.yaml`: their hashes are recorded as provenance and the
+  frozen-tag check depends on them. Control new behaviour from code (always-on in exploratory mode).
+- Do **not** rerun the official held-out command. New runs use `python -m qc heldout --exploratory --input-dir data/heldout --out results/v1_1/heldout_exploratory.json`
+  (`heldout._run_once_guard` refuses to overwrite the official file; `--dryrun` validates inputs without Modal).
+- Raw TIFFs are not in Git. On a fresh VM, fetch the 3 held-out images and (if needed) training images via the
+  Drive IDs in `docs/Log/assets/drive_file_listing.json`; put held-out TIFFs in `data/heldout/`. Embeddings run on
+  Modal (`heldout._embed_on_modal`, needs Modal credentials) or local CPU (`heldout._embed_local_cpu`, ~11 min).
+- Python 3.11, `uv`, `.venv` in the repo; run `pytest tests/` before pushing. Commit derived PNG/CSV/JSON under
+  `results/`; never commit `data/`.
+- Any claim about what a PC "means" is exploratory and must be labelled so; an independent fresh-context
+  reviewer must check the tags before they are presented as validated (`AGENTS.md`). If no time, the output
+  carries `review_status: unreviewed`.
+
+### 0.2 Item A: masks and overlays (M1)
+
+Where the mask exists today: `src/qc/heldout.py::_extract_features` segments each 1024 px BSE tile with
+`segment.segment_tile`, stitches them with `features.stitch_mask` (later tile wins, canvas 255 = unanalysed, no
+pixel may remain 255) into one uint8 array of 0/1/2 the size of the border-cropped BSE image
+(`tiles.crop_border`, 8 px each side, `configs/v1.yaml data.border_crop_px`), then calls
+`features.extract_features(stitched, **_feature_parameters(cfg, feature_cfg))`. The stitched array is discarded.
+
+Steps
+1. Make `_extract_features` also return the stitched mask (e.g. `return feature_values, stitched`); update its
+   single call site in `heldout.run` (around the line `feature_values = _extract_features(bse, cfg, feature_cfg)`).
+2. Save next to the output JSON (`<out_dir>/masks/`):
+   - `<id>_mask.png`: uint8, values 0/1/2 only, shape = cropped BSE shape; encode with the existing
+     `features._encode_label_png`.
+   - `<id>_overlay.png`: cropped BSE grayscale blended with a fixed palette, alpha 0.45: void (0) blue
+     (31,119,180), graphite (1) left unshaded, silicon (2) orange (255,127,14); downscaled by
+     `tiling.preview_downscale` (4) with nearest-neighbour for the mask and area averaging for the image.
+     Write a legend line into the JSON, not into the PNG.
+3. Add a `segmentation_mask` entry to each image document's `evidence` block (inspect `images[<id>].evidence` in
+   `results/v1/heldout.json` and `classify.image_document` for the existing shape; add, never rename) with `kind: segmentation_mask`, `mask_path`, `overlay_path` (relative to the JSON),
+   `mask_sha256`, `mask_shape`, `mask_offset_px: [8, 8]` (mask pixel (y, x) = TIFF pixel (y + 8, x + 8)),
+   `class_values: {0: void, 1: graphite, 2: silicon}`, `overlay_downscale: 4`,
+   `phase_identity: stated by Polaron, not image-verified`,
+   `note: one fixed threshold segmentation, not ground truth; 7/11 measurements move under +-10 % threshold shifts`.
+4. Tests (`tests/test_heldout.py`):
+   - Parity: load `<id>_mask.png`, call `features.extract_features(mask, **heldout._feature_parameters(cfg, feature_cfg))`,
+     compare with the F01-F11 values stored in the same image document; max abs diff <= 1e-9.
+   - Shape: mask shape == BSE TIFF shape minus 16 in each dimension; values subset of {0, 1, 2}.
+   - Verdict parity: for each of the 3 held-out images, `verdict`, `inputs` (F01-F11 and PC values) and
+     `evidence` entries that existed before are identical between the new exploratory output and the official
+     `results/v1/heldout.json` (compare `json.dumps(..., sort_keys=True)` of those blocks; ignore run-level
+     timestamps, Modal cost and the new entry).
+   - A unit test on a synthetic 3-class array for the overlay palette and offset (no data needed).
+5. Run once with the command in 0.1 (output under `results/v1_1/`). Commit the JSON and the 3 x 2 PNGs. Expected sizes: masks ~7000 x 2300 px, PNG a few hundred KB.
+6. Update `docs/HANDOFF_MODEL_CAPABILITIES.md` section 5.7 from "being added in parallel" to "available in
+   exploratory runs since <commit>", with the `evidence` field names above.
+
+Done when: tests pass; `git diff` shows no change under `configs/`; the official `results/v1/heldout.json` is
+byte-identical to before; 6 PNGs and the exploratory JSON are committed.
+
+### 0.3 Item B: embedding PC correlation profiles (M9-lite)
+
+Purpose: answer the mentor's "embedding PC1 isn't interpretable" with a descriptive, code-generated profile per
+PC, without changing the model. Tile galleries (M9b) and patch heat maps (M9c) are deferred.
+
+Data (all exist in the repo; no new compute):
+- Training table: `classify.load_training()` -> 31 rows, columns `F_COLS` (11 measurements) and `EMB_COLS`
+  (384 raw BSE embedding dims), sorted by `sample_id`.
+- PC scores of the final model: `model = classify.final_model(frame)`; `pcs = model.pca.transform(xe)` where
+  `xe = frame[EMB_COLS]` -> 31 x 29. Use `model.pca.explained_variance_ratio_` and
+  `classify.coefficient_table(model)` for the PC's weight in the classifier.
+- Acquisition covariates: `classify.covariate_frame(ids, batches)` returns the 8 pre-registered covariates per
+  image (noise sigma, sharpness, curtaining, horizontal-stripe score, edge charging, image size, pixel size,
+  as named there). Optional: KPIs from `results/kpi_per_image.parquet` (BSE rows).
+
+Steps
+1. New module `src/qc/pc_profiles.py` with `run()` and a `python -m qc pc-profiles` entry (follow how other
+   stages are registered in `src/qc/__main__.py`). New module, no edits to existing core functions.
+2. For each PC k (1-29) and each variable v in {11 measurements, 8 covariates, optional KPIs}: Spearman rho
+   over the 31 images, permutation p (2000 label-free shuffles of v, seed 0), BH correction within each PC
+   across all its variables. n = 31 everywhere.
+3. Tag rule, applied by code (constants at the top of the module, cited in the output):
+   - `material:<F-id>` if |rho| >= 0.7 and BH p < 0.05 with a measurement **and** |rho| < 0.5 with every covariate;
+   - `imaging:<covariate>` if |rho| >= 0.5 with a covariate and that |rho| exceeds every measurement |rho|;
+   - otherwise `unresolved image-texture component`.
+   Note: with n = 31, |rho| = 0.36 is already p ~ 0.05 and 0.7 is p ~ 1e-5; the thresholds are deliberately strict.
+4. Outputs, each carrying `config_hash`, `git_sha`, `n_images: 31`, `exploratory: true`,
+   `phase_identity: stated by Polaron, not image-verified`, `review_status: unreviewed|reviewed`:
+   - `results/v1/pc_profiles.csv`: long format `pc, variable, kind (measurement|covariate|kpi), rho, p_perm, p_bh`.
+   - `results/v1/pc_tags.json`: per PC `{tag, explained_variance_ratio, lr_coef_abs_max, top_measurement:
+     {name, rho, p_bh}, top_covariate: {name, rho, p_bh}, sentence}` where `sentence` is a fixed template, e.g.
+     "PC1: image-texture component most correlated with BSE noise (rho 0.71); not separable from imaging
+     conditions (Phase B)." or "PC3: tracks void fraction F01 (rho 0.78); descriptive, not causal."
+5. Tests (`tests/test_pc_profiles.py`): tag rule on synthetic vectors (one material, one imaging, one
+   unresolved case); CSV and JSON regenerate identically with the same seed; every `evidence.drivers` PC name
+   in `results/v1/heldout.json` has a tag.
+6. Handoff: add a paragraph to `docs/HANDOFF_MODEL_CAPABILITIES.md` section on embedding drivers listing the
+   tags for the PCs that appear as drivers in LOIO and the held-out run, with the caveat sentence: "Tags are
+   descriptive correlations over 31 training images; Phase B could not separate the embedding's batch signal
+   from acquisition (BH p 0.75 / 0.96 after residualisation)". Log the analysis in `docs/Log/` as exploratory.
+
+Done when: `python -m qc pc-profiles` regenerates both files deterministically; tests pass; the handoff
+paragraph is in place; the output says whether a fresh-context reviewer checked the tags.
+
+### 0.4 Out of scope today (do not start)
+M2 per-feature layers and crack-like list, M3 F09 chords, M4 aspect-ratio panel, M5b expert rules, M6 v2, M7 data
+fixes, M9b tile galleries, M9c patch heat maps. Their specs below remain the plan of record for later work.
+
+---
+
 ## 1. Why
 
 Three requests from the owner and the materials consultant:
@@ -47,6 +168,8 @@ Effort is engineering time to a reviewed result on this codebase; it excludes th
 `AGENTS.md` (about 1 h per release).
 
 ### M1. Save segmentation masks and overlays (v1.1, output-only)
+
+Status: APPROVED, execution plan in section 0.2.
 
 What: `qc heldout` already builds a stitched per-image mask in memory (`heldout._extract_features`,
 `features.stitch_mask`). Write it to disk and reference it from the JSON.
@@ -168,6 +291,8 @@ changed or hidden.
 
 #### M5a. Guideline card first (no rules, no scoring; ~30 min of writing, wrapper renders it)
 
+Status: APPROVED; rendered wrapper-side from the table below, no model-side work today.
+
 Everything needed is already in the v1 output: tier and tier reason, runner-up and margin, out-of-baseline label,
 acquisition flags, and the LOIO track record for this kind of bet and tier. A fixed guideline card is selected
 by situation and filled from those fields. It is guidance for the scientist, not a prediction, so it needs no
@@ -244,6 +369,8 @@ measured.
 
 ### M8. Model accuracy in the software (v1.1, output-only; data already exists)
 
+Status: moved to the wrapper side for now (reads `results/v1/loio_summary.json` directly); the `run.model_card` copy is deferred.
+
 What: the wrapper should show how well the model did, with the right caveats. No model work is needed; the
 numbers are already in `results/v1/loio_summary.json`, `results/v1/loio_predictions.csv` and
 `results/v1/confusion_matrix.csv`.
@@ -274,6 +401,8 @@ Acceptance: the block is generated from the result files, not typed by hand, and
 Effort: ~0.5 h.
 
 ### M9. Characterise the embedding PCs (mentor feedback; v1.1, output-only)
+
+Status: M9a + M9d APPROVED as "M9-lite", execution plan in section 0.3; M9b and M9c deferred.
 
 Mentor: "embedding PC1 isn't really interpretable ... would be cool to try link them to material/microstructure
 properties."

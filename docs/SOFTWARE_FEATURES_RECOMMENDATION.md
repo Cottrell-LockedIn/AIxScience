@@ -9,6 +9,32 @@ pixel size is confirmed.
 
 Primary user: a materials scientist who knows the material and the microscope but not the model.
 
+## 0. APPROVED FOR NOW: what the wrapper can build immediately (read this first)
+
+Decided by the owner on 2026-10-04. Model-side work is limited to two output-only items (masks + overlays, and
+embedding-PC tags; see `docs/PRD_MODEL_IMPROVEMENTS.md` section 0). The wrapper team can build the following
+without waiting for anything:
+
+| Wrapper feature | Data source available today | Notes |
+|---|---|---|
+| W1-W4 upload, locked recipe, results list, result card | `results/v1/heldout.json` schema (see `docs/HANDOFF_MODEL_CAPABILITIES.md`) | run new images with `python -m qc heldout --exploratory` |
+| W17 model accuracy panel | `results/v1/loio_summary.json` keys: `loio_accuracy_str` (18/31), `wilson95`, `chance_majority`, `permutation_p`, `confusion_matrix`, `per_batch_recall`, `precision_by_pred_batch`, `accuracy_by_tier`, `precision_by_pred_batch_tier` | add the held-out line: 2/3 correct, 5/6 under the confidence scoring (exploratory, n = 3); caveat "leave-one-out on the 31 training images, not an unseen-lot score; Batch_1 vs Batch_2 at chance" |
+| W12a low-confidence guideline card | per-image fields in `heldout.json`: tier and tier reason, runner-up and margin, out-of-baseline label, acquisition flags, LOIO track record for this bet/tier (all under `verdict`, `acquisition`, `uncertainty`; exact paths in the handoff) | card texts are the six rows of the table in PRD section M5a; render verbatim with the fields filled; never name a batch the model did not name; a materials scientist should check wording before release |
+| W10, W11, W13, W15 | `heldout.json` | as specified below |
+
+Arriving from the model side within the approved 1 h 30 (branch `devin/<ts>-v1.1-masks-pcprofiles`):
+- W5 mask overlay viewer: `images[i].evidence` entry `kind: segmentation_mask` with `mask_path`, `overlay_path`,
+  `mask_offset_px: [8, 8]`, `class_values`, `overlay_downscale: 4`. The mask is 8 px inset from the TIFF on each
+  side; align accordingly. Show the legend and the "one fixed segmentation, not ground truth" note from the entry.
+- W18 embedding driver profile (lite): `results/v1/pc_tags.json` keyed by PC; show `sentence` next to every
+  driver named `embedding PC k`, plus the fixed caveat "descriptive correlation over 31 training images; not
+  separable from imaging conditions (Phase B)". If `review_status` is `unreviewed`, show that word.
+
+Not arriving today (do not design around them yet): W6 crack-like locator, W7 per-feature layers, W8 F09 chords,
+W9 aspect-ratio panel, W12b rule-based second opinion, tile galleries and heat maps in W18, W16 lot-level rule.
+
+---
+
 ## 1. Context: what the model provides, by version
 
 | Capability | v1 (frozen, today) | v1.1 (output-only, proposed) | v1.2 (decision support, proposed) |
