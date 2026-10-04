@@ -128,7 +128,7 @@ export default function BatchCompare({ fieldId, compareUrl, batchLabel }: BatchC
           base={compareUrl}
           layer={layer}
           zoom={zoom ? zoomPx : 0}
-          unavailable="No verified mask is recorded for this field, so no layer can be drawn."
+          unavailable="Original TIFF or verified mask not present on this machine, so no layer can be drawn."
         />
         {(refs?.references || []).map((reference) => (
           <Panel

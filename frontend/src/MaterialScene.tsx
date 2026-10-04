@@ -27,7 +27,7 @@ export type MaterialSceneProps = {
   imageUrl: string;
   fieldId: string;
   /** A saved mask has no original TIFF underneath it, so it must remain a flat artifact. */
-  imageKind?: "original" | "saved-overlay" | "saved-mask";
+  imageKind?: "original" | "saved-overlay" | "saved-mask" | "saved-micrograph";
   /** Exact aligned masks from the completed engine run, when available. */
   layers?: MaterialLayer[];
   /** `/api/compare/...` base for the batch comparison tab; absent when no verified mask exists. */
@@ -222,8 +222,8 @@ function Scene({
 function FlatFallback({ imageUrl, fieldId, imageKind = "original" }: Pick<MaterialSceneProps, "imageUrl" | "fieldId" | "imageKind">) {
   return (
     <div className="material-scene__fallback">
-      <img src={imageUrl} alt={imageKind === "original" ? `Original micrograph for ${fieldId}` : `Saved segmentation ${imageKind === "saved-overlay" ? "overlay" : "mask"} for ${fieldId}`} />
-      <span>{imageKind === "original" ? "3D view unavailable — showing the original image." : `Saved segmentation ${imageKind === "saved-overlay" ? "overlay" : "mask"} · original TIFF unavailable`}</span>
+      <img src={imageUrl} alt={imageKind === "original" ? `Original micrograph for ${fieldId}` : imageKind === "saved-micrograph" ? `Saved reduced-resolution micrograph preview for ${fieldId}` : `Saved segmentation ${imageKind === "saved-overlay" ? "overlay" : "mask"} for ${fieldId}`} />
+      <span>{imageKind === "original" ? "3D view unavailable — showing the original image." : imageKind === "saved-micrograph" ? "Saved micrograph preview · reduced resolution · original TIFF unavailable" : `Saved segmentation ${imageKind === "saved-overlay" ? "overlay" : "mask"} · original TIFF unavailable`}</span>
     </div>
   );
 }
@@ -245,14 +245,27 @@ export default function MaterialScene({ imageUrl, fieldId, imageKind = "original
     [layers],
   );
 
+  const modeTabs = (
+    <div className="material-scene__modes" role="tablist" aria-label="Material perspective tabs">
+      <button type="button" role="tab" aria-selected={mode === "perspective"} className={mode === "perspective" ? "is-active" : ""} onClick={() => setMode("perspective")}>
+        Perspective
+      </button>
+      <button type="button" role="tab" aria-selected={mode === "compare"} className={mode === "compare" ? "is-active" : ""} onClick={() => setMode("compare")}>
+        Compare with batches
+      </button>
+    </div>
+  );
+
   if (imageKind !== "original") {
-    return <section className="material-scene material-scene--saved-overlay" aria-label={`Saved segmentation overlay for ${fieldId}`}>
+    const micrograph = imageKind === "saved-micrograph";
+    return <section className="material-scene material-scene--saved-overlay" aria-label={`${micrograph ? "Saved micrograph preview" : "Saved segmentation overlay"} for ${fieldId}`}>
       <div className="material-scene__topline">
-        <div><p className="material-scene__label">Saved run artifact</p><h3>{fieldId}</h3></div>
+        <div><p className="material-scene__label">{micrograph ? "Saved micrograph preview" : "Saved run artifact"}</p><h3>{fieldId}</h3></div>
         <span className="material-scene__status">Original TIFF unavailable</span>
       </div>
-      <FlatFallback imageUrl={imageUrl} fieldId={fieldId} imageKind={imageKind} />
-      <div className="material-scene__notes"><p>This flat segmentation overlay was saved with the run. It does not provide an original image or 3D material structure.</p></div>
+      {mode === "compare" ? <BatchCompare fieldId={fieldId} compareUrl={compareUrl} batchLabel={batchLabel} /> : <FlatFallback imageUrl={imageUrl} fieldId={fieldId} imageKind={imageKind} />}
+      {modeTabs}
+      {mode === "perspective" && <div className="material-scene__notes"><p>{micrograph ? "This reduced-resolution preview was saved with the record. It does not provide the original pixels or 3D material structure." : "This flat segmentation overlay was saved with the run. It does not provide an original image or 3D material structure."}</p></div>}
     </section>
   }
 
@@ -317,14 +330,7 @@ export default function MaterialScene({ imageUrl, fieldId, imageKind = "original
       </div>
       )}
 
-      <div className="material-scene__modes" role="tablist" aria-label="Material perspective tabs">
-        <button type="button" role="tab" aria-selected={mode === "perspective"} className={mode === "perspective" ? "is-active" : ""} onClick={() => setMode("perspective")}>
-          Perspective
-        </button>
-        <button type="button" role="tab" aria-selected={mode === "compare"} className={mode === "compare" ? "is-active" : ""} onClick={() => setMode("compare")}>
-          Compare with batches
-        </button>
-      </div>
+      {modeTabs}
 
       {mode === "perspective" && (
       <div className="material-scene__controls" aria-label="Perspective controls">
