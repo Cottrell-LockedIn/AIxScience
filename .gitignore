@@ -34,3 +34,11 @@ weights/
 .DS_Store
 .vscode/
 .idea/
+
+# Cottrell local web application
+frontend/node_modules/
+frontend/dist/
+app/local_uploads/
+app/local_reviews/
+.cottrell/
+.impeccable/review/

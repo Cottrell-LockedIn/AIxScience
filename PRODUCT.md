@@ -1,0 +1,2 @@
+# Cottrell
+Cottrell is an image-level electrode inspection workspace for materials scientists examining fresh manufacturing electrodes. It wraps frozen model evidence with screening criteria, human review and actionable investigation ownership. Source of truth: planning PRD and ARD in the parent ChatGPT Cottrell workspace. The current implementation presents authentic saved evaluation data and preflight checks uploaded TIFFs. New model execution remains gated on a verified release. It does not issue batch release decisions, calibrated defect probabilities or supplier blame.

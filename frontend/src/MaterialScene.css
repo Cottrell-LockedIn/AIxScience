@@ -1,0 +1,171 @@
+.material-scene {
+  --scene-violet: #7040dc;
+  --scene-amber: #8a5600;
+  --scene-line: rgba(32, 32, 36, 0.16);
+  --scene-muted: #666670;
+  background: #f7f7f4;
+  border: 1px solid var(--scene-line);
+  color: #202024;
+  min-height: 29rem;
+  overflow: hidden;
+  position: relative;
+}
+
+.material-scene__topline {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+  padding: 1.25rem 1.25rem 0;
+  position: relative;
+  z-index: 1;
+}
+
+.material-scene__label {
+  color: var(--scene-violet);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.11em;
+  margin: 0 0 0.35rem;
+  text-transform: uppercase;
+}
+
+.material-scene h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.material-scene__status {
+  border: 1px solid rgba(112, 64, 220, 0.48);
+  color: #5530a9;
+  font-size: 0.6875rem;
+  line-height: 1;
+  padding: 0.45rem 0.55rem;
+}
+
+.material-scene__viewport {
+  cursor: grab;
+  touch-action: none;
+}
+
+.material-scene__viewport.is-dragging {
+  cursor: grabbing;
+}
+
+.material-scene__canvas {
+  display: block;
+  height: 22rem !important;
+  margin-top: -1rem;
+  outline: 0;
+  width: 100% !important;
+}
+
+.material-scene__controls {
+  border-top: 1px solid var(--scene-line);
+  display: flex;
+  gap: 0.375rem;
+  padding: 0.75rem 1.25rem;
+}
+
+.material-scene__controls button {
+  appearance: none;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 0;
+  color: var(--scene-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.75rem;
+  min-height: 2rem;
+  padding: 0.35rem 0.55rem;
+  transition: background-color 180ms ease-out, border-color 180ms ease-out, color 180ms ease-out, transform 180ms ease-out;
+}
+
+.material-scene__controls button:hover {
+  border-color: rgba(32, 32, 36, 0.36);
+  color: #202024;
+}
+
+.material-scene__controls button.is-active {
+  background: #202024;
+  border-color: #202024;
+  color: #fff;
+}
+
+.material-scene__controls button:focus-visible {
+  outline: 2px solid #7040dc;
+  outline-offset: 2px;
+}
+
+.material-scene__controls button:active {
+  transform: scale(0.98);
+}
+
+.material-scene__notes {
+  border-top: 1px solid var(--scene-line);
+  color: var(--scene-muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
+  padding: 0.75rem 1.25rem 1rem;
+}
+
+.material-scene__notes p {
+  margin: 0;
+}
+
+.material-scene__unavailable {
+  color: var(--scene-amber);
+  margin-top: 0.35rem !important;
+}
+
+.material-scene__available {
+  color: #245f39;
+  margin-top: 0.35rem !important;
+}
+
+.material-scene__fallback {
+  align-items: center;
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  justify-content: center;
+  min-height: 22rem;
+  padding: 1rem;
+}
+
+.material-scene__fallback img {
+  display: block;
+  max-height: 18rem;
+  max-width: 100%;
+  object-fit: contain;
+}
+
+.material-scene__fallback span {
+  color: var(--scene-muted);
+  font-size: 0.75rem;
+}
+
+@media (max-width: 560px) {
+  .material-scene {
+    min-height: 24rem;
+  }
+
+  .material-scene__canvas {
+    height: 17rem !important;
+  }
+
+  .material-scene__topline,
+  .material-scene__controls,
+  .material-scene__notes {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .material-scene__controls button {
+    transition: none;
+  }
+}

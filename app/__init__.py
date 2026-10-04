@@ -1,0 +1,1 @@
+"""Local Cottrell application adapters."""
