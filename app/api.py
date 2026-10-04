@@ -36,6 +36,7 @@ PC_TAGS = ROOT / "results" / "v1" / "pc_tags.json"
 SAVED_MASKS = ROOT / "results" / "v1_1" / "masks"
 VALIDATION_DIR = ROOT / "results" / "v1" / "loio_images"
 VALIDATION_FEATURES = ROOT / "results" / "features_per_image.parquet"
+VALIDATION_PREVIEWS = ROOT / "results" / "v1" / "validation_previews"
 POLARON_DATASET = Path("/Users/bedelau/Documents/Codex/2026-10-03/i/outputs/polaron_dataset")
 REVIEWS_FILE = ROOT / ".cottrell" / "reviews.json"
 MAX_UPLOAD_BYTES = 128 * 1024 * 1024
@@ -166,6 +167,7 @@ def _find_source(field_id: str, channel: str) -> Path | None:
 
 def _file_channel(field_id: str, channel: str) -> dict[str, Any]:
     source = _find_source(field_id, channel)
+    saved_preview = _validation_preview(field_id, channel) if source is None else None
     expected = next(
         (digest for digest, pair in _recorded_files().items() if pair == (field_id, channel)),
         None,
@@ -177,6 +179,8 @@ def _file_channel(field_id: str, channel: str) -> dict[str, Any]:
         "previewUrl": f"/api/preview/{field_id}/{channel}",
         "rawUrl": f"/api/raw/{field_id}/{channel}",
         "available": source is not None,
+        "previewAvailable": source is not None or saved_preview is not None,
+        "previewKind": "saved-micrograph" if saved_preview else "original",
     }
     if source is not None:
         if expected is None:
@@ -184,9 +188,34 @@ def _file_channel(field_id: str, channel: str) -> dict[str, Any]:
             result["sha256"] = expected
         with tifffile.TiffFile(source) as image:
             result.update(width=int(image.pages[0].imagewidth), height=int(image.pages[0].imagelength))
+    elif saved_preview:
+        _, metadata = saved_preview
+        result.update(
+            sha256=metadata["source_sha256"], width=metadata["width"], height=metadata["height"],
+            previewWidth=metadata["preview_width"], previewHeight=metadata["preview_height"],
+            previewProvenance={"source": f"results/v1/validation_previews/{metadata['filename']}", "method": metadata["method"], "sha256": metadata["preview_sha256"]},
+        )
     else:
         result.update(width=None, height=None)
     return result
+
+
+def _validation_preview(field_id: str, channel: str) -> tuple[Path, dict[str, Any]] | None:
+    """Serve only hash-bound display previews for the selected validation fields."""
+    if field_id not in {item[0]["subject"]["id"] for item in _validation_records()} or channel not in CHANNELS:
+        return None
+    manifest = VALIDATION_PREVIEWS / "manifest.json"
+    if not manifest.is_file():
+        return None
+    metadata = json.loads(manifest.read_text(encoding="utf-8")).get("entries", {}).get(f"{field_id}_{channel}")
+    if not metadata or metadata.get("filename") != f"{field_id}_{channel}.png":
+        return None
+    path = VALIDATION_PREVIEWS / metadata["filename"]
+    if not path.is_file():
+        return None
+    if _sha256(path) != metadata.get("preview_sha256"):
+        raise HTTPException(409, "Saved validation preview checksum does not match its manifest.")
+    return path, metadata
 
 
 def _plain_driver(driver: Any) -> dict[str, Any]:
@@ -579,6 +608,10 @@ def raw_records(dataset: str = "validation") -> dict[str, Any]:
 
 @app.get("/api/preview/{field_id}/{channel}")
 def preview(field_id: str, channel: str) -> Response:
+    if _find_source(field_id, channel) is None:
+        saved_preview = _validation_preview(field_id, channel)
+        if saved_preview:
+            return FileResponse(saved_preview[0], media_type="image/png", headers={"Cache-Control": "private, max-age=300", "X-Cottrell-Preview": "saved-micrograph"})
     source = _source_or_404(field_id, channel)
     array = tifffile.imread(source, key=0)
     if array.ndim > 2 and array.shape[-1] not in (3, 4):

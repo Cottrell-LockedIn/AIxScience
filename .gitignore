@@ -49,3 +49,6 @@ frontend/*.tsbuildinfo
 /dist/
 /node_modules/
 .sites-runtime/
+
+# Saved training micrograph display copies stay in private app storage.
+results/v1/validation_previews/*.png

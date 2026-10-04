@@ -174,6 +174,9 @@ def _configure_state_paths() -> tuple[Any, Any]:
     # Saved numerical records remain available, while image endpoints honestly
     # return 404 until their original TIFFs are uploaded in an exploratory run.
     api.POLARON_DATASET = paths["root"] / "no-saved-raw-tiffs"
+    # The restored display copies live in the account's private state Volume,
+    # outside Git and the deployable scientific source bundle.
+    api.VALIDATION_PREVIEWS = paths["root"] / "validation-previews"
     # The deployment image intentionally excludes .git. Preserve the commit
     # identity baked at deploy time for the engine's own provenance fields.
     qc_config.git_sha = lambda: os.environ.get("COTTRELL_BUNDLE_GIT_SHA", "unknown")

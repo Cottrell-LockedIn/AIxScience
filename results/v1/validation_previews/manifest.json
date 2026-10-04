@@ -1,0 +1,104 @@
+{
+  "kind": "saved training-validation micrograph previews",
+  "entries": {
+    "b3esycq1_BSE": {
+      "filename": "b3esycq1_BSE.png",
+      "source_file": "Batch_2/img_b3esycq1_BSE.tif",
+      "source_sha256": "01e83352c90c1a77bf2e8d216651d2b1cb747257b22b4cbc2e8c7c4ccaa485d5",
+      "preview_sha256": "5725ab6d7c5c5d90f6f1a50a6688ee35dcd76ee5a198db2581b8aa906a0a32f9",
+      "width": 7000,
+      "height": 2156,
+      "preview_width": 1600,
+      "preview_height": 493,
+      "method": "Whole-field display PNG, reduced to 1600 pixels on its longest edge with Lanczos resampling. No model inference or segmentation."
+    },
+    "b3esycq1_ETD": {
+      "filename": "b3esycq1_ETD.png",
+      "source_file": "Batch_2/img_b3esycq1_ETD.tif",
+      "source_sha256": "d01394a58d801249909c8401349efdfda8b8b018c0d1b6349468335273048f77",
+      "preview_sha256": "e277c3ed5e17710421181860a3b5be66f33ef2366963e954f639762416355ad2",
+      "width": 7000,
+      "height": 2156,
+      "preview_width": 1600,
+      "preview_height": 493,
+      "method": "Whole-field display PNG, reduced to 1600 pixels on its longest edge with Lanczos resampling. No model inference or segmentation."
+    },
+    "b3esycq1_Inlens": {
+      "filename": "b3esycq1_Inlens.png",
+      "source_file": "Batch_2/img_b3esycq1_Inlens.tif",
+      "source_sha256": "c078f946f4951d34fccfbd081f2f08250678d0b4c049bd2d4a3b4fb3c48b325b",
+      "preview_sha256": "ba2c168c2e5c67b12ee4fbe15bb803c9b78a7b7c0234d6f30216ecb6ec462fd3",
+      "width": 7000,
+      "height": 2156,
+      "preview_width": 1600,
+      "preview_height": 493,
+      "method": "Whole-field display PNG, reduced to 1600 pixels on its longest edge with Lanczos resampling. No model inference or segmentation."
+    },
+    "fzrt2k6r_BSE": {
+      "filename": "fzrt2k6r_BSE.png",
+      "source_file": "Batch_1/img_fzrt2k6r_BSE.tif",
+      "source_sha256": "9fa0f4c9a5cb019fde2f081618788453afb96f86532d4b0ca0a83783edf1ec3a",
+      "preview_sha256": "6c90908eb45f7a4d58e2e097815bdf5393176d293ded3aa08101a804030448db",
+      "width": 7000,
+      "height": 2156,
+      "preview_width": 1600,
+      "preview_height": 493,
+      "method": "Whole-field display PNG, reduced to 1600 pixels on its longest edge with Lanczos resampling. No model inference or segmentation."
+    },
+    "fzrt2k6r_ETD": {
+      "filename": "fzrt2k6r_ETD.png",
+      "source_file": "Batch_1/img_fzrt2k6r_ETD.tif",
+      "source_sha256": "35b29b950a2b1379650ca9ae813919500cc264f5c27d73f9384ed8e1df32d68a",
+      "preview_sha256": "47fbcd03be06afec101f10a1425b6ef7a9bdd612e8c56a3dcf9c8630bef55312",
+      "width": 7000,
+      "height": 2156,
+      "preview_width": 1600,
+      "preview_height": 493,
+      "method": "Whole-field display PNG, reduced to 1600 pixels on its longest edge with Lanczos resampling. No model inference or segmentation."
+    },
+    "fzrt2k6r_Inlens": {
+      "filename": "fzrt2k6r_Inlens.png",
+      "source_file": "Batch_1/img_fzrt2k6r_Inlens.tif",
+      "source_sha256": "53ce1e8d9e30a31e80414f511e016ac4c8aebad4decc697758889797b583df6e",
+      "preview_sha256": "f3edb13427c38b75da808e8e245dba1dbcff7c35269030117faa5847abdbf567",
+      "width": 7000,
+      "height": 2156,
+      "preview_width": 1600,
+      "preview_height": 493,
+      "method": "Whole-field display PNG, reduced to 1600 pixels on its longest edge with Lanczos resampling. No model inference or segmentation."
+    },
+    "71vgq3fw_BSE": {
+      "filename": "71vgq3fw_BSE.png",
+      "source_file": "Batch_3/img_71vgq3fw_BSE.tif",
+      "source_sha256": "6e39035f9fec96c1b3728c7e4a482f9e3aa07802eb0afbb15c01deb01f1b7113",
+      "preview_sha256": "ed472965208c5064d39320642efdc86c4ab43832ff0e785e6435f1c3b9d7e0bf",
+      "width": 7000,
+      "height": 2060,
+      "preview_width": 1600,
+      "preview_height": 471,
+      "method": "Whole-field display PNG, reduced to 1600 pixels on its longest edge with Lanczos resampling. No model inference or segmentation."
+    },
+    "71vgq3fw_ETD": {
+      "filename": "71vgq3fw_ETD.png",
+      "source_file": "Batch_3/img_71vgq3fw_ETD.tif",
+      "source_sha256": "d33a99897dc39863f8385d22e8ee36cfd084f4666f74063a600629db85fb4341",
+      "preview_sha256": "6b9d33561d5e655901ee0f4d80f3db6ba44ce36113fbead3599f9c27edab0d6a",
+      "width": 7000,
+      "height": 2060,
+      "preview_width": 1600,
+      "preview_height": 471,
+      "method": "Whole-field display PNG, reduced to 1600 pixels on its longest edge with Lanczos resampling. No model inference or segmentation."
+    },
+    "71vgq3fw_Inlens": {
+      "filename": "71vgq3fw_Inlens.png",
+      "source_file": "Batch_3/img_71vgq3fw_Inlens.tif",
+      "source_sha256": "f754984ce9e2a2506aaa5aa902692d9c6a4319de960becf8608984995828d6d5",
+      "preview_sha256": "b5bce04a3a7958a08ceeabf966bd646dc86d0847e8447cb25598d46d3c5cd0b3",
+      "width": 7000,
+      "height": 2060,
+      "preview_width": 1600,
+      "preview_height": 471,
+      "method": "Whole-field display PNG, reduced to 1600 pixels on its longest edge with Lanczos resampling. No model inference or segmentation."
+    }
+  }
+}
