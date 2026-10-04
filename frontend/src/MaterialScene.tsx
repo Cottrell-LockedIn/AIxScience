@@ -25,6 +25,8 @@ export type MaterialLayer = {
 export type MaterialSceneProps = {
   imageUrl: string;
   fieldId: string;
+  /** A saved mask has no original TIFF underneath it, so it must remain a flat artifact. */
+  imageKind?: "original" | "saved-overlay" | "saved-mask";
   /** Exact aligned masks from the completed engine run, when available. */
   layers?: MaterialLayer[];
 };
@@ -210,11 +212,11 @@ function Scene({
   );
 }
 
-function FlatFallback({ imageUrl, fieldId }: Pick<MaterialSceneProps, "imageUrl" | "fieldId">) {
+function FlatFallback({ imageUrl, fieldId, imageKind = "original" }: Pick<MaterialSceneProps, "imageUrl" | "fieldId" | "imageKind">) {
   return (
     <div className="material-scene__fallback">
-      <img src={imageUrl} alt={`Original micrograph for ${fieldId}`} />
-      <span>3D view unavailable — showing the original image.</span>
+      <img src={imageUrl} alt={imageKind === "original" ? `Original micrograph for ${fieldId}` : `Saved segmentation ${imageKind === "saved-overlay" ? "overlay" : "mask"} for ${fieldId}`} />
+      <span>{imageKind === "original" ? "3D view unavailable — showing the original image." : `Saved segmentation ${imageKind === "saved-overlay" ? "overlay" : "mask"} · original TIFF unavailable`}</span>
     </div>
   );
 }
@@ -223,7 +225,7 @@ function FlatFallback({ imageUrl, fieldId }: Pick<MaterialSceneProps, "imageUrl"
  * A presentation-only perspective of one original micrograph.
  * It never invents material layers or physical depth from a 2D field.
  */
-export default function MaterialScene({ imageUrl, fieldId, layers = EMPTY_LAYERS }: MaterialSceneProps) {
+export default function MaterialScene({ imageUrl, fieldId, imageKind = "original", layers = EMPTY_LAYERS }: MaterialSceneProps) {
   const [view, setView] = useState<View>("front");
   const [rotation, setRotation] = useState<[number, number, number]>(VIEWS.front);
   const [separated, setSeparated] = useState(false);
@@ -234,6 +236,17 @@ export default function MaterialScene({ imageUrl, fieldId, layers = EMPTY_LAYERS
     () => layers.filter((layer) => layer.verified === true && layer.imageUrl.trim().length > 0).slice(0, 3),
     [layers],
   );
+
+  if (imageKind !== "original") {
+    return <section className="material-scene material-scene--saved-overlay" aria-label={`Saved segmentation overlay for ${fieldId}`}>
+      <div className="material-scene__topline">
+        <div><p className="material-scene__label">Saved run artifact</p><h3>{fieldId}</h3></div>
+        <span className="material-scene__status">Original TIFF unavailable</span>
+      </div>
+      <FlatFallback imageUrl={imageUrl} fieldId={fieldId} imageKind={imageKind} />
+      <div className="material-scene__notes"><p>This flat segmentation overlay was saved with the run. It does not provide an original image or 3D material structure.</p></div>
+    </section>
+  }
 
   const setPresetView = (next: View) => {
     setView(next);
@@ -281,7 +294,7 @@ export default function MaterialScene({ imageUrl, fieldId, layers = EMPTY_LAYERS
         onPointerCancel={endDrag}
         aria-label="Drag the image to change its perspective"
       >
-        <SceneBoundary fallback={<FlatFallback imageUrl={imageUrl} fieldId={fieldId} />}>
+        <SceneBoundary fallback={<FlatFallback imageUrl={imageUrl} fieldId={fieldId} imageKind="original" />}>
           <Scene
             imageUrl={imageUrl}
             rotation={rotation}
