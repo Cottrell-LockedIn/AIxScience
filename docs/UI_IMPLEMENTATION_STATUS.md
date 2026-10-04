@@ -8,7 +8,9 @@ Original TIFF upload validates files, stores byte-preserving sources and runs th
 
 Review has an enlarged original-image crop, full-field navigator, zoom controls, three highlighted threshold-proximity suggestions and exact 512 px close-ups. Manual region selection remains available. This separate diagnostic is not local classifier confidence. Reviews preserve source/run/method hashes and original coordinates.
 
-Results provide Overview, Investigate and Material details. Exact model masks, phase layers and raw TIFFs are available per completed run. The Three.js view splits actual 2D layers with explicitly illustrative depth, bounded animation and reduced-motion support. Results styling fixes button text contrast, spacing and top-aligned desktop evidence placement.
+Results provide Overview, Investigate, Material details and Model output. The Model output view reads the selected image's recorded prediction, tier, probabilities, drivers and uncertainty. Model-wide validation intervals and permutation tests stay separate from image-level batch probabilities. Exact model masks, phase layers and raw TIFFs are available per completed run. The Three.js view splits actual 2D layers with explicitly illustrative depth, bounded animation and reduced-motion support. Results styling fixes button text contrast, spacing and top-aligned desktop evidence placement.
+
+Model Accuracy is a separate workspace tab. It reads the trainer's committed `results/v1/accuracy_tab/metrics.json` and five saved figures through a read-only API. The 31-image cross-validation record, three-image held-out score and six-image unscored predictions remain separate. The latest accuracy presentation groups the old medium tier into low; historical individual run records retain their recorded tiers.
 
 The 11 native KPI values link to the supplied scientist's 14 manufacturing/formation patterns and 14 future-service scenarios. Selected criteria and supporting features are separate. Sources, required evidence, investigation roles, caveats and recommended checks remain visible; no numerical failure probability is assigned. Unknown evidence is not a pass. Aspect ratio is not measured in v1. Scale conversion is restricted to the attested source hash.
 
@@ -18,4 +20,4 @@ A real browser TIFF upload ran successfully through the engine, CPU fallback, re
 
 TypeScript/Vite build and focused wrapper/region tests pass. Existing held-out tests: 27 passed, 3 skipped for absent raw TIFFs. One existing PC-profile permutation-artifact comparison remains different under the local unpinned scientific dependencies; see ENGINE_INTEGRATION_AUDIT.md. Modal has no authenticated local profile, so GPU execution is not verified here. No deployment, multiuser authentication or production lot-release policy is claimed.
 
-Git target: Cottrell-LockedIn/AIxScience. Branch: codex/cottrell-prd-ui. Latest fetched main 0517998 merged at 0bfdc16 without conflicts. Local data and run artifacts remain ignored.
+Git target: Cottrell-LockedIn/AIxScience. Development branch: codex/cottrell-prd-ui. Main 4ef39fd, including the trainer's PR #17 accuracy package, was merged at b9a723e. Its single append-only run-log conflict was resolved by preserving both histories. Local data and run artifacts remain ignored. The user has requested this completed implementation be committed and pushed to main.

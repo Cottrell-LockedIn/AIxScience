@@ -1,11 +1,8 @@
-"""Read-only local API for the saved Cottrell evaluation.
+"""Local API for exploratory Cottrell runs and immutable saved evidence.
 
-This service intentionally does not run the scientific pipeline.  It exposes the
-committed ``results/v1/heldout.json`` artifact and lets the UI replay a result
-only when uploaded source bytes match a recorded hash.
-
-Run from the repository root:
-    .venv/bin/uvicorn app.api:app --host 127.0.0.1 --port 8502
+Original TIFF uploads run the fixed scientific pipeline in isolated exploratory
+workers. Saved validation/model-card endpoints only read committed artifacts.
+Run: .venv/bin/uvicorn app.api:app --host 127.0.0.1 --port 8502
 """
 from __future__ import annotations
 
@@ -29,6 +26,7 @@ from fastapi.responses import FileResponse, Response
 from PIL import Image
 
 from app import jobs
+from app.model_accuracy import router as model_accuracy_router
 
 ROOT = Path(__file__).resolve().parents[1]
 HELDOUT = ROOT / "results" / "v1" / "heldout.json"
@@ -57,7 +55,8 @@ FEATURE_KEYS = {
     "F11": "F11_c2_perimeter_fraction_adjacent_c0",
 }
 
-app = FastAPI(title="Cottrell saved-result API", version="0.1.0")
+app = FastAPI(title="Cottrell analysis API", version="0.2.0")
+app.include_router(model_accuracy_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://127.0.0.1:8501", "http://localhost:8501", "http://127.0.0.1:5173", "http://localhost:5173"],

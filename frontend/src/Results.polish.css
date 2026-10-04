@@ -9,6 +9,7 @@
 .result-tabs{height:66px;gap:32px}
 .result-tabs button{min-width:130px;font-size:14px}
 .results__content{grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);align-items:start;gap:34px;min-height:0}
+.results__content--model{display:block;min-height:0}.results__content--model .results__copy{max-width:1120px;padding-right:0}
 .results__copy{max-width:none;padding:34px 0 40px}
 .results__visual{position:sticky;top:20px;align-self:start;min-height:0;padding:30px 0 24px 30px;margin-top:4px;gap:24px;border-left:1px solid var(--line);max-width:100%;min-width:0}
 .visual-topline{padding:0;align-items:center;gap:12px;line-height:1.5;font-size:10px}
@@ -76,3 +77,5 @@
 .kpi-guidance__head{display:block}.kpi-guidance__head p{line-height:1.7;margin:12px 0 18px}.kpi-tabs{width:max-content;max-width:100%;border-radius:5px;overflow:hidden}.kpi-tabs button{min-height:40px}.kpi-row{grid-template-columns:30px minmax(0,1fr) 18px;gap:6px 10px;line-height:1.6}.kpi-row strong{font-size:12px;font-weight:550}.kpi-row em{grid-column:2;grid-row:2;line-height:1.6}.kpi-row>svg{grid-column:3;grid-row:1}.kpi-drawer{padding-left:40px}.kpi-drawer p{line-height:1.75;margin:12px 0}.kpi-drawer .source-links a{align-items:flex-start;line-height:1.6}.kpi-measures{display:grid;grid-template-columns:1fr;gap:0}.kpi-measures>strong{margin-bottom:10px}.kpi-measures>span{padding:11px 0;border-width:0 0 1px;line-height:1.7}.kpi-measures>span>b{display:block;margin-bottom:3px}.kpi-calibration{align-items:flex-start}.kpi-calibration>svg{flex:0 0 14px;margin-top:2px}
 @media(min-width:768px){.inventory-head,.inventory-row{min-width:0;grid-template-columns:1fr 1.1fr .8fr 1.2fr 1fr;gap:10px;padding-left:0;padding-right:0;overflow-wrap:anywhere}.inventory-head{font-size:9px}.inventory-row{font-size:11px}.inventory-row strong{font-size:11px}.class-chips{flex-wrap:wrap}.channel-row{min-width:0;grid-template-columns:40px minmax(0,1fr) auto;gap:10px;padding-left:12px;font-size:10px;overflow-wrap:anywhere}}
 .result-tabs{overflow-y:hidden}
+
+@media(max-width:767px){.result-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));height:auto;gap:0 18px;overflow:visible}.result-tabs button{min-height:46px;white-space:normal}.result-tabs button.is-active:after{bottom:0}.results__content--model .results__copy{padding-top:0}}
