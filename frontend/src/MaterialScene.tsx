@@ -25,7 +25,7 @@ export type MaterialLayer = {
 export type MaterialSceneProps = {
   imageUrl: string;
   fieldId: string;
-  /** Optional exact masks from a future engine release. The current engine supplies none. */
+  /** Exact aligned masks from the completed engine run, when available. */
   layers?: MaterialLayer[];
 };
 
@@ -135,7 +135,7 @@ function TexturedPlates({
       Math.abs(next[2] - object.z) < 0.002;
     layersRef.current.forEach((layer, index) => {
       if (!layer) return;
-      const targetZ = separated ? index * 0.36 : index * 0.012;
+      const targetZ = separated ? (index - (sources.length - 1) / 2) * 0.6 : index * 0.012;
       const layerRate = snap ? 1 : 1 - Math.exp(-delta * 30);
       layer.position.z += (targetZ - layer.position.z) * layerRate;
       if (Math.abs(targetZ - layer.position.z) >= 0.002) resting = false;
@@ -270,7 +270,7 @@ export default function MaterialScene({ imageUrl, fieldId, layers = EMPTY_LAYERS
           <p className="material-scene__label">Material perspective</p>
           <h3>{fieldId}</h3>
         </div>
-        <span className="material-scene__status">Original BSE image</span>
+        <span className="material-scene__status">{separated ? "Original + phase layers" : "Aligned image layers"}</span>
       </div>
 
       <div
@@ -303,7 +303,7 @@ export default function MaterialScene({ imageUrl, fieldId, layers = EMPTY_LAYERS
           Tilt right
         </button>
         {exactLayers.length > 0 && (
-          <button type="button" className={separated ? "is-active" : ""} onClick={() => setSeparated((current) => !current)}>
+          <button type="button" className={separated ? "is-active" : ""} onClick={() => { const next = !separated; setSeparated(next); setView(next ? "left" : "front"); setRotation(next ? [0.72, -0.4, -0.06] : VIEWS.front); }}>
             {separated ? "Stack layers" : "Separate layers"}
           </button>
         )}
@@ -315,7 +315,7 @@ export default function MaterialScene({ imageUrl, fieldId, layers = EMPTY_LAYERS
           <p className="material-scene__unavailable">Segmentation layers unavailable for this engine release.</p>
         ) : (
           <p className="material-scene__available">
-            {exactLayers.length} exact, versioned segmentation {exactLayers.length === 1 ? "layer is" : "layers are"} available for a future separated view.
+            {exactLayers.length} exact, versioned segmentation {exactLayers.length === 1 ? "layer is" : "layers are"} from this run. Separate them to compare the measured regions.
           </p>
         )}
       </div>

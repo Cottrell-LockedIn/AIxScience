@@ -42,3 +42,5 @@ app/local_uploads/
 app/local_reviews/
 .cottrell/
 .impeccable/review/
+
+frontend/*.tsbuildinfo

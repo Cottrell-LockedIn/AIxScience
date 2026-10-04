@@ -1,0 +1,53 @@
+import { useEffect, useRef, useState } from 'react';
+import { Crosshair, LoaderCircle, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
+import './ReviewImage.css';
+
+export type Region = { x:number; y:number; width:number; height:number; evidence?:unknown };
+type Suggestion = { id:string; roi:Region; title:string; reason:string; score?:number; scoreLabel?:string };
+type Props = { runId?:string|null; field:any; channel:any; roi:Region|null; onSelect:(roi:Region|null)=>void };
+const clamp = (v:number,lo:number,hi:number)=>Math.max(lo,Math.min(hi,v));
+export default function ReviewImage({runId,field,channel,roi,onSelect}:Props){
+ const [diagnostic,setDiagnostic]=useState<any>(null);
+ const [pending,setPending]=useState(false);
+ const [message,setMessage]=useState('');
+ const [zoom,setZoom]=useState(2);
+ const [centre,setCentre]=useState({x:.5,y:.5});
+ const [aspect,setAspect]=useState(2);
+ const [manual,setManual]=useState(false);
+ const canvas=useRef<HTMLDivElement>(null);
+ const pointer=useRef<{x:number;y:number}|null>(null);
+ const W=channel?.width||1,H=channel?.height||1;
+ const available=channel?.available!==false&&!!channel?.previewUrl;
+ const fitWidth=Math.min(W,H*aspect),vw=Math.max(1,Math.round(fitWidth/zoom)),vh=Math.max(1,Math.round(vw/aspect));
+ const viewport={x:Math.round(clamp(centre.x*W-vw/2,0,W-vw)),y:Math.round(clamp(centre.y*H-vh/2,0,H-vh)),width:vw,height:vh};
+ const regions:Suggestion[]=diagnostic?.regions||[];
+ const selected=regions.find(r=>roi&&r.roi.x===roi.x&&r.roi.y===roi.y&&r.roi.width===roi.width&&r.roi.height===roi.height);
+ const cropUrl=(r:Region)=>`${runId?`/api/runs/${encodeURIComponent(runId)}/crop`:'/api/crop'}/${encodeURIComponent(field.id)}/${encodeURIComponent(channel.name)}?${new URLSearchParams({x:String(r.x),y:String(r.y),width:String(r.width),height:String(r.height)})}`;
+ function select(r:Suggestion){onSelect({...r.roi,evidence:{diagnosticId:diagnostic.id,diagnosticHash:diagnostic.diagnosticHash,regionId:r.id,method:diagnostic.method,version:diagnostic.version,sourceHash:diagnostic.sourceHash,maskHash:diagnostic.maskHash,reason:r.reason}});setCentre({x:(r.roi.x+r.roi.width/2)/W,y:(r.roi.y+r.roi.height/2)/H});setZoom(clamp(fitWidth/Math.max(r.roi.width*1.6,r.roi.height*aspect*1.6),1,8));setManual(false);}
+ useEffect(()=>{const node=canvas.current;if(!node)return;const observer=new ResizeObserver(([entry])=>setAspect(entry.contentRect.width/entry.contentRect.height));observer.observe(node);return()=>observer.disconnect();},[]);
+ useEffect(()=>{
+  let disposed=false;setDiagnostic(null);setMessage('');setZoom(2);setCentre({x:.5,y:.5});setManual(false);onSelect(null);
+  if(!runId||!available){setMessage('This saved record has no local region diagnostic. Select an area for your own review.');setPending(false);return;}
+  setPending(true);fetch(`/api/runs/${encodeURIComponent(runId)}/review-regions?field=${encodeURIComponent(field.id)}`).then(async r=>{const d=await r.json();if(!r.ok)throw Error(typeof d.detail==='string'?d.detail:'Region suggestions could not be opened.');return d;}).then(d=>{if(disposed)return;setDiagnostic(d);if(d.regions?.length){const r=d.regions[0];onSelect({...r.roi,evidence:{diagnosticId:d.id,diagnosticHash:d.diagnosticHash,regionId:r.id,method:d.method,version:d.version,sourceHash:d.sourceHash,maskHash:d.maskHash,reason:r.reason}});setCentre({x:(r.roi.x+r.roi.width/2)/W,y:(r.roi.y+r.roi.height/2)/H});setZoom(clamp(fitWidth/Math.max(r.roi.width*1.6,r.roi.height*aspect*1.6),1,8));}else setMessage('No distinct regions were suggested. You can select an area manually.');}).catch(e=>{if(!disposed)setMessage(e.message);}).finally(()=>{if(!disposed)setPending(false);});
+  return()=>{disposed=true;};
+ },[runId,field?.id,channel?.sha256]);
+ const roiStyle=(r:Region,v=viewport)=>({left:`${(r.x-v.x)/v.width*100}%`,top:`${(r.y-v.y)/v.height*100}%`,width:`${r.width/v.width*100}%`,height:`${r.height/v.height*100}%`});
+ function point(e:React.PointerEvent<HTMLDivElement>){const b=e.currentTarget.getBoundingClientRect();return{x:Math.round(viewport.x+clamp((e.clientX-b.left)/b.width,0,1)*viewport.width),y:Math.round(viewport.y+clamp((e.clientY-b.top)/b.height,0,1)*viewport.height)};}
+ return <div className="region-review">
+  <div className="region-toolbar"><span><Crosshair size={15}/>{selected?selected.title:manual?'Draw your review area':'Magnified source image'}</span><div className="zoom-controls"><button aria-label="Zoom out" disabled={zoom<=1} onClick={()=>setZoom(z=>Math.max(1,z/1.5))}><ZoomOut size={17}/></button><span>{zoom.toFixed(1)}×</span><button aria-label="Zoom in" disabled={zoom>=8} onClick={()=>setZoom(z=>Math.min(8,z*1.5))}><ZoomIn size={17}/></button><button aria-label="Reset image view" onClick={()=>{setZoom(1);setCentre({x:.5,y:.5});}}><RotateCcw size={16}/></button></div></div>
+  <div className={`region-main ${manual?'is-selecting':''}`} ref={canvas} onPointerDown={e=>{if(!manual||!available)return;pointer.current=point(e);e.currentTarget.setPointerCapture(e.pointerId);}} onPointerUp={e=>{if(!pointer.current)return;const p=pointer.current,end=point(e);pointer.current=null;const r={x:Math.min(p.x,end.x),y:Math.min(p.y,end.y),width:Math.abs(p.x-end.x),height:Math.abs(p.y-end.y)};if(r.width>=8&&r.height>=8)onSelect(r);}} onPointerCancel={()=>{pointer.current=null;}}>
+   {available?<img key={cropUrl(viewport)} src={cropUrl(viewport)} alt={`Magnified BSE image, ${viewport.width} by ${viewport.height} original pixels`} draggable={false}/>:<div className="image-unavailable">Original image unavailable.</div>}
+   {regions.map((r,i)=><button aria-label={`Inspect region ${i+1}: ${r.title}`} key={r.id} className={`region-highlight ${selected?.id===r.id?'active':''}`} style={roiStyle(r.roi)} onClick={()=>select(r)} disabled={manual}><span>{String(i+1).padStart(2,'0')}</span></button>)}
+   {roi&&!selected&&<div className="region-highlight manual" style={roiStyle(roi)}><span>Your region</span></div>}
+   <span className="region-scale">{viewport.width} × {viewport.height} px · original coordinates</span>
+  </div>
+  {available&&<div className="region-context-row"><div className="region-map" role="button" tabIndex={0} aria-label="Overview map. Click to move the magnified view; use arrow keys to pan." onClick={e=>{const b=e.currentTarget.getBoundingClientRect();setCentre({x:clamp((e.clientX-b.left)/b.width,0,1),y:clamp((e.clientY-b.top)/b.height,0,1)});}} onKeyDown={e=>{if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)){e.preventDefault();setCentre(c=>({x:clamp(c.x+(e.key==='ArrowRight'?.05:e.key==='ArrowLeft'?-.05:0),0,1),y:clamp(c.y+(e.key==='ArrowDown'?.05:e.key==='ArrowUp'?-.05:0),0,1)}));}}}>
+   <img src={channel.previewUrl} alt="Full image with the current magnified area outlined"/>{regions.map((r,i)=><span key={r.id} className="map-region" style={roiStyle(r.roi,{x:0,y:0,width:W,height:H})}>{i+1}</span>)}<span className="map-viewport" style={roiStyle(viewport,{x:0,y:0,width:W,height:H})}/></div><div><strong>Full-field navigator</strong><p>Click the overview to move around. The violet frame marks the enlarged view.</p><button className="text-button" onClick={()=>setManual(m=>!m)}>{manual?'Finish drawing':'Draw a different region'}</button><button className="text-button" onClick={()=>{onSelect({x:viewport.x+Math.floor(viewport.width*.25),y:viewport.y+Math.floor(viewport.height*.25),width:Math.floor(viewport.width*.5),height:Math.floor(viewport.height*.5)});setManual(false);}}>Select centre of this view</button></div></div>}
+  <div className="region-section-title"><h3>Areas worth a closer look</h3><span>{regions.length?`${regions.length} review suggestions`:'Local review'}</span></div>
+  {pending&&<p className="inline-note" role="status"><LoaderCircle size={15} className="spin"/>Finding regions where the mask may need a closer check…</p>}
+  {message&&<p className="inline-note" role="status">{message}</p>}
+  {!!regions.length&&<><p className="region-method">{'These areas contain many pixels close to a brightness cut-off. Small changes to that cut-off could change their material label, so their boundaries are worth checking.'}</p><div className="region-crops">{regions.map((r,i)=><button key={r.id} className={`region-crop ${selected?.id===r.id?'selected':''}`} onClick={()=>select(r)} aria-pressed={selected?.id===r.id}><div><img src={cropUrl(r.roi)} alt={`Native-resolution close-up of review region ${i+1}`}/><span>{String(i+1).padStart(2,'0')}</span></div><strong>{r.score===0?'Context region':'Ambiguous boundaries'}</strong><p>{r.score===0?'No local sensitivity was found here. This area is shown for comparison.':'Small changes in the brightness cut-off could change the labels here. Check the material boundaries.'}</p><small>{r.roi.width} × {r.roi.height} px</small></button>)}</div></>}
+  {roi&&!selected&&<div className="manual-crop"><img src={cropUrl(roi)} alt="Magnified crop of your selected region"/><div><strong>Your selected region</strong><p>{roi.width} × {roi.height} original pixels. This is a manual selection.</p></div></div>}
+  <p className="region-disclaimer">The classifier scores the whole image. These close-ups help review its mask; they are not a map of model confidence. Your tag stays separate from the measured result.</p>
+ </div>;
+}

@@ -14,6 +14,8 @@ import io
 import json
 import os
 import re
+import time
+import uuid
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -26,6 +28,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from PIL import Image
 
+from app import jobs
+
 ROOT = Path(__file__).resolve().parents[1]
 HELDOUT = ROOT / "results" / "v1" / "heldout.json"
 VALIDATION_DIR = ROOT / "results" / "v1" / "loio_images"
@@ -36,7 +40,9 @@ MAX_UPLOAD_BYTES = 128 * 1024 * 1024
 MAX_DECODED_PIXELS = 25_000_000
 MIN_TILER_DIMENSION = 1040  # 1024px tile plus the frozen reader's 8px crop.
 MAX_PREVIEW_EDGE = 1600
+MAX_CROP_EDGE = 1024
 CHANNELS = ("BSE", "ETD", "Inlens", "SE")
+ID_RE = re.compile(r"[a-f0-9]{32}")
 FEATURE_KEYS = {
     "F01": "F01_c0_area_fraction",
     "F02": "F02_c2_area_fraction",
@@ -77,6 +83,12 @@ def _finite(value: Any) -> float | None:
     return None
 
 
+def _id_or_422(value: str, label: str) -> str:
+    if not ID_RE.fullmatch(value):
+        raise HTTPException(422, f"Invalid {label}.")
+    return value
+
+
 @lru_cache(maxsize=1)
 def _saved() -> dict[str, Any]:
     if not HELDOUT.is_file():
@@ -115,15 +127,20 @@ def _find_source(field_id: str, channel: str) -> Path | None:
         digest for digest, pair in _recorded_files().items()
         if pair == (field_id, channel)
     }
-    for root in _source_roots():
+    validation_ids = {record[0]["subject"]["id"] for record in _validation_records()} if VALIDATION_DIR.is_dir() else set()
+    # Validation displays only come from this explicitly selected local dataset
+    # root; never from an arbitrary matching TIFF elsewhere on disk.
+    roots = [POLARON_DATASET] if field_id in validation_ids else _source_roots()
+    found: list[Path] = []
+    for root in roots:
         for suffix in ("*.tif", "*.tiff", "*.TIF", "*.TIFF"):
             for candidate in root.rglob(suffix):
                 if pattern.fullmatch(candidate.name):
                     # Validation records identify their original by field/channel.
                     # Held-out records additionally require an exact recorded hash.
                     if not expected or _sha256(candidate) in expected:
-                        return candidate
-    return None
+                        found.append(candidate)
+    return found[0] if len(found) == 1 else None
 
 
 def _file_channel(field_id: str, channel: str) -> dict[str, Any]:
@@ -206,6 +223,110 @@ def _normalise(image: dict[str, Any], raw_inputs: dict[str, Any]) -> dict[str, A
     }
 
 
+def _run_source(run_id: str, field_id: str, channel: str) -> Path:
+    _id_or_422(run_id, "run id")
+    state = jobs.load_run(run_id)
+    if state is None:
+        raise HTTPException(404, "Unknown run.")
+    upload_id = _id_or_422(str(state["uploadId"]), "upload id")
+    root = jobs.upload_path(upload_id)
+    manifest = root / "manifest.json"
+    if manifest.is_file():
+        try:
+            files = json.loads(manifest.read_text(encoding="utf-8")).get("files", [])
+            for item in files:
+                if item.get("fieldId") == field_id and item.get("channel") == channel:
+                    candidate = root / str(item["filename"])
+                    if candidate.is_file():
+                        return candidate
+        except (OSError, json.JSONDecodeError, KeyError, TypeError):
+            pass
+    for suffix in (".tif", ".tiff", ".TIF", ".TIFF"):
+        candidate = root / f"img_{field_id}_{channel}{suffix}"
+        if candidate.is_file():
+            return candidate
+    raise HTTPException(404, "The original TIFF for this exploratory field is unavailable.")
+
+
+def _run_channel(run_id: str, field_id: str, channel: str) -> dict[str, Any]:
+    source = _run_source(run_id, field_id, channel)
+    with tifffile.TiffFile(source) as image:
+        width, height = int(image.pages[0].imagewidth), int(image.pages[0].imagelength)
+    return {
+        "name": channel, "filename": source.name, "sha256": _sha256(source), "width": width, "height": height,
+        "available": True, "previewUrl": f"/api/runs/{run_id}/preview/{field_id}/{channel}",
+        "rawUrl": f"/api/runs/{run_id}/raw/{field_id}/{channel}",
+    }
+
+
+def _normalise_run(run_id: str, image: dict[str, Any], raw_inputs: dict[str, Any]) -> dict[str, Any]:
+    field = _normalise(image, raw_inputs)
+    field_id = str(field["id"])
+    field["channels"] = [_run_channel(run_id, field_id, channel) for channel in image.get("acquisition", {}).get("detectors_present", [])]
+    segmentation = image.get("evidence", {}).get("segmentation_mask")
+    if isinstance(segmentation, dict):
+        field.update({
+            "overlayUrl": f"/api/runs/{run_id}/overlay/{field_id}",
+            "originalCroppedPreviewUrl": f"/api/runs/{run_id}/cropped-preview/{field_id}",
+            "layers": [
+                {"id": "phase-0", "label": "Void / pore", "imageUrl": f"/api/runs/{run_id}/layer/{field_id}/0", "verified": True},
+                {"id": "phase-1", "label": "Graphite", "imageUrl": f"/api/runs/{run_id}/layer/{field_id}/1", "verified": True},
+                {"id": "phase-2", "label": "Silicon-containing", "imageUrl": f"/api/runs/{run_id}/layer/{field_id}/2", "verified": True},
+            ],
+            "maskMeta": {"maskUrl": f"/api/runs/{run_id}/mask/{field_id}", "cropOffsetPx": segmentation.get("mask_offset_px"), "offset": segmentation.get("mask_offset_px"), "sha256": segmentation.get("mask_sha256"), "shape": segmentation.get("mask_shape"), "note": segmentation.get("note")},
+        })
+        field["mask"] = {**field["maskMeta"], "overlayUrl": field["overlayUrl"], "originalCroppedPreviewUrl": field["originalCroppedPreviewUrl"], "layers": field["layers"], "width": segmentation["mask_shape"][1], "height": segmentation["mask_shape"][0]}
+    return field
+
+
+def _run_result(run_id: str) -> tuple[dict[str, Any], dict[str, Any]]:
+    state = jobs.load_run(run_id)
+    if state is None:
+        raise HTTPException(404, "Unknown run.")
+    result = jobs.run_path(run_id) / "result.json"
+    if not result.is_file():
+        raise HTTPException(409, "This run has not produced a result yet.")
+    return state, json.loads(result.read_text(encoding="utf-8"))
+
+
+def _png_response(array: np.ndarray) -> Response:
+    image = Image.fromarray(array)
+    image.thumbnail((MAX_PREVIEW_EDGE, MAX_PREVIEW_EDGE), Image.Resampling.LANCZOS)
+    encoded = io.BytesIO()
+    image.save(encoded, format="PNG", optimize=True)
+    return Response(encoded.getvalue(), media_type="image/png", headers={"Cache-Control": "private, max-age=300"})
+
+
+def _native_crop(source: Path, x: int, y: int, width: int, height: int) -> Response:
+    """Crop source pixels first; bound only the returned display PNG."""
+    if width < 1 or height < 1:
+        raise HTTPException(422, "width and height must be positive source-pixel integers.")
+    with tifffile.TiffFile(source) as tif:
+        page = tif.pages[0]
+        source_width, source_height = int(page.imagewidth), int(page.imagelength)
+        if x < 0 or y < 0 or x >= source_width or y >= source_height:
+            raise HTTPException(422, "x and y must fall inside the source image.")
+        # Clamp the requested rectangle at the right/bottom source edge without
+        # moving its origin; reported headers tell clients the actual bounds.
+        right, bottom = min(source_width, x + width), min(source_height, y + height)
+        image = tif.asarray(key=0)
+    cropped = image[y:bottom, x:right]
+    if cropped.ndim == 3 and cropped.shape[-1] == 1:
+        cropped = cropped[..., 0]
+    display = Image.fromarray(cropped)
+    resampled = max(display.size) > MAX_CROP_EDGE
+    if resampled:
+        display.thumbnail((MAX_CROP_EDGE, MAX_CROP_EDGE), Image.Resampling.LANCZOS)
+    encoded = io.BytesIO()
+    display.save(encoded, format="PNG", compress_level=6)
+    return Response(encoded.getvalue(), media_type="image/png", headers={
+        "Cache-Control": "private, max-age=300",
+        "X-Cottrell-Crop": f"{x},{y},{right - x},{bottom - y}",
+        "X-Cottrell-Source-Coordinates": "native",
+        "X-Cottrell-Display-Resampled": str(resampled).lower(),
+    })
+
+
 @lru_cache(maxsize=1)
 def _validation_records() -> list[tuple[dict[str, Any], dict[str, Any]]]:
     """Three real LOIO records with their original local TIFF counterparts."""
@@ -223,12 +344,15 @@ def _validation_records() -> list[tuple[dict[str, Any], dict[str, Any]]]:
 
 @app.get("/api/capabilities")
 def capabilities() -> dict[str, Any]:
+    bundle = jobs.exploration_bundle()
+    ready = bool(bundle["verified"])
     return {
         "savedResultsReady": HELDOUT.is_file(),
-        "liveRunReady": False,
+        "liveRunReady": ready,
         "uploadReplayReady": True,
         "reviewPersistenceReady": True,
-        "reason": "This local build exposes saved evaluation results. A production inference bundle has not been installed or verified.",
+        "reason": "Local exploratory inference is available with the pinned engine bundle." if ready else "The local exploratory engine bundle is incomplete.",
+        "explorationBundle": bundle,
         "acceptedTypes": [".tif", ".tiff"],
         "maxUploadBytes": MAX_UPLOAD_BYTES,
     }
@@ -312,6 +436,127 @@ def preview(field_id: str, channel: str) -> Response:
     return Response(encoded.getvalue(), media_type="image/png", headers={"Cache-Control": "private, max-age=300"})
 
 
+@app.get("/api/crop/{field_id}/{channel}")
+def saved_crop(field_id: str, channel: str, x: int, y: int, width: int, height: int, dataset: str = "validation") -> Response:
+    if dataset != "validation":
+        raise HTTPException(422, "Only the explicitly bound validation dataset supports saved-image crops.")
+    if field_id not in {record[0]["subject"]["id"] for record in _validation_records()}:
+        raise HTTPException(404, "Unknown validation field.")
+    return _native_crop(_source_or_404(field_id, channel), x, y, width, height)
+
+
+@app.get("/api/runs/{run_id}/raw/{field_id}/{channel}")
+def run_raw(run_id: str, field_id: str, channel: str) -> FileResponse:
+    _run_result(run_id)
+    source = _run_source(run_id, field_id, channel)
+    return FileResponse(source, media_type="image/tiff", filename=source.name)
+
+
+@app.get("/api/runs/{run_id}/preview/{field_id}/{channel}")
+def run_preview(run_id: str, field_id: str, channel: str) -> Response:
+    _run_result(run_id)
+    array = tifffile.imread(_run_source(run_id, field_id, channel), key=0)
+    if array.ndim == 3:
+        array = array[..., 0]
+    return _png_response(array.astype(np.uint8, copy=False))
+
+
+@app.get("/api/runs/{run_id}/crop/{field_id}/{channel}")
+def run_crop(run_id: str, field_id: str, channel: str, x: int, y: int, width: int, height: int) -> Response:
+    _run_result(run_id)  # only a run-owned, persisted original may be cropped
+    return _native_crop(_run_source(run_id, field_id, channel), x, y, width, height)
+
+
+def _run_field(run_id: str, field_id: str) -> tuple[dict[str, Any], dict[str, Any], dict[str, Any]]:
+    _, result = _run_result(run_id)
+    for image in result["images"]:
+        if image["subject"]["id"] == field_id:
+            evidence = image.get("evidence", {}).get("segmentation_mask")
+            if not isinstance(evidence, dict):
+                raise HTTPException(404, "No verified segmentation evidence for this field.")
+            return result, image, evidence
+    raise HTTPException(404, "Unknown field in this run.")
+
+
+def _mask_path(run_id: str, field_id: str) -> tuple[Path, dict[str, Any]]:
+    _, _, evidence = _run_field(run_id, field_id)
+    path = jobs.run_path(run_id) / str(evidence["mask_path"])
+    if not path.is_file():
+        raise HTTPException(404, "Segmentation mask file is unavailable.")
+    if _sha256(path) != evidence.get("mask_sha256"):
+        raise HTTPException(409, "Segmentation mask checksum does not match the engine record.")
+    return path, evidence
+
+
+@lru_cache(maxsize=64)
+def _review_regions_cached(run_id: str, field_id: str, source_hash: str, mask_hash: str) -> dict[str, Any]:
+    """One hash-bound diagnostic calculation per source/mask pair per process."""
+    from app.review_regions import generate_review_regions
+
+    source = _run_source(run_id, field_id, "BSE")
+    mask, _ = _mask_path(run_id, field_id)
+    document = generate_review_regions(source, mask, jobs.run_path(run_id) / "review-regions")
+    if document.get("sourceHash") != source_hash or document.get("maskHash") != mask_hash:
+        raise HTTPException(409, "Review diagnostic hashes do not match the verified source evidence.")
+    return document
+
+
+@app.get("/api/runs/{run_id}/review-regions")
+def review_regions(run_id: str, field: str) -> dict[str, Any]:
+    _id_or_422(run_id, "run id")
+    state, _ = _run_result(run_id)
+    if state.get("state") != "completed":
+        raise HTTPException(409, "Review regions are available only after a completed exploratory run.")
+    source = _run_source(run_id, field, "BSE")
+    mask, evidence = _mask_path(run_id, field)
+    source_hash, mask_hash = _sha256(source), _sha256(mask)
+    expected_hashes = set(_run_field(run_id, field)[1].get("subject", {}).get("file_hashes", {}).values())
+    if source_hash not in expected_hashes or mask_hash != evidence.get("mask_sha256"):
+        raise HTTPException(409, "Review regions require the exact BSE source and exact verified engine mask.")
+    document = _review_regions_cached(run_id, field, source_hash, mask_hash)
+    document = {**document, "runId": run_id, "fieldId": field, "diagnosticHash": hashlib.sha256(json.dumps(document, sort_keys=True).encode()).hexdigest()}
+    return document
+
+
+@app.get("/api/runs/{run_id}/overlay/{field_id}")
+def run_overlay(run_id: str, field_id: str) -> FileResponse:
+    _, _, evidence = _run_field(run_id, field_id)
+    path = jobs.run_path(run_id) / str(evidence["overlay_path"])
+    if not path.is_file():
+        raise HTTPException(404, "Segmentation overlay is unavailable.")
+    return FileResponse(path, media_type="image/png")
+
+
+@app.get("/api/runs/{run_id}/mask/{field_id}")
+def run_mask(run_id: str, field_id: str) -> FileResponse:
+    path, _ = _mask_path(run_id, field_id)
+    return FileResponse(path, media_type="image/png")
+
+
+@app.get("/api/runs/{run_id}/cropped-preview/{field_id}")
+def run_cropped_preview(run_id: str, field_id: str) -> Response:
+    _, _, evidence = _run_field(run_id, field_id)
+    source = _run_source(run_id, field_id, "BSE")
+    image = tifffile.imread(source, key=0)
+    if image.ndim == 3:
+        image = image[..., 0]
+    offset = int((evidence.get("mask_offset_px") or [0])[0])
+    if offset:
+        image = image[offset:-offset, offset:-offset]
+    return _png_response(image.astype(np.uint8, copy=False))
+
+
+@app.get("/api/runs/{run_id}/layer/{field_id}/{label}")
+def run_layer(run_id: str, field_id: str, label: int) -> Response:
+    if label not in {0, 1, 2}:
+        raise HTTPException(404, "Unknown phase layer.")
+    path, _ = _mask_path(run_id, field_id)
+    mask = np.asarray(Image.open(path), dtype=np.uint8)
+    rgba = np.zeros((*mask.shape, 4), dtype=np.uint8)
+    rgba[mask == label] = ((31, 119, 180, 220) if label == 0 else (143, 143, 143, 220) if label == 1 else (255, 127, 14, 220))
+    return _png_response(rgba)
+
+
 def _field_channel_from_name(filename: str) -> tuple[str, str] | None:
     match = re.search(r"(?:img_)?([^_]+)_([A-Za-z0-9]+)\.tiff?$", filename, re.I)
     return (match.group(1), match.group(2)) if match else None
@@ -322,6 +567,7 @@ async def uploads(files: list[UploadFile] = File(...)) -> dict[str, Any]:
     received: list[dict[str, Any]] = []
     matches: dict[str, set[str]] = {}
     grouped: dict[str, set[str]] = {}
+    pending: list[tuple[str, bytes]] = []
     for upload in files:
         filename = Path(upload.filename or "upload.tif").name
         if Path(filename).suffix.lower() not in {".tif", ".tiff"}:
@@ -366,7 +612,8 @@ async def uploads(files: list[UploadFile] = File(...)) -> dict[str, Any]:
         replay = _recorded_files().get(digest)
         if replay:
             matches.setdefault(replay[0], set()).add(replay[1])
-        received.append({"filename": filename, "sha256": digest, "bytes": len(data), "shape": shape, "dtype": dtype, "layout": layout, "recordedSource": replay is not None})
+        received.append({"filename": filename, "fieldId": field_id, "channel": channel, "sha256": digest, "bytes": len(data), "shape": shape, "dtype": dtype, "layout": layout, "recordedSource": replay is not None})
+        pending.append((filename, data))
     missing_bse = [field_id for field_id, channels in grouped.items() if "BSE" not in channels]
     if missing_bse:
         raise HTTPException(422, "Each field needs one BSE TIFF. Missing BSE for: " + ", ".join(sorted(missing_bse)))
@@ -376,13 +623,88 @@ async def uploads(files: list[UploadFile] = File(...)) -> dict[str, Any]:
         for item in saved["images"]
         if (field_id := item["subject"]["id"]) in matches and "BSE" in matches[field_id]
     ]
+    upload_id = uuid.uuid4().hex
+    upload_dir = jobs.upload_path(upload_id)
+    upload_dir.mkdir(parents=True, exist_ok=False)
+    for filename, data in pending:
+        (upload_dir / filename).write_bytes(data)
+    manifest = {"uploadId": upload_id, "createdAt": time.time(), "files": received, "validFields": [{"id": field_id, "channels": sorted(channels)} for field_id, channels in sorted(grouped.items())]}
+    (upload_dir / "manifest.json").write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     return {
-        "mode": "Saved evaluation replay" if replay_fields else "Upload validated; live analysis unavailable",
+        "uploadId": upload_id,
+        "mode": "Saved evaluation replay" if replay_fields else "Upload validated",
         "uploads": received,
+        "validFields": manifest["validFields"],
         "fields": replay_fields,
-        "liveRunReady": False,
-        "reason": "Exact recorded source hashes matched a saved result." if replay_fields else "Files were validated, but this build has no verified production inference bundle.",
+        "liveRunReady": capabilities()["liveRunReady"],
+        "reason": "Exact recorded source hashes matched a saved result." if replay_fields else "Files were validated and persisted for an exploratory local run.",
     }
+
+
+@app.post("/api/runs")
+async def start_run(payload: dict[str, Any]) -> dict[str, Any]:
+    upload_id = payload.get("uploadId")
+    if not isinstance(upload_id, str) or not ID_RE.fullmatch(upload_id) or not jobs.upload_path(upload_id).is_dir():
+        raise HTTPException(422, "A valid uploadId is required.")
+    manifest_path = jobs.upload_path(upload_id) / "manifest.json"
+    if not manifest_path.is_file():
+        raise HTTPException(422, "Upload manifest is missing.")
+    bundle = jobs.exploration_bundle()
+    if not bundle["verified"]:
+        raise HTTPException(503, "The local exploratory engine bundle is not ready.")
+    if jobs.active_run_exists():
+        raise HTTPException(409, "One local exploratory run is already active.")
+    criteria = payload.get("criteria")
+    if not isinstance(criteria, (dict, list)):
+        raise HTTPException(422, "criteria must be an object or a list of criterion rows.")
+    if isinstance(criteria, list):
+        for index, row in enumerate(criteria):
+            if not isinstance(row, dict) or not isinstance(row.get("id"), str):
+                raise HTTPException(422, f"criteria[{index}] must include an id.")
+            if row.get("enabled"):
+                low, high = _finite(row.get("min")), _finite(row.get("max"))
+                if low is None or high is None or low > high:
+                    raise HTTPException(422, f"criteria[{index}] needs finite ordered minimum and maximum values.")
+    metadata = payload.get("metadata") if isinstance(payload.get("metadata"), dict) else {}
+    metadata = {**metadata, "explorationBundle": bundle}
+    state = jobs.create_run(upload_id, criteria, metadata)
+    try:
+        state = jobs.launch(state["id"])
+    except Exception as exc:
+        state = jobs.update_run(state["id"], state="failed", stage="Failed", error=f"Could not start local worker: {exc}")
+    return {key: state.get(key) for key in ("id", "state", "stage")}
+
+
+@app.get("/api/runs/{run_id}")
+def run_status(run_id: str) -> dict[str, Any]:
+    _id_or_422(run_id, "run id")
+    state = jobs.reconcile(run_id)
+    if state is None:
+        raise HTTPException(404, "Unknown run.")
+    response = {key: state.get(key) for key in ("id", "state", "stage", "error") if state.get(key) is not None}
+    endpoint = state.get("updatedAt", time.time()) if state.get("state") in {"completed", "failed", "cancelled"} else time.time()
+    response["elapsedSeconds"] = max(0, round(float(endpoint) - float(state.get("createdAt", endpoint)), 1))
+    return response
+
+
+@app.post("/api/runs/{run_id}/cancel")
+def cancel_run(run_id: str) -> dict[str, Any]:
+    _id_or_422(run_id, "run id")
+    try:
+        state = jobs.cancel(run_id)
+    except FileNotFoundError as exc:
+        raise HTTPException(404, "Unknown run.") from exc
+    return {key: state.get(key) for key in ("id", "state", "stage", "error")}
+
+
+@app.get("/api/runs/{run_id}/results")
+def run_results(run_id: str) -> dict[str, Any]:
+    _id_or_422(run_id, "run id")
+    state, result = _run_result(run_id)
+    if state.get("state") != "completed":
+        raise HTTPException(409, "This exploratory run is not complete.")
+    run_info = {**result["run"], "id": run_id, "explorationBundle": state.get("metadata", {}).get("explorationBundle")}
+    return {"mode": "Exploratory analysis", "run": run_info, "criteria": state.get("criteria", []), "metadata": state.get("metadata", {}), "reviews": [review for values in _REVIEWS.values() for review in values if review.get("runId") == run_id], "fields": [_normalise_run(run_id, image, result["inputs"].get(image["subject"]["id"], {})) for image in result["images"]], "limitations": ["This is an exploratory local run, not the official held-out evaluation.", "Batch-match probabilities are not defect probabilities.", "Phase identity: stated by Polaron, not image-verified."]}
 
 
 def _load_reviews() -> dict[str, list[dict[str, Any]]]:
@@ -406,16 +728,82 @@ def _save_reviews() -> None:
 
 
 def _known_field(field_id: str) -> bool:
-    return field_id in {item["subject"]["id"] for item in _saved()["images"]} or field_id in {
+    if field_id in {item["subject"]["id"] for item in _saved()["images"]} or field_id in {
         item[0]["subject"]["id"] for item in _validation_records()
-    }
+    }:
+        return True
+    if jobs.RUNS.is_dir():
+        for path in jobs.RUNS.iterdir():
+            result = path / "result.json"
+            if result.is_file():
+                try:
+                    if field_id in {item["subject"]["id"] for item in json.loads(result.read_text(encoding="utf-8"))["images"]}:
+                        return True
+                except (OSError, json.JSONDecodeError, KeyError):
+                    continue
+    return False
 
 
 def _store_review(field_id: str, review: dict[str, Any]) -> dict[str, Any]:
     if not _known_field(field_id):
         raise HTTPException(404, "Unknown saved-result field.")
-    safe = {key: review.get(key) for key in ("tag", "note", "channel", "roi", "reviewer", "time", "timestamp", "taskVersion")}
+    run_id = review.get("runId")
+    source_verified = False
+    if run_id:
+        _id_or_422(str(run_id), "run id")
+        _, run_result = _run_result(str(run_id))
+        match = next((item for item in run_result["images"] if item["subject"]["id"] == field_id), None)
+        if match is None:
+            raise HTTPException(422, "The review field does not belong to this run.")
+        detector = review.get("detector", "BSE")
+        source = _run_source(str(run_id), field_id, detector)
+        if review.get("sourceHash") != _sha256(source):
+            raise HTTPException(422, "The review source hash does not match the analysed image.")
+        roi = review.get("roi")
+        if roi is not None:
+            if not isinstance(roi, dict) or any(not isinstance(roi.get(key), int) for key in ("x", "y", "width", "height")):
+                raise HTTPException(422, "roi must have integer x, y, width and height source coordinates.")
+            with tifffile.TiffFile(source) as tif:
+                width, height = int(tif.pages[0].imagewidth), int(tif.pages[0].imagelength)
+            if roi["x"] < 0 or roi["y"] < 0 or roi["width"] < 1 or roi["height"] < 1 or roi["x"] + roi["width"] > width or roi["y"] + roi["height"] > height:
+                raise HTTPException(422, "roi is outside the analysed source-image bounds.")
+        source_verified = True
+        region_evidence = review.get("regionEvidence")
+        if region_evidence is not None:
+            if not isinstance(region_evidence, dict):
+                raise HTTPException(422, "regionEvidence must be an object.")
+            mask, evidence = _mask_path(str(run_id), field_id)
+            diagnostic = _review_regions_cached(str(run_id), field_id, _sha256(source), _sha256(mask))
+            diagnostic_hash = hashlib.sha256(json.dumps(diagnostic, sort_keys=True).encode()).hexdigest()
+            diagnostic_id = region_evidence.get("diagnosticId", region_evidence.get("id"))
+            if diagnostic_id != diagnostic.get("id") or region_evidence.get("method") != diagnostic.get("method") or region_evidence.get("hash", region_evidence.get("diagnosticHash")) != diagnostic_hash:
+                raise HTTPException(422, "regionEvidence does not match the verified review diagnostic.")
+            region_id = region_evidence.get("regionId")
+            region = next((item for item in diagnostic.get("regions", []) if item.get("id") == region_id), None)
+            if region is None or review.get("roi") != region.get("roi"):
+                raise HTTPException(422, "regionEvidence regionId and roi must match one suggested diagnostic region.")
+    elif not review.get("skipped"):
+        validation_ids = {record[0]["subject"]["id"] for record in _validation_records()}
+        if field_id not in validation_ids:
+            raise HTTPException(422, "A non-run review needs a bound validation image, or must be saved as skipped.")
+        detector = review.get("detector", review.get("channel", "BSE"))
+        if detector not in CHANNELS:
+            raise HTTPException(422, "Unsupported review detector channel.")
+        source = _source_or_404(field_id, detector)
+        if review.get("sourceHash") != _sha256(source):
+            raise HTTPException(422, "The review source hash does not match the bound validation image.")
+        roi = review.get("roi")
+        if not isinstance(roi, dict) or any(not isinstance(roi.get(key), int) for key in ("x", "y", "width", "height")):
+            raise HTTPException(422, "roi must have integer x, y, width and height source coordinates.")
+        with tifffile.TiffFile(source) as tif:
+            width, height = int(tif.pages[0].imagewidth), int(tif.pages[0].imagelength)
+        if roi["x"] < 0 or roi["y"] < 0 or roi["width"] < 1 or roi["height"] < 1 or roi["x"] + roi["width"] > width or roi["y"] + roi["height"] > height:
+            raise HTTPException(422, "roi is outside the bound validation source-image bounds.")
+        source_verified = True
+    safe = {key: review.get(key) for key in ("runId", "tag", "note", "channel", "detector", "sourceHash", "roi", "regionEvidence", "skipped", "taskType", "reviewer", "time", "timestamp", "taskVersion")}
+    safe["channel"] = safe.get("detector") or safe.get("channel")
     safe["fieldId"] = field_id
+    safe["sourceVerified"] = source_verified
     _REVIEWS.setdefault(field_id, []).append(safe)
     _save_reviews()
     return {"saved": True, "review": safe, "note": "Review annotations do not change saved probabilities or measurements."}
