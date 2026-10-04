@@ -6,6 +6,8 @@ import pytest
 from qc import config as _config
 from qc.verdict import (
     RULE_CONSTANTS,
+    _reason_for_decision,
+    _uncertainty,
     build_verdicts,
     decide_verdict,
     validate_documents,
@@ -22,6 +24,10 @@ def _synthetic_stats(
     energy_band="within",
     mmd_p=0.8,
     mmd_band="within",
+    residual_energy_p=0.8,
+    residual_energy_band="within",
+    residual_mmd_p=0.8,
+    residual_mmd_band="within",
     embedding_gates=(False, True, True),
     loo_rows=None,
 ):
@@ -59,11 +65,44 @@ def _synthetic_stats(
             "value": 1.0,
             "p_bh": p_bh,
             "band_position": band_position,
+            "band99": 2.0,
+            "band_position_exact": band_position,
+            "frac_splits_exceeding": 0.0,
+        })
+        distance_rows.append({
+            "table": "emb_BSE",
+            "statistic": statistic,
+            "batch_a": "Batch_1",
+            "batch_b": "Batch_3",
+            "residualised": True,
+            "value": 0.1,
+            "p_bh": (
+                residual_energy_p if statistic == "energy" else residual_mmd_p
+            ),
+            "band95": 0.5,
+            "band99": 1.0,
+            "band_position": (
+                residual_energy_band if statistic == "energy" else residual_mmd_band
+            ),
+            "band_position_exact": (
+                residual_energy_band if statistic == "energy" else residual_mmd_band
+            ),
+            "frac_splits_exceeding": 0.0,
         })
     return {
         "feature_contrasts": pd.DataFrame(feature_rows),
-        "feature_status": pd.DataFrame(status_rows),
+        "feature_status": pd.DataFrame(
+            status_rows, columns=["table", "feature", "family", "status"]
+        ),
         "distance_matrix": pd.DataFrame(distance_rows),
+        "gates": pd.DataFrame([{
+            "table": "features",
+            "feature": "F01_c0_area_fraction",
+            "pair": pair,
+            "sens_ratio": 0.5,
+            "rank_stability": 0.4,
+            "G4": False,
+        }]),
         "embedding_gates": pd.DataFrame([{
             "channel": "BSE",
             "pair": pair,
@@ -136,6 +175,33 @@ def test_synthetic_nonreference_verdict_labels(features, statuses, drift, expect
     assert decide_verdict("Batch_1", stats)["label"] == expected
 
 
+def test_raw_embedding_difference_absent_after_residualisation_is_reported():
+    stats = _synthetic_stats(
+        [("F01_c0_area_fraction", "phase_fraction", 2.0, 0.2, "outside", "investigate")],
+        [("F01_c0_area_fraction", "phase_fraction", "investigate")],
+        energy_p=0.01,
+        energy_band="outside",
+        mmd_p=0.02,
+        mmd_band="outside",
+        residual_energy_p=0.6,
+        residual_energy_band="within",
+        residual_mmd_p=0.7,
+        residual_mmd_band="within",
+    )
+    decision = decide_verdict("Batch_1", stats)
+
+    reason = _reason_for_decision(decision)
+    uncertainty = _uncertainty(stats, decision, 7)["decision_margin"]
+
+    expected = (
+        "the difference is not present after label-free residualisation on the 8 "
+        "pre-registered acquisition covariates (energy=0.1, BH p=0.6, band=within); "
+        "acquisition and material contributions cannot be separated with these data."
+    )
+    assert expected in reason
+    assert expected in uncertainty
+
+
 def test_batch_3_reference_rule_investigates_multiple_families_and_never_exits():
     stats = _synthetic_stats([], [], loo_rows=[
         {
@@ -162,6 +228,42 @@ def test_batch_3_reference_rule_investigates_multiple_families_and_never_exits()
     assert decision["label"] != "outside_bounds"
 
 
+def test_batch_3_reason_lists_driver_status_and_drop_feature_exclusion_count():
+    stats = _synthetic_stats(
+        [],
+        [
+            ("F01_c0_area_fraction", "drop_family", "drop"),
+            ("F05_c2_count_density_per_Mpx", "phase_fraction", "keep"),
+            ("F08_c0_local_thickness_median_px", "void_shape", "investigate"),
+        ],
+        loo_rows=[
+            {
+                "table": "features", "feature": "F01_c0_area_fraction",
+                "family": "drop_family", "sample_id": "sample001",
+                "robust_z": 8.0, "outlier": True,
+            },
+            {
+                "table": "features", "feature": "F05_c2_count_density_per_Mpx",
+                "family": "phase_fraction", "sample_id": "sample001",
+                "robust_z": 7.0, "outlier": True,
+            },
+            {
+                "table": "features", "feature": "F08_c0_local_thickness_median_px",
+                "family": "void_shape", "sample_id": "sample001",
+                "robust_z": 6.0, "outlier": True,
+            },
+        ],
+    )
+    reason = _reason_for_decision(decide_verdict("Batch_3", stats))
+
+    assert "F01_c0_area_fraction on sample001 (robust z=8, status drop)" in reason
+    assert "F05_c2_count_density_per_Mpx on sample001 (robust z=7, status keep)" in reason
+    assert (
+        "every qualifying image involves at least one feature with status drop; "
+        "excluding drop features, 1 images are outliers on ≥2 families"
+    ) in reason
+
+
 @pytest.fixture(scope="module")
 def generated_verdicts():
     return build_verdicts(_config.load())
@@ -180,6 +282,15 @@ def test_generated_verdicts_validate_schema_and_exclude_classifier_fields(genera
         assert "open_set" not in document["verdict"]
         assert document["verdict"]["justification"]["evidence"]
         assert document["acquisition"]["drift_justification"]["evidence"]
+        if document["subject"]["batch"] in {"Batch_1", "Batch_2"}:
+            residual_stats = {
+                item["selector"]
+                for item in document["verdict"]["justification"]["evidence"]
+                if item.get("file") == "distance_matrix.csv"
+                and "residualised == True" in item.get("selector", "")
+            }
+            assert any("statistic == 'energy'" in selector for selector in residual_stats)
+            assert any("statistic == 'mmd2'" in selector for selector in residual_stats)
         for driver in document["evidence"]["drivers"]:
             assert driver["justification"]["evidence"]
             assert driver["justification"]["numbers"]

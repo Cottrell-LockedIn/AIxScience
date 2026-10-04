@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+from itertools import combinations
+from math import comb
 import time
 from pathlib import Path
 from typing import Any
@@ -377,20 +379,27 @@ def _mmd2_from_kernel(kernel: np.ndarray, idx_a: np.ndarray, idx_b: np.ndarray) 
     return float(within_a + within_b - 2 * cross)
 
 
-def _rbf_kernel(vectors: np.ndarray) -> tuple[np.ndarray, float]:
+def _median_pairwise_distance(vectors: np.ndarray) -> float:
     distances = pairwise_distance_matrix(vectors)
     upper = distances[np.triu_indices(len(distances), k=1)]
     bandwidth = float(np.median(upper))
     if not np.isfinite(bandwidth) or bandwidth <= 0:
         raise ValueError("RBF median pairwise embedding distance must be positive")
-    kernel = np.exp(-0.5 * np.square(distances / bandwidth))
-    return kernel, bandwidth
+    return bandwidth
+
+
+def _rbf_kernel(vectors: np.ndarray, bandwidth: float) -> np.ndarray:
+    if not np.isfinite(bandwidth) or bandwidth <= 0:
+        raise ValueError("RBF median pairwise embedding distance must be positive")
+    distances = pairwise_distance_matrix(vectors)
+    return np.exp(-0.5 * np.square(distances / bandwidth))
 
 
 def _embedding_permutation_tests(
     frame: pd.DataFrame,
     vectors: np.ndarray,
     plan: dict[str, Any],
+    bandwidth: float,
     *,
     excluded_ids: set[str] | None = None,
 ) -> dict[str, Any]:
@@ -406,7 +415,7 @@ def _embedding_permutation_tests(
     if len(idx_a) < 2 or len(idx_b) < 2:
         raise ValueError("embedding permutation test requires at least two images per group")
     distances = cdist(vectors, vectors, metric="euclidean")
-    kernel, bandwidth = _rbf_kernel(vectors)
+    kernel = _rbf_kernel(vectors, bandwidth)
     observed = {
         "energy": _energy_from_distances(distances, idx_a, idx_b),
         "mmd2": _mmd2_from_kernel(kernel, idx_a, idx_b),
@@ -432,6 +441,173 @@ def _embedding_permutation_tests(
     }
 
 
+def _ols_r_squared(response: np.ndarray, design: np.ndarray) -> float:
+    coefficients = np.linalg.lstsq(design, response, rcond=None)[0]
+    residual = response - design @ coefficients
+    total = np.square(response - response.mean()).sum()
+    return float(1.0 - np.square(residual).sum() / total) if total else 0.0
+
+
+def _batch_indicator_r2_test(
+    frame: pd.DataFrame,
+    standardized_covariates: np.ndarray,
+    plan: dict[str, Any],
+    batch_a: str,
+    n_permutations: int,
+) -> tuple[float, float]:
+    ids, priorities = _plan_subset(plan, frame["sample_id"].astype(str).tolist())
+    positions = {sample_id: index for index, sample_id in enumerate(
+        frame["sample_id"].astype(str)
+    )}
+    selected = np.asarray([positions[sample_id] for sample_id in ids], dtype=int)
+    design = np.column_stack((
+        np.ones(len(selected)),
+        standardized_covariates[selected],
+    ))
+    labels = frame.set_index(frame["sample_id"].astype(str))["batch"].astype(str)
+    response = np.asarray([labels.loc[sample_id] == batch_a for sample_id in ids], dtype=float)
+    observed = _ols_r_squared(response, design)
+    projection = design @ np.linalg.pinv(design)
+    order = np.argsort(priorities, axis=1, kind="stable")
+    n_a = int(np.count_nonzero(response))
+    permuted = np.zeros((len(order), len(ids)), dtype=float)
+    for index, assignment in enumerate(order):
+        permuted[index, assignment[:n_a]] = 1.0
+    fitted = permuted @ projection
+    residual = permuted - fitted
+    total = np.square(permuted - permuted.mean(axis=1, keepdims=True)).sum(axis=1)
+    residual_sum = np.square(residual).sum(axis=1)
+    r_squared = np.divide(
+        total - residual_sum,
+        total,
+        out=np.zeros_like(total),
+        where=total > 0,
+    )
+    p_value = float(
+        (1 + np.count_nonzero(r_squared >= observed)) / (1 + len(r_squared))
+    )
+    return observed, p_value
+
+
+def _exploratory_confound_probe(
+    frame: pd.DataFrame,
+    vectors: np.ndarray,
+    covariates: pd.DataFrame,
+    covariate_features: list[str],
+    standardized_covariates: np.ndarray,
+    pair_plans: dict[str, dict[str, Any]],
+    base_seed: int,
+    n_permutations: int,
+    *,
+    gaussian_draws: int = 200,
+) -> pd.DataFrame:
+    covariate_positions = {
+        sample_id: index
+        for index, sample_id in enumerate(covariates["sample_id"].astype(str))
+    }
+    frame_ids = frame["sample_id"].astype(str).tolist()
+    aligned_rows = np.asarray([covariate_positions[sample_id] for sample_id in frame_ids])
+    aligned_covariates = standardized_covariates[aligned_rows]
+    rows: list[dict[str, Any]] = []
+    pairs = (PAIR_ORDER[1], PAIR_ORDER[2])
+
+    for column_index, covariate in enumerate(covariate_features):
+        residual_vectors = residualize(
+            vectors, aligned_covariates[:, [column_index]]
+        )
+        bandwidth = _median_pairwise_distance(residual_vectors)
+        for batch_a, batch_b in pairs:
+            pair = _pair_name(batch_a, batch_b)
+            result = _embedding_permutation_tests(
+                frame, residual_vectors, pair_plans[pair], bandwidth
+            )
+            rows.append({
+                "probe": "single_covariate_residualisation",
+                "channel": "BSE",
+                "pair": pair,
+                "covariate": covariate,
+                "energy": result["observed"]["energy"],
+                "energy_p_perm": result["p"]["energy"],
+                "mmd2": result["observed"]["mmd2"],
+                "mmd2_p_perm": result["p"]["mmd2"],
+                "r2": np.nan,
+                "r2_p_perm": np.nan,
+                "median_energy": np.nan,
+                "p05_energy": np.nan,
+                "n_permutations": n_permutations,
+                "n_draws": np.nan,
+                "exploratory": True,
+            })
+
+    for batch_a, batch_b in pairs:
+        pair = _pair_name(batch_a, batch_b)
+        r2, p_value = _batch_indicator_r2_test(
+            frame,
+            aligned_covariates,
+            pair_plans[pair],
+            batch_a,
+            n_permutations,
+        )
+        rows.append({
+            "probe": "batch_indicator_ols",
+            "channel": "BSE",
+            "pair": pair,
+            "covariate": "eight_preregistered_covariates",
+            "energy": np.nan,
+            "energy_p_perm": np.nan,
+            "mmd2": np.nan,
+            "mmd2_p_perm": np.nan,
+            "r2": r2,
+            "r2_p_perm": p_value,
+            "median_energy": np.nan,
+            "p05_energy": np.nan,
+            "n_permutations": n_permutations,
+            "n_draws": np.nan,
+            "exploratory": True,
+        })
+
+    rng = np.random.default_rng(base_seed + 3000)
+    random_energy: dict[str, list[float]] = {
+        _pair_name(*pair): [] for pair in pairs
+    }
+    positions = {sample_id: index for index, sample_id in enumerate(frame_ids)}
+    labels = frame["batch"].astype(str).to_numpy()
+    pair_positions = {
+        _pair_name(batch_a, batch_b): (
+            np.flatnonzero(labels == batch_a),
+            np.flatnonzero(labels == batch_b),
+        )
+        for batch_a, batch_b in pairs
+    }
+    for _ in range(gaussian_draws):
+        random_design = rng.normal(size=(len(frame), len(covariate_features)))
+        residual_vectors = residualize(vectors, random_design)
+        distances = cdist(residual_vectors, residual_vectors, metric="euclidean")
+        for pair, (idx_a, idx_b) in pair_positions.items():
+            random_energy[pair].append(_energy_from_distances(distances, idx_a, idx_b))
+    for batch_a, batch_b in pairs:
+        pair = _pair_name(batch_a, batch_b)
+        values = np.asarray(random_energy[pair], dtype=np.float64)
+        rows.append({
+            "probe": "random_gaussian_covariates",
+            "channel": "BSE",
+            "pair": pair,
+            "covariate": "eight_random_gaussian_covariates",
+            "energy": np.nan,
+            "energy_p_perm": np.nan,
+            "mmd2": np.nan,
+            "mmd2_p_perm": np.nan,
+            "r2": np.nan,
+            "r2_p_perm": np.nan,
+            "median_energy": float(np.median(values)),
+            "p05_energy": float(np.quantile(values, 0.05)),
+            "n_permutations": np.nan,
+            "n_draws": gaussian_draws,
+            "exploratory": True,
+        })
+    return pd.DataFrame(rows)
+
+
 def _band_position(value: float, band95: float, band99: float, *, absolute: bool = False) -> str:
     if not np.isfinite(value) or not np.isfinite(band95) or not np.isfinite(band99):
         return "not_applicable"
@@ -441,6 +617,36 @@ def _band_position(value: float, band95: float, band99: float, *, absolute: bool
     if tested > band99:
         return "outside"
     return "between"
+
+
+def _band_quantiles(values: np.ndarray) -> tuple[float, float]:
+    return float(np.quantile(values, 0.95)), float(np.quantile(values, 0.99))
+
+
+def _exact_band_summary(
+    values: np.ndarray,
+    observed: float,
+    *,
+    absolute: bool = False,
+) -> tuple[float, float, str, float]:
+    band95, band99 = _band_quantiles(values)
+    fraction = float(np.count_nonzero(values >= (abs(observed) if absolute else observed)) / len(values))
+    return (
+        band95,
+        band99,
+        _band_position(observed, band95, band99, absolute=absolute),
+        fraction,
+    )
+
+
+def _parse_loo_outlier_ids(value: Any) -> list[str]:
+    if value is None or pd.isna(value):
+        return []
+    return [
+        sample_id
+        for sample_id in str(value).split(";")
+        if sample_id.strip() and sample_id.strip().lower() != "none"
+    ]
 
 
 def _split_plan(
@@ -467,6 +673,25 @@ def _split_plan(
     return splits
 
 
+def _exact_split_plan(
+    reference_ids: list[str],
+    n_first: int,
+    n_second: int,
+    max_splits: int = 50_000,
+) -> list[tuple[list[str], list[str]]] | None:
+    if n_second != len(reference_ids) - n_first:
+        return None
+    if comb(len(reference_ids), n_first) > max_splits:
+        return None
+    result = []
+    for selected in combinations(reference_ids, n_first):
+        first = list(selected)
+        selected_set = set(first)
+        second = [sample_id for sample_id in reference_ids if sample_id not in selected_set]
+        result.append((first, second))
+    return result
+
+
 def _split_scalar_bands(
     frame: pd.DataFrame,
     feature: str,
@@ -474,12 +699,20 @@ def _split_scalar_bands(
     splits: list[tuple[list[str], list[str]]],
 ) -> tuple[float, float, np.ndarray]:
     indexed = frame.set_index(frame["sample_id"].astype(str))[feature]
-    values = []
-    for first, second in splits:
-        a = indexed.reindex(first).to_numpy(dtype=np.float64)
-        b = indexed.reindex(second).to_numpy(dtype=np.float64)
-        values.append(abs((np.median(a) - np.median(b)) / scale))
-    array = np.asarray(values, dtype=np.float64)
+    positions = {sample_id: index for index, sample_id in enumerate(indexed.index)}
+    first_indices = np.asarray([
+        [positions[sample_id] for sample_id in first]
+        for first, _ in splits
+    ], dtype=int)
+    second_indices = np.asarray([
+        [positions[sample_id] for sample_id in second]
+        for _, second in splits
+    ], dtype=int)
+    values = indexed.to_numpy(dtype=np.float64)
+    array = np.abs(
+        (np.median(values[first_indices], axis=1) - np.median(values[second_indices], axis=1))
+        / scale
+    )
     return float(np.quantile(array, 0.95)), float(np.quantile(array, 0.99)), array
 
 
@@ -487,10 +720,11 @@ def _split_embedding_bands(
     vectors: np.ndarray,
     ids: list[str],
     splits: list[tuple[list[str], list[str]]],
+    bandwidth: float,
 ) -> dict[str, tuple[float, float, np.ndarray]]:
     positions = {sample_id: i for i, sample_id in enumerate(ids)}
     distances = cdist(vectors, vectors, metric="euclidean")
-    kernel, _ = _rbf_kernel(vectors)
+    kernel = _rbf_kernel(vectors, bandwidth)
     values = {"energy": [], "mmd2": []}
     for first, second in splits:
         idx_a = np.asarray([positions[sample_id] for sample_id in first], dtype=int)
@@ -634,7 +868,14 @@ def _stamp(frame: pd.DataFrame, cfg: dict[str, Any], stats_hash: str) -> pd.Data
 
 def _unique_null_bands(rows: list[dict[str, Any]]) -> pd.DataFrame:
     frame = pd.DataFrame(rows)
-    keys = ["table", "feature", "channel", "statistic", "residualised"]
+    keys = [
+        column for column in (
+            "table", "feature", "channel", "statistic", "residualised", "pair"
+        )
+        if column in frame.columns
+    ]
+    if not keys:
+        return frame.reset_index(drop=True)
     return frame.drop_duplicates(subset=keys, keep="first").reset_index(drop=True)
 
 
@@ -653,6 +894,10 @@ def _record_scalar_row(
     sens_f: float,
     sens_ratio: float,
     prevalence: str,
+    band95_exact: float,
+    band99_exact: float,
+    band_position_exact: str,
+    frac_splits_exceeding: float,
 ) -> dict[str, Any]:
     return {
         "table": table,
@@ -668,10 +913,14 @@ def _record_scalar_row(
         "band95": band95,
         "band99": band99,
         "band_position": _band_position(raw["z"], band95, band99, absolute=True),
+        "band95_exact": band95_exact,
+        "band99_exact": band99_exact,
+        "band_position_exact": band_position_exact,
+        "frac_splits_exceeding": frac_splits_exceeding,
         "z_resid": resid["z"],
         "p_resid": resid["p"],
         "n_loo_outliers": len(outlier_ids),
-        "loo_outlier_ids": ";".join(outlier_ids),
+        "loo_outlier_ids": ";".join(outlier_ids) if outlier_ids else "none",
         "z_loo": loo["z"],
         "p_loo": loo["p"],
         "sens_f": sens_f,
@@ -710,9 +959,15 @@ def _make_distance_matrix(
                             value, p_perm, p_bh = 0.0, 1.0, 1.0
                             band95 = band99 = np.nan
                             band_position = "diagonal"
+                            band95_exact = band99_exact = np.nan
+                            band_position_exact = "diagonal"
+                            frac_splits_exceeding = np.nan
                         elif not applicable:
                             value = p_perm = p_bh = band95 = band99 = np.nan
                             band_position = "not_applicable"
+                            band95_exact = band99_exact = np.nan
+                            band_position_exact = "not_applicable"
+                            frac_splits_exceeding = np.nan
                         else:
                             ordered = (batch_a, batch_b)
                             canonical = next(
@@ -725,12 +980,23 @@ def _make_distance_matrix(
                             if source is None:
                                 value = p_perm = p_bh = band95 = band99 = np.nan
                                 band_position = "not_applicable"
+                                band95_exact = band99_exact = np.nan
+                                band_position_exact = "not_applicable"
+                                frac_splits_exceeding = np.nan
                             else:
                                 value = source["value"]
                                 p_perm = source["p_perm"]
                                 p_bh = source["p_bh"]
                                 band95, band99 = source["band95"], source["band99"]
                                 band_position = source["band_position"]
+                                band95_exact = source.get("band95_exact", np.nan)
+                                band99_exact = source.get("band99_exact", np.nan)
+                                band_position_exact = source.get(
+                                    "band_position_exact", "not_applicable"
+                                )
+                                frac_splits_exceeding = source.get(
+                                    "frac_splits_exceeding", np.nan
+                                )
                         rows.append({
                             "table": table,
                             "statistic": statistic,
@@ -743,12 +1009,76 @@ def _make_distance_matrix(
                             "band95": band95,
                             "band99": band99,
                             "band_position": band_position,
+                            "band95_exact": band95_exact,
+                            "band99_exact": band99_exact,
+                            "band_position_exact": band_position_exact,
+                            "frac_splits_exceeding": frac_splits_exceeding,
                             "n_a": n_a,
                             "n_b": n_b,
                             "residualised": residualised,
                             "applicable": bool(applicable),
                         })
     return pd.DataFrame(rows)
+
+
+def _expand_null_band_rows(
+    rows: list[dict[str, Any]],
+    exact_split_values: dict[tuple[str, str, str, bool], np.ndarray],
+    feature_frame: pd.DataFrame,
+    covariate_frame: pd.DataFrame,
+    distance_records: list[dict[str, Any]],
+) -> pd.DataFrame:
+    expanded = []
+    for base in rows:
+        for batch_a, batch_b in (PAIR_ORDER[1], PAIR_ORDER[2]):
+            pair = _pair_name(batch_a, batch_b)
+            row = {**base, "pair": pair}
+            key = (
+                str(base["table"]),
+                str(base["feature"]),
+                str(base["statistic"]),
+                bool(base["residualised"]),
+            )
+            exact_values = exact_split_values.get(key)
+            if base["statistic"] == "|z|":
+                source_frame = (
+                    covariate_frame if base["table"] == "covariates" else feature_frame
+                )
+                matches = source_frame.loc[
+                    (source_frame["table"] == base["table"])
+                    & (source_frame["feature"] == base["feature"])
+                    & (source_frame["pair"] == pair)
+                ]
+                observed = np.nan
+                if not matches.empty:
+                    contrast = matches.iloc[0]
+                    observed = _as_float(
+                        contrast["z_resid"] if base["residualised"] else contrast["z"]
+                    )
+                absolute = True
+            else:
+                matches = [
+                    item for item in distance_records
+                    if item["table"] == base["table"]
+                    and item["statistic"] == base["statistic"]
+                    and bool(item["residualised"]) == bool(base["residualised"])
+                    and item["pair"] == pair
+                ]
+                observed = _as_float(matches[0]["value"]) if matches else np.nan
+                absolute = False
+            if exact_values is None or not np.isfinite(observed):
+                row["band_position_exact"] = "not_applicable"
+                row["frac_splits_exceeding"] = np.nan
+            else:
+                b95, b99, position, fraction = _exact_band_summary(
+                    exact_values, observed, absolute=absolute
+                )
+                row["band95_exact"] = b95
+                row["band99_exact"] = b99
+                row["band_position_exact"] = position
+                row["frac_splits_exceeding"] = fraction
+            expanded.append(row)
+    return pd.DataFrame(expanded)
 
 
 def run(cfg: dict[str, Any]) -> None:
@@ -804,9 +1134,14 @@ def run(cfg: dict[str, Any]) -> None:
     scalar_splits = _split_plan(
         reference_ids, null_sizes[0], null_sizes[1], n_splits, base_seed
     )
+    scalar_exact_splits = _exact_split_plan(
+        reference_ids, null_sizes[0], null_sizes[1]
+    )
 
     distance_records: list[dict[str, Any]] = []
     null_band_rows: list[dict[str, Any]] = []
+    exact_split_values: dict[tuple[str, str, str, bool], np.ndarray] = {}
+    scalar_split_values: dict[tuple[str, str, bool], np.ndarray] = {}
     feature_rows: list[dict[str, Any]] = []
     covariate_rows: list[dict[str, Any]] = []
     gate_rows: list[dict[str, Any]] = []
@@ -846,18 +1181,42 @@ def run(cfg: dict[str, Any]) -> None:
                 row["sample_id"] for row in loo_rows if row["outlier"]
             ]
             if scale > 0 and np.isfinite(scale):
-                b95, b99, _ = _split_scalar_bands(frame, feature, scale, scalar_splits)
+                b95, b99, split_values = _split_scalar_bands(
+                    frame, feature, scale, scalar_splits
+                )
+                scalar_split_values[(table_name, feature, False)] = split_values
                 band_lookup[(table_name, feature, "z", False)] = (b95, b99)
+                if scalar_exact_splits is not None:
+                    band95_exact, band99_exact, exact_values = _split_scalar_bands(
+                        frame, feature, scale, scalar_exact_splits
+                    )
+                    exact_split_values[(table_name, feature, "|z|", False)] = exact_values
+                else:
+                    band95_exact = band99_exact = np.nan
                 null_band_rows.append({
                     "table": table_name, "feature": feature, "channel": "",
-                    "statistic": "|z|", "residualised": False, "band95": b95, "band99": b99,
+                    "statistic": "|z|", "residualised": False,
+                    "band95": b95, "band99": b99,
+                    "band95_exact": band95_exact, "band99_exact": band99_exact,
                 })
             if resid_scale > 0 and np.isfinite(resid_scale):
-                b95, b99, _ = _split_scalar_bands(residual, feature, resid_scale, scalar_splits)
+                b95, b99, split_values = _split_scalar_bands(
+                    residual, feature, resid_scale, scalar_splits
+                )
+                scalar_split_values[(table_name, feature, True)] = split_values
                 band_lookup[(table_name, feature, "z", True)] = (b95, b99)
+                if scalar_exact_splits is not None:
+                    band95_exact, band99_exact, exact_values = _split_scalar_bands(
+                        residual, feature, resid_scale, scalar_exact_splits
+                    )
+                    exact_split_values[(table_name, feature, "|z|", True)] = exact_values
+                else:
+                    band95_exact = band99_exact = np.nan
                 null_band_rows.append({
                     "table": table_name, "feature": feature, "channel": "",
-                    "statistic": "|z|", "residualised": True, "band95": b95, "band99": b99,
+                    "statistic": "|z|", "residualised": True,
+                    "band95": b95, "band99": b99,
+                    "band95_exact": band95_exact, "band99_exact": band99_exact,
                 })
             sens = _sensitivity_summary(sensitivities[table_name], feature)
             sensitivity_values[(table_name, feature)] = sens
@@ -909,11 +1268,31 @@ def run(cfg: dict[str, Any]) -> None:
                     band95, band99 = band_lookup.get(
                         (table_name, feature, "z", False), (np.nan, np.nan)
                     )
+                    if scalar_exact_splits is not None:
+                        exact_values = exact_split_values.get(
+                            (table_name, feature, "|z|", False)
+                        )
+                        if exact_values is not None:
+                            (
+                                band95_exact,
+                                band99_exact,
+                                band_position_exact,
+                                frac_splits_exceeding,
+                            ) = _exact_band_summary(
+                                exact_values, raw["z"], absolute=True
+                            )
+                        else:
+                            band95_exact = band99_exact = frac_splits_exceeding = np.nan
+                            band_position_exact = "not_applicable"
+                    else:
+                        band95_exact = band99_exact = frac_splits_exceeding = np.nan
+                        band_position_exact = "not_applicable"
                     feature_rows.append(_record_scalar_row(
                         table_name, feature, family, pair, raw, resid, scale,
                         band95, band99, outlier_ids, loo, sensitivity_values[(table_name, feature)],
                         sensitivity_values[(table_name, feature)] / scale if scale > 0 else np.nan,
-                        prevalence,
+                        prevalence, band95_exact, band99_exact,
+                        band_position_exact, frac_splits_exceeding,
                     ))
                 else:
                     feature_rows.append(_record_scalar_row(
@@ -921,7 +1300,7 @@ def run(cfg: dict[str, Any]) -> None:
                         np.nan, np.nan, outlier_ids, {"z": np.nan, "p": np.nan},
                         sensitivity_values[(table_name, feature)],
                         sensitivity_values[(table_name, feature)] / scale if scale > 0 else np.nan,
-                        "",
+                        "", np.nan, np.nan, "not_applicable", np.nan,
                     ))
 
             for residualised, feature_results, scale_map in (
@@ -947,29 +1326,42 @@ def run(cfg: dict[str, Any]) -> None:
                     / (1 + len(d_permuted))
                 )
                 if batch_b == reference_batch:
-                    band_values = []
-                    for first, second in scalar_splits:
-                        z_split = []
-                        indexed = frame.set_index(frame["sample_id"].astype(str))
-                        source_frame = residual if residualised else frame
-                        indexed = source_frame.set_index(source_frame["sample_id"].astype(str))
-                        for feature in included:
-                            v_a = indexed.loc[first, feature].to_numpy(dtype=np.float64)
-                            v_b = indexed.loc[second, feature].to_numpy(dtype=np.float64)
-                            z_split.append(
-                                (np.median(v_a) - np.median(v_b)) / scale_map[feature]
-                            )
-                        band_values.append(float(np.sqrt(np.mean(np.square(z_split)))))
-                    band_array = np.asarray(band_values)
+                    band_array = np.sqrt(np.mean(np.square(np.stack([
+                        scalar_split_values[(table_name, feature, residualised)]
+                        for feature in included
+                    ], axis=1)), axis=1))
                     band95 = float(np.quantile(band_array, 0.95))
                     band99 = float(np.quantile(band_array, 0.99))
+                    if scalar_exact_splits is not None:
+                        exact_array = np.sqrt(np.mean(np.square(np.stack([
+                            exact_split_values[(table_name, feature, "|z|", residualised)]
+                            for feature in included
+                        ], axis=1)), axis=1))
+                        exact_split_values[(table_name, "", "rms_z", residualised)] = exact_array
+                        band95_exact, band99_exact = _band_quantiles(exact_array)
+                    else:
+                        exact_array = None
+                        band95_exact = band99_exact = np.nan
                     null_band_rows.append({
                         "table": table_name, "feature": "", "channel": "",
                         "statistic": "rms_z", "residualised": residualised,
                         "band95": band95, "band99": band99,
+                        "band95_exact": band95_exact, "band99_exact": band99_exact,
                     })
+                    if exact_array is not None:
+                        (
+                            _,
+                            _,
+                            band_position_exact,
+                            frac_splits_exceeding,
+                        ) = _exact_band_summary(exact_array, d_observed)
+                    else:
+                        band_position_exact = "not_applicable"
+                        frac_splits_exceeding = np.nan
                 else:
                     band95 = band99 = np.nan
+                    band95_exact = band99_exact = frac_splits_exceeding = np.nan
+                    band_position_exact = "not_applicable"
                 distance_records.append({
                     "table": table_name,
                     "statistic": "rms_z",
@@ -981,6 +1373,10 @@ def run(cfg: dict[str, Any]) -> None:
                     "band95": band95,
                     "band99": band99,
                     "band_position": _band_position(d_observed, band95, band99),
+                    "band95_exact": band95_exact,
+                    "band99_exact": band99_exact,
+                    "band_position_exact": band_position_exact,
+                    "frac_splits_exceeding": frac_splits_exceeding,
                     "n_a": int((frame["batch"] == batch_a).sum()),
                     "n_b": int((frame["batch"] == batch_b).sum()),
                     "family": "aggregate",
@@ -989,13 +1385,23 @@ def run(cfg: dict[str, Any]) -> None:
     for feature in covariate_features:
         scale = _scale_from_frame(covariates, feature, reference_batch)
         raw_scales[("covariates", feature)] = scale
-        b95, b99, _ = _split_scalar_bands(
+        b95, b99, split_values = _split_scalar_bands(
             covariates, feature, scale, scalar_splits
         )
+        scalar_split_values[("covariates", feature, False)] = split_values
         band_lookup[("covariates", feature, "z", False)] = (b95, b99)
+        if scalar_exact_splits is not None:
+            band95_exact, band99_exact, exact_values = _split_scalar_bands(
+                covariates, feature, scale, scalar_exact_splits
+            )
+            exact_split_values[("covariates", feature, "|z|", False)] = exact_values
+        else:
+            band95_exact = band99_exact = np.nan
         null_band_rows.append({
             "table": "covariates", "feature": feature, "channel": "",
-            "statistic": "|z|", "residualised": False, "band95": b95, "band99": b99,
+            "statistic": "|z|", "residualised": False,
+            "band95": b95, "band99": b99,
+            "band95_exact": band95_exact, "band99_exact": band99_exact,
         })
     for pair_index, (batch_a, batch_b) in enumerate(PAIR_ORDER):
         pair = _pair_name(batch_a, batch_b)
@@ -1027,7 +1433,7 @@ def run(cfg: dict[str, Any]) -> None:
                     "z_resid": np.nan,
                     "p_resid": np.nan,
                     "n_loo_outliers": 0,
-                    "loo_outlier_ids": "",
+                    "loo_outlier_ids": "none",
                     "z_loo": np.nan,
                     "p_loo": np.nan,
                     "reference_p05": float(p05),
@@ -1051,7 +1457,7 @@ def run(cfg: dict[str, Any]) -> None:
                     "z_resid": np.nan,
                     "p_resid": np.nan,
                     "n_loo_outliers": 0,
-                    "loo_outlier_ids": "",
+                    "loo_outlier_ids": "none",
                     "z_loo": np.nan,
                     "p_loo": np.nan,
                     "reference_p05": np.nan,
@@ -1069,31 +1475,43 @@ def run(cfg: dict[str, Any]) -> None:
                 / (1 + len(d_permuted))
             )
             if batch_b == reference_batch:
-                band_values = []
-                for first, second in scalar_splits:
-                    z_split = []
-                    for feature in included:
-                        v_a = covariates.set_index("sample_id").loc[first, feature].to_numpy()
-                        v_b = covariates.set_index("sample_id").loc[second, feature].to_numpy()
-                        z_split.append(
-                            (np.median(v_a) - np.median(v_b))
-                            / raw_scales[("covariates", feature)]
-                        )
-                    band_values.append(float(np.sqrt(np.mean(np.square(z_split)))))
-                band95 = float(np.quantile(band_values, 0.95))
-                band99 = float(np.quantile(band_values, 0.99))
+                band_array = np.sqrt(np.mean(np.square(np.stack([
+                    scalar_split_values[("covariates", feature, False)]
+                    for feature in included
+                ], axis=1)), axis=1))
+                band95, band99 = _band_quantiles(band_array)
+                if scalar_exact_splits is not None:
+                    exact_array = np.sqrt(np.mean(np.square(np.stack([
+                        exact_split_values[("covariates", feature, "|z|", False)]
+                        for feature in included
+                    ], axis=1)), axis=1))
+                    exact_split_values[("covariates", "", "rms_z", False)] = exact_array
+                    band95_exact, band99_exact = _band_quantiles(exact_array)
+                    _, _, band_position_exact, frac_splits_exceeding = _exact_band_summary(
+                        exact_array, d_observed
+                    )
+                else:
+                    exact_array = None
+                    band95_exact = band99_exact = frac_splits_exceeding = np.nan
+                    band_position_exact = "not_applicable"
                 null_band_rows.append({
                     "table": "covariates", "feature": "", "channel": "",
                     "statistic": "rms_z", "residualised": False,
                     "band95": band95, "band99": band99,
+                    "band95_exact": band95_exact, "band99_exact": band99_exact,
                 })
             else:
                 band95 = band99 = np.nan
+                band95_exact = band99_exact = frac_splits_exceeding = np.nan
+                band_position_exact = "not_applicable"
             distance_records.append({
                 "table": "covariates", "statistic": "rms_z", "pair": pair,
                 "residualised": False, "value": d_observed, "p_perm": p_value,
                 "p_bh": np.nan, "band95": band95, "band99": band99,
                 "band_position": _band_position(d_observed, band95, band99),
+                "band95_exact": band95_exact, "band99_exact": band99_exact,
+                "band_position_exact": band_position_exact,
+                "frac_splits_exceeding": frac_splits_exceeding,
                 "n_a": int((covariates["batch"] == batch_a).sum()),
                 "n_b": int((covariates["batch"] == batch_b).sum()),
                 "family": "covariates",
@@ -1161,8 +1579,8 @@ def run(cfg: dict[str, Any]) -> None:
                 )
                 g3 = bool(np.isfinite(sens_f) and scale > 0 and sens_f < 0.5 * scale)
                 loo_ids = [
-                    sample_id for sample_id in str(contrast["loo_outlier_ids"]).split(";")
-                    if sample_id
+                    sample_id
+                    for sample_id in _parse_loo_outlier_ids(contrast["loo_outlier_ids"])
                 ]
                 if not loo_ids:
                     g4 = True
@@ -1303,6 +1721,13 @@ def run(cfg: dict[str, Any]) -> None:
         channel_splits = _split_plan(
             b3_ids, split_sizes[0], split_sizes[1], n_splits, base_seed
         )
+        channel_exact_splits = _exact_split_plan(
+            b3_ids, split_sizes[0], split_sizes[1]
+        )
+        bandwidths = {
+            False: _median_pairwise_distance(vectors),
+            True: _median_pairwise_distance(residual_vectors),
+        }
         for residualised, current_vectors in (
             (False, vectors),
             (True, residual_vectors),
@@ -1311,31 +1736,50 @@ def run(cfg: dict[str, Any]) -> None:
             positions = {sample_id: i for i, sample_id in enumerate(ids)}
             b3_vectors = current_vectors[[positions[sample_id] for sample_id in b3_ids]]
             split_ids = [tuple((a, b)) for a, b in channel_splits]
-            split_stats = _split_embedding_bands(b3_vectors, b3_ids, split_ids)
+            split_stats = _split_embedding_bands(
+                b3_vectors, b3_ids, split_ids, bandwidths[residualised]
+            )
+            exact_split_stats = (
+                _split_embedding_bands(
+                    b3_vectors, b3_ids, channel_exact_splits, bandwidths[residualised]
+                )
+                if channel_exact_splits is not None else {}
+            )
             for statistic, (band95, band99, _) in split_stats.items():
                 embedding_table = f"emb_{channel}"
                 band_lookup[(embedding_table, statistic, "embedding", residualised)] = (band95, band99)
+                exact_stats = exact_split_stats.get(statistic)
+                if exact_stats is not None:
+                    band95_exact, band99_exact, exact_values = exact_stats
+                    exact_split_values[
+                        (embedding_table, "", statistic, residualised)
+                    ] = exact_values
+                else:
+                    band95_exact = band99_exact = np.nan
                 null_band_rows.append({
                     "table": embedding_table, "feature": "", "channel": channel,
                     "statistic": statistic, "residualised": residualised,
                     "band95": band95, "band99": band99,
+                    "band95_exact": band95_exact, "band99_exact": band99_exact,
                 })
 
         for batch_a, batch_b in PAIR_ORDER:
             pair = _pair_name(batch_a, batch_b)
             plan = pair_plans[pair]
             raw_tests = _embedding_permutation_tests(
-                frame, vectors, plan
+                frame, vectors, plan, bandwidths[False]
             )
             resid_tests = _embedding_permutation_tests(
-                frame, residual_vectors, plan
+                frame, residual_vectors, plan, bandwidths[True]
             )
             if batch_b == reference_batch and embedding_outliers[channel]:
                 raw_loo = _embedding_permutation_tests(
-                    frame, vectors, plan, excluded_ids=set(embedding_outliers[channel])
+                    frame, vectors, plan, bandwidths[False],
+                    excluded_ids=set(embedding_outliers[channel])
                 )
                 resid_loo = _embedding_permutation_tests(
-                    frame, residual_vectors, plan, excluded_ids=set(embedding_outliers[channel])
+                    frame, residual_vectors, plan, bandwidths[True],
+                    excluded_ids=set(embedding_outliers[channel])
                 )
             else:
                 raw_loo, resid_loo = raw_tests, resid_tests
@@ -1351,8 +1795,23 @@ def run(cfg: dict[str, Any]) -> None:
                         band95, band99 = band_lookup[
                             (table, statistic, "embedding", residualised)
                         ]
+                        exact_values = exact_split_values.get(
+                            (table, "", statistic, residualised)
+                        )
+                        if exact_values is not None:
+                            (
+                                band95_exact,
+                                band99_exact,
+                                band_position_exact,
+                                frac_splits_exceeding,
+                            ) = _exact_band_summary(exact_values, value)
+                        else:
+                            band95_exact = band99_exact = frac_splits_exceeding = np.nan
+                            band_position_exact = "not_applicable"
                     else:
                         band95 = band99 = np.nan
+                        band95_exact = band99_exact = frac_splits_exceeding = np.nan
+                        band_position_exact = "not_applicable"
                     distance_records.append({
                         "table": table,
                         "statistic": statistic,
@@ -1364,6 +1823,10 @@ def run(cfg: dict[str, Any]) -> None:
                         "band95": band95,
                         "band99": band99,
                         "band_position": _band_position(value, band95, band99),
+                        "band95_exact": band95_exact,
+                        "band99_exact": band99_exact,
+                        "band_position_exact": band_position_exact,
+                        "frac_splits_exceeding": frac_splits_exceeding,
                         "n_a": current["n_a"],
                         "n_b": current["n_b"],
                         "family": "embedding",
@@ -1382,6 +1845,18 @@ def run(cfg: dict[str, Any]) -> None:
                         "band99": band99,
                         "band_position": _band_position(value, band95, band99),
                     })
+
+    bse_data = embedding_data["BSE"]
+    exploratory_probe_frame = _exploratory_confound_probe(
+        bse_data["frame"],
+        bse_data["vectors"],
+        covariates,
+        covariate_features,
+        standardized_covariates,
+        pair_plans,
+        base_seed,
+        n_permutations,
+    )
 
     embedding_raw_indexes = [
         index for index, row in enumerate(distance_records)
@@ -1555,7 +2030,14 @@ def run(cfg: dict[str, Any]) -> None:
     embedding_gates_frame = pd.DataFrame(embedding_gate_rows)
     acquisition_frame = pd.DataFrame(acquisition_rows)
     loo_frame = pd.DataFrame(reference_loo_rows)
-    null_frame = _unique_null_bands(null_band_rows)
+    null_frame = _expand_null_band_rows(
+        null_band_rows,
+        exact_split_values,
+        feature_frame,
+        covariate_frame,
+        distance_records,
+    )
+    null_frame = _unique_null_bands(null_frame.to_dict("records"))
     for frame_name, frame in (
         ("distance_matrix", distance_frame),
         ("feature_contrasts", feature_frame),
@@ -1567,6 +2049,7 @@ def run(cfg: dict[str, Any]) -> None:
         ("embedding_gates", embedding_gates_frame),
         ("consistency", consistency_frame),
         ("reference_loo", loo_frame),
+        ("exploratory_confound_probe", exploratory_probe_frame),
     ):
         output = _stamp(frame, cfg, stats_hash)
         output_path = _config.ROOT / "results" / "stats" / f"{frame_name}.csv"
@@ -1576,6 +2059,6 @@ def run(cfg: dict[str, Any]) -> None:
     elapsed = time.perf_counter() - started
     print(
         f"stats: {len(feature_frame)} feature contrasts, {len(covariate_frame)} covariate contrasts, "
-        f"{len(distance_frame)} distance rows, 10 CSV outputs; {elapsed:.2f}s "
+        f"{len(distance_frame)} distance rows, 11 CSV outputs; {elapsed:.2f}s "
         f"(stats_config={stats_path.name}@{stats_hash})"
     )

@@ -13,13 +13,69 @@ Status: scaffold. Nothing below `results/` is real yet.
 ## Run
 
 ```bash
-uv venv && source .venv/bin/activate && uv pip install -e .
+uv venv --python 3.11 && source .venv/bin/activate && uv pip install -e .
 python scripts/download_drive.py --channel BSE      # ~620 MB; omit --channel for everything (~1.7 GB)
 python -m qc info
-python -m qc run                                    # S1..S8 once implemented
-pytest
+qc run
+modal run modal_app.py::main --task kpi
+modal run modal_app.py::main --task features
+modal run modal_app.py::main --task embed
+qc stats
+qc verdict
+python -m pytest -q
 streamlit run app/streamlit_app.py
 ```
+
+## Regenerate Phase B
+
+From a fresh Python 3.11 environment with the repository installed and `data/raw` available,
+the verified regeneration sequence is:
+
+```bash
+uv venv --python 3.11
+source .venv/bin/activate
+uv pip install -e .
+qc run
+modal run modal_app.py::main --task kpi
+modal run modal_app.py::main --task features
+modal run modal_app.py::main --task embed
+qc stats
+qc verdict
+```
+
+The Modal commands select `main`'s local entrypoint tasks; `kpi`, `features`, and `embed`
+run KPI sensitivity, feature sensitivity, and frozen DINOv2 embeddings, respectively. The
+`embed` task performs the one-image local/Modal parity and repeated-run checks before the
+full embedding job.
+
+Measured fresh-clone wall times:
+
+| Stage | Wall time |
+|---|---:|
+| `qc run` audit | 6.93 s |
+| `qc run` tiles | 14.25 s |
+| `qc run` artefacts | 58.55 s |
+| `qc run` segment | 78.97 s |
+| `qc run` KPI | 144.08 s |
+| `qc run` features | 545.24 s |
+| `qc run` CPU embeddings | 657.99 s |
+| `qc run` register | 104.29 s |
+| `qc run` charging | 29.89 s |
+| **`qc run` total** | **1,641.33 s** |
+| Modal KPI sensitivity command | 98.35 s wall; 92.53 s Modal-reported |
+| Modal feature sensitivity command | 150.47 s wall; 146.50 s Modal-reported |
+| Modal embeddings command | 85.16 s wall; 56.21 s Modal-reported |
+| `qc stats` | 100.44 s |
+| `qc verdict` | 1.51 s |
+
+The local CPU `embed` stage took about 658 s, compared with about 56 s for the Modal L4
+full embedding run. Local `features` took about 545 s, compared with about 146 s for the
+Modal feature-sensitivity run. The measured Modal cost estimates were $0.054036 for KPI
+sensitivity, $0.020304 for feature labels, $0.060973 for feature images, and $0.119069 for
+full embeddings ($0.254382 combined); these are estimates from Modal's published pricing,
+not billed totals. The timed `qc run` stages were measured with a wrapper around the same
+CLI stage dispatch path; Modal command wall times include startup/CLI overhead. The Modal
+reported times above are remote execution timings.
 
 ## Layout
 

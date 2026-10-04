@@ -2,11 +2,18 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from qc import stats as stats_module
 from qc.stats import (
     PAIR_ORDER,
+    _embedding_permutation_tests,
+    _exact_split_plan,
     _make_distance_matrix,
+    _median_pairwise_distance,
+    _parse_loo_outlier_ids,
     _plan_subset,
     _pair_name,
+    _record_scalar_row,
+    _split_embedding_bands,
     _unique_null_bands,
     pairwise_distance_matrix,
     permutation_test_z,
@@ -138,3 +145,73 @@ def test_tile_level_data_is_rejected():
 
     with pytest.raises(ValueError, match="tile-level"):
         validate_image_table(frame, "synthetic_tiles")
+
+
+def test_embedding_observed_permutations_and_null_share_bandwidth(monkeypatch):
+    frame = pd.DataFrame({
+        "sample_id": ["a1", "a2", "b1", "b2"],
+        "batch": ["Batch_1", "Batch_1", "Batch_3", "Batch_3"],
+    })
+    vectors = np.asarray([
+        [1.0, 0.0], [0.8, 0.6], [0.0, 1.0], [0.6, 0.8],
+    ])
+    ids = frame["sample_id"].tolist()
+    plan = {
+        "ids": ids,
+        "priorities": np.asarray([
+            [0.1, 0.2, 0.3, 0.4],
+            [0.4, 0.3, 0.2, 0.1],
+            [0.2, 0.4, 0.1, 0.3],
+        ]),
+        "batch_a": "Batch_1",
+        "batch_b": "Batch_3",
+    }
+    bandwidth = _median_pairwise_distance(vectors)
+    seen = []
+    original = stats_module._rbf_kernel
+
+    def record_bandwidth(received_vectors, received_bandwidth):
+        seen.append(received_bandwidth)
+        return original(received_vectors, received_bandwidth)
+
+    monkeypatch.setattr(stats_module, "_rbf_kernel", record_bandwidth)
+    tested = _embedding_permutation_tests(frame, vectors, plan, bandwidth)
+    null = _split_embedding_bands(
+        vectors,
+        ids,
+        [(["a1", "a2"], ["b1", "b2"])],
+        bandwidth,
+    )
+
+    assert len(tested["permuted"]["mmd2"]) == 3
+    assert set(null) == {"energy", "mmd2"}
+    assert seen == [bandwidth, bandwidth]
+
+
+def test_exact_split_plan_enumerates_registered_reference_splits():
+    bse_splits = _exact_split_plan(
+        [f"b3_{index}" for index in range(17)], 7, 10
+    )
+    etd_splits = _exact_split_plan(
+        [f"etd_{index}" for index in range(14)], 7, 7
+    )
+
+    assert bse_splits is not None and len(bse_splits) == 19_448
+    assert etd_splits is not None and len(etd_splits) == 3_432
+
+
+def test_empty_loo_ids_survive_csv_round_trip(tmp_path):
+    raw = {
+        "z": 0.0, "p": 1.0, "median_a": 1.0, "median_b": 1.0, "n_a": 7, "n_b": 17,
+    }
+    row = _record_scalar_row(
+        "features", "F08", "void_morphology", "Batch_1_vs_Batch_3",
+        raw, raw, 1.0, 1.0, 2.0, [], raw, 0.0, 0.0, "0/7",
+        1.0, 2.0, "within", 0.0,
+    )
+    path = tmp_path / "feature_contrasts.csv"
+    pd.DataFrame([row]).to_csv(path, index=False)
+    round_tripped = pd.read_csv(path)
+
+    assert round_tripped.loc[0, "loo_outlier_ids"] == "none"
+    assert _parse_loo_outlier_ids(round_tripped.loc[0, "loo_outlier_ids"]) == []

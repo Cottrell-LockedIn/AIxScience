@@ -20,6 +20,8 @@ from qc import config as _config
 from qc import tiles
 
 PHASE_IDENTITY = "stated by Polaron, not image-verified"
+TRANSLATION_UPSAMPLE_FACTOR = 10
+LOG_POLAR_UPSAMPLE_FACTOR = 100
 
 
 def read_raw_channel(path: Path, cfg: dict[str, Any]) -> np.ndarray:
@@ -68,7 +70,9 @@ def _co_located_windows(
 
 
 def _phase_shift(
-    reference: np.ndarray, moving: np.ndarray
+    reference: np.ndarray,
+    moving: np.ndarray,
+    upsample_factor: int = TRANSLATION_UPSAMPLE_FACTOR,
 ) -> tuple[np.ndarray, float]:
     ref = np.asarray(reference, dtype=np.float64)
     mov = np.asarray(moving, dtype=np.float64)
@@ -82,7 +86,7 @@ def _phase_shift(
     ref = np.where(valid, ref - ref[valid].mean(), 0.0)
     mov = np.where(valid, mov - mov[valid].mean(), 0.0)
     shift, _, _ = phase_cross_correlation(
-        ref, mov, upsample_factor=10, normalization="phase"
+        ref, mov, upsample_factor=upsample_factor, normalization="phase"
     )
 
     cross_power = fft2(ref) * np.conj(fft2(mov))
@@ -159,7 +163,9 @@ def estimate_rotation_scale(
         scaling="log",
         preserve_range=True,
     )
-    polar_shift, _ = _phase_shift(polar_ref, polar_mov)
+    polar_shift, _ = _phase_shift(
+        polar_ref, polar_mov, LOG_POLAR_UPSAMPLE_FACTOR
+    )
     angular_shift = float(polar_shift[0])
     angular_shift = (
         (angular_shift + output_shape[0] / 2) % output_shape[0]
@@ -188,6 +194,22 @@ def _similarity_transform(
         rotation=angle,
         translation=tuple(translation),
     )
+
+
+def _registration_step_sizes(shape: tuple[int, int]) -> tuple[float, float]:
+    size = min(1024, *shape)
+    radius = size / 2
+    radial_bins = max(128, min(512, size))
+    rotation_step_deg = (
+        360.0 / 360 / LOG_POLAR_UPSAMPLE_FACTOR
+    )
+    scale_step = float(
+        np.exp(
+            np.log(radius)
+            / (radial_bins * LOG_POLAR_UPSAMPLE_FACTOR)
+        ) - 1
+    )
+    return rotation_step_deg, scale_step
 
 
 def align_image(
@@ -231,6 +253,7 @@ def estimate_registration(
     registration_cfg: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     rotation_deg, scale = estimate_rotation_scale(reference, moving)
+    rotation_step_deg, scale_step = _registration_step_sizes(reference.shape)
     aligned = align_image(moving, rotation_deg, scale)
     shifts, psrs = [], []
     for ref_window, mov_window in _co_located_windows(reference, aligned):
@@ -260,7 +283,9 @@ def estimate_registration(
         "shift_y_px": float(shift_y_px),
         "shift_x_px": float(shift_x_px),
         "rotation_deg": float(rotation_deg),
+        "rotation_step_deg": rotation_step_deg,
         "scale": float(scale),
+        "scale_step": scale_step,
         "psr": psr,
         "same_fov": same_fov,
     }

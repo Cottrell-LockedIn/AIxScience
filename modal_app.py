@@ -36,8 +36,11 @@ gpu_image = base_image.pip_install(
 
 MODAL_RUN_COLUMNS = [
     "timestamp_utc", "function", "n_inputs", "wall_s", "hardware", "git_sha",
-    "config_hash", "est_cost_usd", "cost_source",
+    "config_hash", "est_cost_usd", "cost_source", "local_remote_max_abs_diff",
+    "repeat_max_abs_diff",
 ]
+LEGACY_MODAL_RUN_COLUMNS = MODAL_RUN_COLUMNS[:-2]
+DINO_LOCAL_REMOTE_MAX_ABS_TOL = 1e-4
 MODAL_PRICING = (
     "https://modal.com/pricing; CPU=$0.0000131/physical-core-s, "
     "memory=$0.00000222/GiB-s, L4=$0.000222/GPU-s"
@@ -200,6 +203,9 @@ def _append_modal_run(
     hardware: str,
     est_cost_usd: float,
     cost_source: str = MODAL_PRICING,
+    *,
+    local_remote_max_abs_diff: float | None = None,
+    repeat_max_abs_diff: float | None = None,
 ) -> None:
     import pandas as pd
 
@@ -215,11 +221,18 @@ def _append_modal_run(
         "config_hash": cfg["_hash"],
         "est_cost_usd": est_cost_usd,
         "cost_source": cost_source,
+        "local_remote_max_abs_diff": local_remote_max_abs_diff,
+        "repeat_max_abs_diff": repeat_max_abs_diff,
     }
     row = pd.DataFrame([record], columns=MODAL_RUN_COLUMNS)
     if path.exists():
         existing = pd.read_csv(path)
-        if list(existing.columns) != MODAL_RUN_COLUMNS:
+        if list(existing.columns) == LEGACY_MODAL_RUN_COLUMNS:
+            existing["local_remote_max_abs_diff"] = float("nan")
+            existing["repeat_max_abs_diff"] = float("nan")
+            existing = existing[MODAL_RUN_COLUMNS]
+            existing.to_csv(path, index=False)
+        elif list(existing.columns) != MODAL_RUN_COLUMNS:
             raise RuntimeError(f"unexpected Modal run log schema in {path}")
         row.to_csv(path, mode="a", index=False, header=False)
     else:
@@ -735,27 +748,17 @@ def _dino_cost(container_seconds: float) -> float:
     )
 
 
-def _run_dino_embeddings() -> None:
+def _run_dino_embedding_checks(
+    cfg,
+    benchmark_group,
+    benchmark_rows,
+    weights_cfg,
+    local_weights,
+    *,
+    torch,
+    embed,
+) -> tuple[float, float, float, float]:
     import numpy as np
-    import torch
-    from qc import embed
-
-    cfg = _config.load()
-    weights_cfg = cfg["embeddings"]
-    index = embed.load_tile_index(cfg)
-    groups = embed.image_groups(index)
-    if len(index) != 4329 or len(groups) != 93:
-        raise AssertionError(f"expected 4329 tiles across 93 image-channels, got {len(index)} and {len(groups)}")
-
-    local_weights = embed.local_weights_path(weights_cfg)
-    with weights_volume.batch_upload(force=True) as batch:
-        batch.put_file(str(local_weights), f"/{embed.WEIGHT_FILENAME}")
-
-    benchmark_group = groups[0]
-    benchmark_rows = index.loc[
-        (index["sample_id"].astype(str) == benchmark_group["sample_id"])
-        & (index["channel"].astype(str) == benchmark_group["channel"])
-    ]
     torch.set_num_threads(8)
     local_model = embed.load_frozen_model(weights_cfg, local_weights, "cpu")
     local_started = time.perf_counter()
@@ -792,6 +795,11 @@ def _run_dino_embeddings() -> None:
     local_remote_diff = float(
         np.max(np.abs(local_result["embeddings"] - remote_one_result["embeddings"]))
     )
+    if local_remote_diff > DINO_LOCAL_REMOTE_MAX_ABS_TOL:
+        raise AssertionError(
+            f"local/Modal embedding difference {local_remote_diff:.6g} exceeds "
+            f"{DINO_LOCAL_REMOTE_MAX_ABS_TOL:g}"
+        )
     _append_modal_run(
         cfg,
         "dino_embed_one_image",
@@ -799,12 +807,15 @@ def _run_dino_embeddings() -> None:
         remote_wall,
         "L4",
         _dino_cost(float(remote_one_result["wall_s"])),
+        local_remote_max_abs_diff=local_remote_diff,
     )
 
     repeat_started = time.perf_counter()
     repeats = list(encoder.embed_image.map([benchmark_group, benchmark_group]))
     repeat_wall = time.perf_counter() - repeat_started
     repeat_diff = float(np.max(np.abs(repeats[0]["embeddings"] - repeats[1]["embeddings"])))
+    if repeat_diff != 0:
+        raise AssertionError(f"repeated Modal embeddings differ by {repeat_diff:.6g}")
     _append_modal_run(
         cfg,
         "dino_embed_repeat",
@@ -812,6 +823,71 @@ def _run_dino_embeddings() -> None:
         repeat_wall,
         "L4",
         _dino_cost(sum(float(result["wall_s"]) for result in repeats)),
+        repeat_max_abs_diff=repeat_diff,
+    )
+    print(
+        f"dino_embedding_checks: local one-image wall={local_wall:.2f}s; "
+        f"Modal one-image wall={remote_wall:.2f}s; "
+        f"local/Modal max_abs_diff={local_remote_diff:.3g}; "
+        f"repeat max_abs_diff={repeat_diff:.3g}"
+    )
+    return local_wall, remote_wall, local_remote_diff, repeat_diff
+
+
+def _load_dino_embedding_inputs():
+    import torch
+    from qc import embed
+
+    cfg = _config.load()
+    weights_cfg = cfg["embeddings"]
+    index = embed.load_tile_index(cfg)
+    groups = embed.image_groups(index)
+    if len(index) != 4329 or len(groups) != 93:
+        raise AssertionError(
+            f"expected 4329 tiles across 93 image-channels, got {len(index)} and {len(groups)}"
+        )
+    local_weights = embed.local_weights_path(weights_cfg)
+    with weights_volume.batch_upload(force=True) as batch:
+        batch.put_file(str(local_weights), f"/{embed.WEIGHT_FILENAME}")
+    benchmark_group = groups[0]
+    benchmark_rows = index.loc[
+        (index["sample_id"].astype(str) == benchmark_group["sample_id"])
+        & (index["channel"].astype(str) == benchmark_group["channel"])
+    ]
+    return cfg, weights_cfg, index, groups, local_weights, benchmark_group, benchmark_rows, torch, embed
+
+
+def _run_dino_embedding_checks_only() -> None:
+    (
+        cfg, weights_cfg, _, _, local_weights, benchmark_group, benchmark_rows,
+        torch, embed,
+    ) = _load_dino_embedding_inputs()
+    _run_dino_embedding_checks(
+        cfg,
+        benchmark_group,
+        benchmark_rows,
+        weights_cfg,
+        local_weights,
+        torch=torch,
+        embed=embed,
+    )
+
+
+def _run_dino_embeddings() -> None:
+    import numpy as np
+
+    (
+        cfg, weights_cfg, index, groups, local_weights, benchmark_group,
+        benchmark_rows, torch, embed,
+    ) = _load_dino_embedding_inputs()
+    local_wall, remote_wall, local_remote_diff, repeat_diff = _run_dino_embedding_checks(
+        cfg,
+        benchmark_group,
+        benchmark_rows,
+        weights_cfg,
+        local_weights,
+        torch=torch,
+        embed=embed,
     )
 
     full_started = time.perf_counter()
@@ -839,11 +915,7 @@ def _run_dino_embeddings() -> None:
         np.float32, copy=False
     )
     embed.write_outputs(cfg, index, embeddings)
-    print(
-        f"dino_embedding: local one-image wall={local_wall:.2f}s; Modal one-image wall={remote_wall:.2f}s; "
-        f"local/Modal max_abs_diff={local_remote_diff:.3g}; repeat max_abs_diff={repeat_diff:.3g}; "
-        f"full Modal wall={full_wall:.2f}s; {len(embeddings)} tile embeddings"
-    )
+    print(f"dino_embedding: full Modal wall={full_wall:.2f}s; {len(embeddings)} tile embeddings")
 
 
 @app.local_entrypoint()
@@ -862,5 +934,8 @@ def main(task: str = "kpi"):
         return
     if task == "embed":
         _run_dino_embeddings()
+        return
+    if task == "embed-check":
+        _run_dino_embedding_checks_only()
         return
     raise ValueError(f"unsupported task {task!r}")

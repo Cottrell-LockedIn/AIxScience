@@ -21,3 +21,15 @@ What the panels show:
 3. **Graphite (class 1)** is one connected matrix in 4 of 5 tiles (largest component 0.998-0.999 of class 1). Connected components therefore do not resolve individual flakes; `c1_flake_eqdiam_median_px` and `c1_flake_aspect_median` measure small detached fragments, not flakes. This is what the pre-registered percolation rule tests for at image level (`docs/PHASE_B_PREREGISTRATION.md` §1).
 4. **Void (class 0)**: the dark inter-flake gaps and pores are segmented as expected. Most void is elongated along the flake direction, so `c0_cracklike_frac` (share of void in components with aspect ≥ 5) mostly measures elongated inter-flake porosity, not cracks. It cannot separate coating cracks (FM07) from preparation damage (A02) or normal inter-flake gaps. Treat it as a void-shape descriptor.
 5. **Pore size** (`c0_region_eqdiam_median_px`, 8.7-12.3 px here) is dominated by many small dark regions; the large gaps carry the area (`c0_region_area_mean_px` 568-1040 px).
+
+## B4/B6 review notes
+
+`F08_c0_local_thickness_median_px` is quantised to 2 px steps, while the Batch_3 MAD is
+2 px. Its G3 threshold-sensitivity and leave-one-out z values are therefore
+resolution-limited. A continuous-radius local-thickness measurement is a v2 candidate;
+the v1 F08 definition is unchanged.
+
+After increasing the log-polar registration upsample factor to 100, `mgxahqnk` Inlens
+still fails the same-FOV check: estimated scale 0.997323 (absolute deviation 0.002677
+from 1.0), with rotation −0.03°. The reported registration resolution is 0.01° and
+0.000122 in scale for this image.

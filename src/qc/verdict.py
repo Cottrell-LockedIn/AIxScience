@@ -94,6 +94,16 @@ def _finite_float(value: Any, name: str) -> float:
     return number
 
 
+def _parse_loo_outlier_ids(value: Any) -> list[str]:
+    if value is None or pd.isna(value):
+        return []
+    return [
+        sample_id
+        for sample_id in str(value).split(";")
+        if sample_id.strip() and sample_id.strip().lower() != "none"
+    ]
+
+
 def _json_value(value: Any) -> Any:
     if isinstance(value, np.generic):
         value = value.item()
@@ -222,8 +232,28 @@ def decide_verdict(batch: str, stats: dict[str, pd.DataFrame]) -> dict[str, Any]
     if batch == REFERENCE_BATCH:
         loo = stats["reference_loo"]
         outliers = loo.loc[loo["outlier"].map(_as_bool)].copy()
+        statuses = stats["feature_status"].set_index(["table", "feature"])["status"].to_dict()
+        outliers["status"] = [
+            statuses.get((row["table"], row["feature"]), "investigate")
+            for row in outliers.to_dict("records")
+        ]
         family_counts = outliers.groupby("sample_id")["family"].nunique()
         qualifying_ids = set(family_counts.loc[family_counts >= 2].index.astype(str))
+        non_drop_outliers = outliers.loc[outliers["status"] != "drop"]
+        non_drop_family_counts = non_drop_outliers.groupby("sample_id")["family"].nunique()
+        qualifying_non_drop_ids = set(
+            non_drop_family_counts.loc[non_drop_family_counts >= 2].index.astype(str)
+        )
+        every_qualifying_involves_drop = bool(qualifying_ids) and all(
+            bool(
+                (
+                    outliers.loc[
+                        outliers["sample_id"].astype(str) == sample_id, "status"
+                    ] == "drop"
+                ).any()
+            )
+            for sample_id in qualifying_ids
+        )
         label = "investigate" if qualifying_ids else "within_bounds"
         return {
             "batch": batch,
@@ -231,6 +261,8 @@ def decide_verdict(batch: str, stats: dict[str, pd.DataFrame]) -> dict[str, Any]
             "rule": RULE_REFERENCE,
             "reference_outliers": outliers.to_dict("records"),
             "qualifying_outlier_ids": sorted(qualifying_ids),
+            "qualifying_non_drop_outlier_ids": sorted(qualifying_non_drop_ids),
+            "every_qualifying_involves_drop": every_qualifying_involves_drop,
             "feature_rows": [],
             "feature_significant": [],
             "feature_beyond95": [],
@@ -255,6 +287,9 @@ def decide_verdict(batch: str, stats: dict[str, pd.DataFrame]) -> dict[str, Any]
     feature_rows = feature_rows_frame.to_dict("records")
     for row in feature_rows:
         row["status"] = statuses.get((row["table"], row["feature"]), "investigate")
+        row["loo_outlier_ids_parsed"] = _parse_loo_outlier_ids(
+            row.get("loo_outlier_ids")
+        )
     feature_significant = [
         row for row in feature_rows if _as_float(row.get("p_bh")) < ALPHA
     ]
@@ -276,6 +311,34 @@ def decide_verdict(batch: str, stats: dict[str, pd.DataFrame]) -> dict[str, Any]
     ].copy()
     embedding_rows = embedding_rows_frame.to_dict("records")
     embedding_beyond95 = [row for row in embedding_rows if _beyond_band95(row)]
+    residual_embedding_rows = distance.loc[
+        (distance["table"] == "emb_BSE")
+        & (distance["residualised"].map(_as_bool) == True)  # noqa: E712
+        & (distance["batch_a"] == batch)
+        & (distance["batch_b"] == REFERENCE_BATCH)
+        & distance["statistic"].isin(["energy", "mmd2"])
+    ].to_dict("records")
+    residual_embedding_passes = (
+        len(residual_embedding_rows) == 2
+        and all(_beyond_band95(row) for row in residual_embedding_rows)
+    )
+    raw_embedding_passes = (
+        len(embedding_rows) == 2
+        and all(_beyond_band95(row) for row in embedding_rows)
+    )
+    residualisation_note = None
+    if raw_embedding_passes and not residual_embedding_passes:
+        residual_energy = next(
+            row for row in residual_embedding_rows if row["statistic"] == "energy"
+        )
+        residualisation_note = (
+            "the difference is not present after label-free residualisation on the 8 "
+            "pre-registered acquisition covariates "
+            f"(energy={_finite_float(residual_energy['value'], 'residualised energy'):.3g}, "
+            f"BH p={_format_p(residual_energy['p_bh'])}, "
+            f"band={residual_energy['band_position']}); acquisition and material "
+            "contributions cannot be separated with these data."
+        )
     gates = stats["embedding_gates"]
     gate_match = gates.loc[gates["pair"] == pair]
     if gate_match.empty:
@@ -326,6 +389,8 @@ def decide_verdict(batch: str, stats: dict[str, pd.DataFrame]) -> dict[str, Any]
         "feature_beyond95": feature_beyond95,
         "feature_lines": _sorted_feature_rows(feature_lines),
         "embedding_rows": embedding_rows,
+        "residual_embedding_rows": residual_embedding_rows,
+        "residualisation_note": residualisation_note,
         "embedding_beyond95": embedding_beyond95,
         "embedding_line": embedding_line,
         "embedding_gate": embedding_gate.to_dict(),
@@ -354,10 +419,33 @@ def _format_p(value: Any) -> str:
 
 
 def _format_feature_reason(row: dict[str, Any]) -> str:
-    return (
+    text = (
         f"{row['feature']} (z={_finite_float(row['z'], 'z'):.3g}, "
         f"band={row['band_position']}, BH p={_format_p(row['p_bh'])})"
     )
+    if (
+        row.get("band_position_exact") not in (None, "not_applicable")
+        and str(row.get("band_position_exact")) != str(row.get("band_position"))
+        and np.isfinite(_as_float(row.get("frac_splits_exceeding")))
+    ):
+        text += (
+            f" (borderline: "
+            f"{100 * _as_float(row['frac_splits_exceeding']):.1f}% of all Batch_3 splits exceed)"
+        )
+    return text
+
+
+def _exact_borderline(row: dict[str, Any]) -> str:
+    if (
+        row.get("band_position_exact") not in (None, "not_applicable")
+        and str(row.get("band_position_exact")) != str(row.get("band_position"))
+        and np.isfinite(_as_float(row.get("frac_splits_exceeding")))
+    ):
+        return (
+            f" (borderline: "
+            f"{100 * _as_float(row['frac_splits_exceeding']):.1f}% of all Batch_3 splits exceed)"
+        )
+    return ""
 
 
 def _reason_for_decision(decision: dict[str, Any]) -> str:
@@ -369,14 +457,23 @@ def _reason_for_decision(decision: dict[str, Any]) -> str:
             key=lambda row: (-abs(_as_float(row["robust_z"])), str(row["feature"])),
         )[:5]
         drivers = ", ".join(
-            f"{row['feature']} on {row['sample_id']} (robust z={_finite_float(row['robust_z'], 'robust_z'):.3g})"
+            f"{row['feature']} on {row['sample_id']} "
+            f"(robust z={_finite_float(row['robust_z'], 'robust_z'):.3g}, "
+            f"status {row['status']})"
             for row in top
         )
         if qualifying:
-            return (
+            sentence = (
                 f"Batch_3 has {len(qualifying)} of 17 images with leave-one-out outliers "
                 f"across at least two families; drivers are {drivers} at robust |z| > 3.5."
             )
+            if decision["every_qualifying_involves_drop"]:
+                sentence += (
+                    " every qualifying image involves at least one feature with status drop;"
+                    f" excluding drop features, {len(decision['qualifying_non_drop_outlier_ids'])}"
+                    " images are outliers on ≥2 families."
+                )
+            return sentence
         if outliers:
             return (
                 f"Batch_3 has {len(outliers)} leave-one-out feature outliers across "
@@ -408,9 +505,11 @@ def _reason_for_decision(decision: dict[str, Any]) -> str:
         if e is not None and m is not None:
             embedding_detail = (
                 f"energy={_finite_float(e['value'], 'energy'):.3g} "
-                f"(band={e['band_position']}, BH p={_format_p(e['p_bh'])}) and "
+                f"(band={e['band_position']}, BH p={_format_p(e['p_bh'])})"
+                f"{_exact_borderline(e)} and "
                 f"MMD²={_finite_float(m['value'], 'mmd2'):.3g} "
                 f"(band={m['band_position']}, BH p={_format_p(m['p_bh'])})"
+                f"{_exact_borderline(m)}"
             )
             if any(_as_float(row["p_bh"]) < ALPHA for row in embedding_rows.values()):
                 sentence += (
@@ -425,6 +524,8 @@ def _reason_for_decision(decision: dict[str, Any]) -> str:
             for row in drifting
         )
         sentence += f"; acquisition drift is flagged in {drift_text}"
+    if decision.get("residualisation_note"):
+        sentence += f"; {decision['residualisation_note']}"
     return sentence.rstrip(".") + "."
 
 
@@ -601,7 +702,10 @@ def _decision_evidence(
         )
         evidence.append(_selector_evidence(
             frames, "feature_contrasts.csv", selector,
-            ["z", "p_bh", "band99", "band_position"],
+            [
+                "z", "p_bh", "band99", "band_position", "band95_exact",
+                "band99_exact", "band_position_exact", "frac_splits_exceeding",
+            ],
         ))
         status_selector = f"table == '{table}' and feature == '{feature}'"
         evidence.append(_selector_evidence(
@@ -614,7 +718,21 @@ def _decision_evidence(
         )
         evidence.append(_selector_evidence(
             frames, "distance_matrix.csv", selector,
-            ["value", "p_bh", "band99", "band_position"],
+            [
+                "value", "p_bh", "band99", "band_position", "band95_exact",
+                "band99_exact", "band_position_exact", "frac_splits_exceeding",
+            ],
+        ))
+        residual_selector = (
+            f"table == 'emb_BSE' and statistic == '{statistic}' and "
+            f"batch_a == '{batch}' and batch_b == 'Batch_3' and residualised == True"
+        )
+        evidence.append(_selector_evidence(
+            frames, "distance_matrix.csv", residual_selector,
+            [
+                "value", "p_bh", "band99", "band_position", "band95_exact",
+                "band99_exact", "band_position_exact", "frac_splits_exceeding",
+            ],
         ))
     evidence.append(_selector_evidence(
         frames,
@@ -893,7 +1011,13 @@ def _uncertainty(
     return {
         "sampling": f"n={n_images} images; resampling unit is image, not tile.",
         "segmentation": f"maximum feature threshold-sensitivity ratio={ratio_text}.",
-        "decision_margin": f"{margin_label}={margin_text}; G4={g4}.",
+        "decision_margin": (
+            f"{margin_label}={margin_text}; G4={g4}."
+            + (
+                f" {decision['residualisation_note']}"
+                if decision.get("residualisation_note") else ""
+            )
+        ),
         "robustness": f"{rank_label} bootstrap rank stability={rank_text}; G4 outcome={g4}.",
     }
 
