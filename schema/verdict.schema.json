@@ -143,5 +143,30 @@
     },
     "next_action": {"type": "string"},
     "caveats": {"type": "array", "items": {"type": "string"}}
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "subject": {
+            "properties": {"kind": {"const": "image"}},
+            "required": ["kind"]
+          }
+        },
+        "required": ["subject"]
+      },
+      "then": {
+        "properties": {
+          "verdict": {
+            "required": ["closed_set"],
+            "properties": {
+              "closed_set": {
+                "required": ["predicted_batch", "confidence"]
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
 }

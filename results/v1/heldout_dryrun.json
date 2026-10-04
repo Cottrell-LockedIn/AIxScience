@@ -1,0 +1,2650 @@
+{
+  "run": {
+    "timestamp_utc": "2026-10-04T02:39:14.813015+00:00",
+    "git_sha": "e6046e6",
+    "git_tag": null,
+    "config_hash": "45629944e398",
+    "input_dir": "/home/ubuntu/heldout_dryrun",
+    "n_images": 3,
+    "file_hashes": {
+      "img_0grcilhi_BSE.tif": "17b8f934fbb4f6904fcf12c7624c58f017f62b5633c856ad159bf6bd2cd9b95a",
+      "img_0grcilhi_ETD.tif": "8b1083c09b5369ab2e964cec1e5f4eff61bdb5864d570772a854a9ba091ccb98",
+      "img_0grcilhi_Inlens.tif": "94eab6358b2110e804065e3fd4d3af80cfd2b57257c325c3cdcd776839bad89a",
+      "img_3806gxp0_BSE.tif": "806d025a34c813c44a6626c882c5358456304dd58d978aa474b42e55f7bfce20",
+      "img_3806gxp0_ETD.tif": "8d11855c77e82d59aac88cf847d4e2e5d6026c4128acfe504c659ae012eacc45",
+      "img_3806gxp0_Inlens.tif": "446eee0eb9055c046e4d6617dd33b5565fc43ca570df60d802b9f614bcada518",
+      "img_4ih2ggld_BSE.tif": "a7fa8987f58071205743249f0b089912c3cdab5289d48aa4dc21e5b73aa21b09",
+      "img_4ih2ggld_ETD.tif": "297533fcdc52070bbf80c81ce61d6fa0b6956c8988310bc632926eef2cdcc2a1",
+      "img_4ih2ggld_Inlens.tif": "bcb9b0d7958dc1547db0915118f981d9cdc05ee8e7a63f1478693ed664b74dc1"
+    },
+    "embedding_backend": "modal_l4",
+    "embedding_error": null,
+    "modal_wall_s": 23.353657093000947,
+    "modal_container_s": 4.752848011000001,
+    "modal_cost_usd": 0.0013885920748937604,
+    "dryrun": true,
+    "frozen": false,
+    "exploratory": true,
+    "frozen_model_max_abs_coefficient_diff": 9.71445146547012e-17,
+    "warnings": []
+  },
+  "images": [
+    {
+      "subject": {
+        "kind": "image",
+        "id": "0grcilhi",
+        "batch": null,
+        "n_images": 1,
+        "n_tiles": 39,
+        "note": "heldout_dryrun: training image copied to a temporary folder; its score does not count",
+        "file_hashes": {
+          "img_0grcilhi_BSE.tif": "17b8f934fbb4f6904fcf12c7624c58f017f62b5633c856ad159bf6bd2cd9b95a",
+          "img_0grcilhi_ETD.tif": "8b1083c09b5369ab2e964cec1e5f4eff61bdb5864d570772a854a9ba091ccb98",
+          "img_0grcilhi_Inlens.tif": "94eab6358b2110e804065e3fd4d3af80cfd2b57257c325c3cdcd776839bad89a"
+        }
+      },
+      "verdict": {
+        "label": "within_bounds",
+        "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch.",
+        "reason": "Bet Batch_3 with p=0.991 (runner-up Batch_2 p=0.008, margin 0.983); tier high because p_max=0.991 >= 0.75 and LOIO permutation p=0.0350 < 0.05. Top drivers: embedding PC 1 (+2.31), embedding PC 3 (+0.99), embedding PC 9 (+0.51). Most top drivers are embedding components, whose batch signal could not be separated from acquisition in Phase B; the bet stands. Batch_3 embedding check: E1=0.1750 vs band95 0.2198 / band99 0.2446 -> within_bounds. Acquisition covariates outside the training 5-95 % range: nm_per_px_if_tag_true.",
+        "closed_set": {
+          "predicted_batch": "Batch_3",
+          "confidence": 0.9911299942295257,
+          "probabilities": {
+            "Batch_1": 0.0005521521315421416,
+            "Batch_2": 0.008317853638932149,
+            "Batch_3": 0.9911299942295257
+          },
+          "runner_up": "Batch_2",
+          "margin": 0.9828121405905936,
+          "tier": "high",
+          "note": "assumes the image is from one of the known batches",
+          "justification": {
+            "rule": "pred_batch = argmax of the image's predicted probability (out-of-fold for training images); always one of Batch_1, Batch_2, Batch_3. confidence = that probability; margin = top minus runner-up. Tier: low if p_max < 0.5, or LOIO permutation p >= 0.05, or OOD label = outside_bounds; medium if 0.5 <= p_max < 0.75; high if p_max >= 0.75 and LOIO permutation p < 0.05. Model: StandardScaler(F01-F11) + PCA(n_components=29, svd_solver='full') of the raw mean-pooled BSE DINOv2 embedding, both fitted on the training images only; LogisticRegression(C=1.0, class_weight='balanced', solver='lbfgs', max_iter=10000, random_state=0), L2, multinomial.",
+            "numbers": {
+              "Batch_1": 0.0005521521315421416,
+              "Batch_2": 0.008317853638932149,
+              "Batch_3": 0.9911299942295257,
+              "margin": 0.9828121405905936,
+              "tier_reason": "p_max=0.991 >= 0.75 and LOIO permutation p=0.0350 < 0.05",
+              "loio_accuracy": "18/31",
+              "loio_permutation_p": 0.03496503496503497,
+              "chance_majority": "17/31",
+              "ood_label": "within_bounds"
+            },
+            "evidence": [
+              {
+                "file": "results/v1/heldout_dryrun.json",
+                "selector": "images[subject.id == '0grcilhi']"
+              },
+              {
+                "file": "results/v1/loio_summary.json",
+                "selector": "loio_accuracy, permutation_p"
+              },
+              {
+                "file": "results/v1/final_model.csv",
+                "selector": "all rows"
+              },
+              {
+                "file": "docs/Log/2026-10-04_phase_c.md",
+                "selector": "Frozen choices"
+              }
+            ]
+          }
+        },
+        "open_set": {
+          "nearest_batch": "Batch_3",
+          "distance_to_each_batch": {
+            "Batch_1": 0.3545897836990758,
+            "Batch_2": 0.29035287770378015,
+            "Batch_3": 0.17497431678471811
+          },
+          "null_band_95": 0.21979105149424963,
+          "null_band_99": 0.24460859976440058,
+          "matches_known_batch": true,
+          "justification": {
+            "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch.",
+            "numbers": {
+              "e1_to_batch3": 0.17497431678471811,
+              "band95": 0.21979105149424963,
+              "band99": 0.24460859976440058,
+              "n_reference": 17,
+              "null_max": 0.2508129868319383
+            },
+            "evidence": [
+              {
+                "file": "results/v1/heldout_dryrun.json",
+                "selector": "images[subject.id == '0grcilhi']"
+              },
+              {
+                "file": "results/emb_per_image.parquet",
+                "selector": "channel == 'BSE'"
+              }
+            ]
+          }
+        },
+        "justification": {
+          "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch.",
+          "numbers": {
+            "e1_to_batch3": 0.17497431678471811,
+            "band95": 0.21979105149424963,
+            "band99": 0.24460859976440058
+          },
+          "evidence": [
+            {
+              "file": "results/v1/heldout_dryrun.json",
+              "selector": "images[subject.id == '0grcilhi']"
+            }
+          ]
+        }
+      },
+      "pipeline": {
+        "git_sha": "e6046e6",
+        "git_tag": null,
+        "config_path": "configs/v1.yaml",
+        "config_hash": "45629944e398",
+        "timestamp_utc": "2026-10-04T02:39:14.746136+00:00",
+        "frozen": false,
+        "exploratory": true,
+        "model_revisions": {
+          "dinov2_hub_ref": "7764ea0f912e53c92e82eb78a2a1631e92725fc8",
+          "dinov2_weights_sha256": "b938bf1bc15cd2ec0feacfe3a1bb553fe8ea9ca46a7e1d8d00217f29aef60cd9",
+          "classifier": "StandardScaler(F01-F11) + PCA(n_components=29, svd_solver='full') of the raw mean-pooled BSE DINOv2 embedding, both fitted on the training images only; LogisticRegression(C=1.0, class_weight='balanced', solver='lbfgs', max_iter=10000, random_state=0), L2, multinomial."
+        }
+      },
+      "acquisition": {
+        "detectors_present": [
+          "BSE",
+          "ETD",
+          "Inlens"
+        ],
+        "pixel_size_nm": null,
+        "pixel_size_confirmed": false,
+        "covariates": {
+          "noise_sigma_BSE": {
+            "value": 37.217061538461536,
+            "training_p05": 30.203223076923077,
+            "training_p95": 47.79959423076923,
+            "flag": false,
+            "justification": {
+              "rule": "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images used for that prediction; reported only, not a model input.",
+              "numbers": {
+                "value": 37.217061538461536,
+                "training_p05": 30.203223076923077,
+                "training_p95": 47.79959423076923,
+                "n_training_images": 31,
+                "flag": false
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "inputs.0grcilhi.covariates"
+                },
+                {
+                  "file": "img_0grcilhi_BSE.tif",
+                  "selector": "TIFF metadata"
+                }
+              ]
+            }
+          },
+          "sharpness_BSE": {
+            "value": 1631.5720306787734,
+            "training_p05": 1015.7933762623713,
+            "training_p95": 2525.597429000414,
+            "flag": false,
+            "justification": {
+              "rule": "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images used for that prediction; reported only, not a model input.",
+              "numbers": {
+                "value": 1631.5720306787734,
+                "training_p05": 1015.7933762623713,
+                "training_p95": 2525.597429000414,
+                "n_training_images": 31,
+                "flag": false
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "inputs.0grcilhi.covariates"
+                },
+                {
+                  "file": "img_0grcilhi_BSE.tif",
+                  "selector": "TIFF metadata"
+                }
+              ]
+            }
+          },
+          "curtaining_score_BSE": {
+            "value": 0.021310860219088512,
+            "training_p05": 0.019745805591529674,
+            "training_p95": 0.02669978772811719,
+            "flag": false,
+            "justification": {
+              "rule": "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images used for that prediction; reported only, not a model input.",
+              "numbers": {
+                "value": 0.021310860219088512,
+                "training_p05": 0.019745805591529674,
+                "training_p95": 0.02669978772811719,
+                "n_training_images": 31,
+                "flag": false
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "inputs.0grcilhi.covariates"
+                },
+                {
+                  "file": "img_0grcilhi_BSE.tif",
+                  "selector": "TIFF metadata"
+                }
+              ]
+            }
+          },
+          "hstripe_score_BSE": {
+            "value": 0.03598502761458415,
+            "training_p05": 0.031219751275595932,
+            "training_p95": 0.043262900640911914,
+            "flag": false,
+            "justification": {
+              "rule": "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images used for that prediction; reported only, not a model input.",
+              "numbers": {
+                "value": 0.03598502761458415,
+                "training_p05": 0.031219751275595932,
+                "training_p95": 0.043262900640911914,
+                "n_training_images": 31,
+                "flag": false
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "inputs.0grcilhi.covariates"
+                },
+                {
+                  "file": "img_0grcilhi_BSE.tif",
+                  "selector": "TIFF metadata"
+                }
+              ]
+            }
+          },
+          "edge_charging_BSE": {
+            "value": 0.6176895183363231,
+            "training_p05": -0.6996318321075112,
+            "training_p95": 1.061743261971936,
+            "flag": false,
+            "justification": {
+              "rule": "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images used for that prediction; reported only, not a model input.",
+              "numbers": {
+                "value": 0.6176895183363231,
+                "training_p05": -0.6996318321075112,
+                "training_p95": 1.061743261971936,
+                "n_training_images": 31,
+                "flag": false
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "inputs.0grcilhi.covariates"
+                },
+                {
+                  "file": "img_0grcilhi_BSE.tif",
+                  "selector": "TIFF metadata"
+                }
+              ]
+            }
+          },
+          "edge_charging_Inlens": {
+            "value": 2.0143079317953676,
+            "training_p05": -5.527612730155483,
+            "training_p95": 2.0583482240589466,
+            "flag": false,
+            "justification": {
+              "rule": "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images used for that prediction; reported only, not a model input.",
+              "numbers": {
+                "value": 2.0143079317953676,
+                "training_p05": -5.527612730155483,
+                "training_p95": 2.0583482240589466,
+                "n_training_images": 31,
+                "flag": false
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "inputs.0grcilhi.covariates"
+                },
+                {
+                  "file": "img_0grcilhi_BSE.tif",
+                  "selector": "TIFF metadata"
+                }
+              ]
+            }
+          },
+          "height": {
+            "value": 1904.0,
+            "training_p05": 1696.0,
+            "training_p95": 2294.0,
+            "flag": false,
+            "justification": {
+              "rule": "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images used for that prediction; reported only, not a model input.",
+              "numbers": {
+                "value": 1904.0,
+                "training_p05": 1696.0,
+                "training_p95": 2294.0,
+                "n_training_images": 31,
+                "flag": false
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "inputs.0grcilhi.covariates"
+                },
+                {
+                  "file": "img_0grcilhi_BSE.tif",
+                  "selector": "TIFF metadata"
+                }
+              ]
+            }
+          },
+          "nm_per_px_if_tag_true": {
+            "value": 25.000548043509866,
+            "training_p05": 24.99920160030165,
+            "training_p95": 25.000548043509863,
+            "flag": true,
+            "justification": {
+              "rule": "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images used for that prediction; reported only, not a model input.",
+              "numbers": {
+                "value": 25.000548043509866,
+                "training_p05": 24.99920160030165,
+                "training_p95": 25.000548043509863,
+                "n_training_images": 31,
+                "flag": true
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "inputs.0grcilhi.covariates"
+                },
+                {
+                  "file": "img_0grcilhi_BSE.tif",
+                  "selector": "TIFF metadata"
+                }
+              ]
+            }
+          }
+        },
+        "acquisition_drift_suspected": true
+      },
+      "evidence": {
+        "drivers": [
+          {
+            "name": "embedding PC 1",
+            "units": "PC score (embedding units)",
+            "value": 3.968569544715101,
+            "standardised_value": 3.968569544715101,
+            "coefficient": 0.582396641160881,
+            "effect_size": 2.3112815730554415,
+            "direction": "higher",
+            "tag": "embedding: acquisition and material not separable (Phase B residualisation)",
+            "justification": {
+              "rule": "contribution_k = coef[pred_batch, k] x x_k (x_k = standardised F value or embedding PC score); top 3 by signed contribution, i.e. the largest support for the bet.",
+              "numbers": {
+                "coefficient": 0.582396641160881,
+                "standardised_value": 3.968569544715101,
+                "contribution": 2.3112815730554415
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "images[subject.id == '0grcilhi']"
+                },
+                {
+                  "file": "results/v1/final_model.csv",
+                  "selector": "all rows"
+                }
+              ]
+            }
+          },
+          {
+            "name": "embedding PC 3",
+            "units": "PC score (embedding units)",
+            "value": 2.051036082034022,
+            "standardised_value": 2.051036082034022,
+            "coefficient": 0.48355530540751257,
+            "effect_size": 0.9917893790497896,
+            "direction": "higher",
+            "tag": "embedding: acquisition and material not separable (Phase B residualisation)",
+            "justification": {
+              "rule": "contribution_k = coef[pred_batch, k] x x_k (x_k = standardised F value or embedding PC score); top 3 by signed contribution, i.e. the largest support for the bet.",
+              "numbers": {
+                "coefficient": 0.48355530540751257,
+                "standardised_value": 2.051036082034022,
+                "contribution": 0.9917893790497896
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "images[subject.id == '0grcilhi']"
+                },
+                {
+                  "file": "results/v1/final_model.csv",
+                  "selector": "all rows"
+                }
+              ]
+            }
+          },
+          {
+            "name": "embedding PC 9",
+            "units": "PC score (embedding units)",
+            "value": -1.1511910355731292,
+            "standardised_value": -1.1511910355731292,
+            "coefficient": -0.4425924051921326,
+            "effect_size": 0.5095084092699331,
+            "direction": "lower",
+            "tag": "embedding: acquisition and material not separable (Phase B residualisation)",
+            "justification": {
+              "rule": "contribution_k = coef[pred_batch, k] x x_k (x_k = standardised F value or embedding PC score); top 3 by signed contribution, i.e. the largest support for the bet.",
+              "numbers": {
+                "coefficient": -0.4425924051921326,
+                "standardised_value": -1.1511910355731292,
+                "contribution": 0.5095084092699331
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "images[subject.id == '0grcilhi']"
+                },
+                {
+                  "file": "results/v1/final_model.csv",
+                  "selector": "all rows"
+                }
+              ]
+            }
+          }
+        ],
+        "embedding": {
+          "backbone": "dinov2_vits14",
+          "energy_distance": 0.17497431678471811
+        }
+      },
+      "uncertainty": {
+        "sampling": "model trained on n=31 images; LOIO accuracy 18/31 (Wilson 95 % CI 0.41-0.74), permutation p=0.0350",
+        "segmentation": "F-feature drivers carry their Phase B status; 17/23 Phase B features were dropped for +/-10 % threshold sensitivity (results/stats/feature_status.csv)",
+        "decision_margin": "probability margin 0.983 to Batch_2; E1 is +0.0696 from band99"
+      },
+      "routing": {
+        "stakeholder": "microscopy_team",
+        "reason": "acquisition covariates out of training range: nm_per_px_if_tag_true"
+      },
+      "next_action": "Check the acquisition settings for this image before interpreting the bet.",
+      "caveats": [
+        "phase_identity: stated by Polaron, not image-verified; Si vs SiOx is indistinguishable in BSE; binder and conductive additive are lumped.",
+        "Pixel size unconfirmed; all lengths in px.",
+        "Embedding batch differences vanished after acquisition residualisation in Phase B; embedding drivers may reflect acquisition rather than material.",
+        "Batch_1 / Batch_2 are variations relative to the Batch_3 baseline, not better or worse."
+      ]
+    },
+    {
+      "subject": {
+        "kind": "image",
+        "id": "3806gxp0",
+        "batch": null,
+        "n_images": 1,
+        "n_tiles": 39,
+        "note": "heldout_dryrun: training image copied to a temporary folder; its score does not count",
+        "file_hashes": {
+          "img_3806gxp0_BSE.tif": "806d025a34c813c44a6626c882c5358456304dd58d978aa474b42e55f7bfce20",
+          "img_3806gxp0_ETD.tif": "8d11855c77e82d59aac88cf847d4e2e5d6026c4128acfe504c659ae012eacc45",
+          "img_3806gxp0_Inlens.tif": "446eee0eb9055c046e4d6617dd33b5565fc43ca570df60d802b9f614bcada518"
+        }
+      },
+      "verdict": {
+        "label": "within_bounds",
+        "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch.",
+        "reason": "Bet Batch_2 with p=0.947 (runner-up Batch_3 p=0.041, margin 0.906); tier high because p_max=0.947 >= 0.75 and LOIO permutation p=0.0350 < 0.05. Top drivers: embedding PC 3 (+0.67), embedding PC 8 (+0.49), F09_c0_chord_anisotropy_h_over_v (+0.40). Most top drivers are embedding components, whose batch signal could not be separated from acquisition in Phase B; the bet stands. Batch_3 embedding check: E1=0.1775 vs band95 0.2198 / band99 0.2446 -> within_bounds. Acquisition covariates outside the training 5-95 % range: edge_charging_Inlens.",
+        "closed_set": {
+          "predicted_batch": "Batch_2",
+          "confidence": 0.9470215022574918,
+          "probabilities": {
+            "Batch_1": 0.011555512120358784,
+            "Batch_2": 0.9470215022574918,
+            "Batch_3": 0.04142298562214922
+          },
+          "runner_up": "Batch_3",
+          "margin": 0.9055985166353426,
+          "tier": "high",
+          "note": "assumes the image is from one of the known batches",
+          "justification": {
+            "rule": "pred_batch = argmax of the image's predicted probability (out-of-fold for training images); always one of Batch_1, Batch_2, Batch_3. confidence = that probability; margin = top minus runner-up. Tier: low if p_max < 0.5, or LOIO permutation p >= 0.05, or OOD label = outside_bounds; medium if 0.5 <= p_max < 0.75; high if p_max >= 0.75 and LOIO permutation p < 0.05. Model: StandardScaler(F01-F11) + PCA(n_components=29, svd_solver='full') of the raw mean-pooled BSE DINOv2 embedding, both fitted on the training images only; LogisticRegression(C=1.0, class_weight='balanced', solver='lbfgs', max_iter=10000, random_state=0), L2, multinomial.",
+            "numbers": {
+              "Batch_1": 0.011555512120358784,
+              "Batch_2": 0.9470215022574918,
+              "Batch_3": 0.04142298562214922,
+              "margin": 0.9055985166353426,
+              "tier_reason": "p_max=0.947 >= 0.75 and LOIO permutation p=0.0350 < 0.05",
+              "loio_accuracy": "18/31",
+              "loio_permutation_p": 0.03496503496503497,
+              "chance_majority": "17/31",
+              "ood_label": "within_bounds"
+            },
+            "evidence": [
+              {
+                "file": "results/v1/heldout_dryrun.json",
+                "selector": "images[subject.id == '3806gxp0']"
+              },
+              {
+                "file": "results/v1/loio_summary.json",
+                "selector": "loio_accuracy, permutation_p"
+              },
+              {
+                "file": "results/v1/final_model.csv",
+                "selector": "all rows"
+              },
+              {
+                "file": "docs/Log/2026-10-04_phase_c.md",
+                "selector": "Frozen choices"
+              }
+            ]
+          }
+        },
+        "open_set": {
+          "nearest_batch": "Batch_2",
+          "distance_to_each_batch": {
+            "Batch_1": 0.2234836778004044,
+            "Batch_2": 0.10949449400955077,
+            "Batch_3": 0.17749929262364458
+          },
+          "null_band_95": 0.21979105149424963,
+          "null_band_99": 0.24460859976440058,
+          "matches_known_batch": true,
+          "justification": {
+            "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch.",
+            "numbers": {
+              "e1_to_batch3": 0.17749929262364458,
+              "band95": 0.21979105149424963,
+              "band99": 0.24460859976440058,
+              "n_reference": 17,
+              "null_max": 0.2508129868319383
+            },
+            "evidence": [
+              {
+                "file": "results/v1/heldout_dryrun.json",
+                "selector": "images[subject.id == '3806gxp0']"
+              },
+              {
+                "file": "results/emb_per_image.parquet",
+                "selector": "channel == 'BSE'"
+              }
+            ]
+          }
+        },
+        "justification": {
+          "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch.",
+          "numbers": {
+            "e1_to_batch3": 0.17749929262364458,
+            "band95": 0.21979105149424963,
+            "band99": 0.24460859976440058
+          },
+          "evidence": [
+            {
+              "file": "results/v1/heldout_dryrun.json",
+              "selector": "images[subject.id == '3806gxp0']"
+            }
+          ]
+        }
+      },
+      "pipeline": {
+        "git_sha": "e6046e6",
+        "git_tag": null,
+        "config_path": "configs/v1.yaml",
+        "config_hash": "45629944e398",
+        "timestamp_utc": "2026-10-04T02:39:14.770859+00:00",
+        "frozen": false,
+        "exploratory": true,
+        "model_revisions": {
+          "dinov2_hub_ref": "7764ea0f912e53c92e82eb78a2a1631e92725fc8",
+          "dinov2_weights_sha256": "b938bf1bc15cd2ec0feacfe3a1bb553fe8ea9ca46a7e1d8d00217f29aef60cd9",
+          "classifier": "StandardScaler(F01-F11) + PCA(n_components=29, svd_solver='full') of the raw mean-pooled BSE DINOv2 embedding, both fitted on the training images only; LogisticRegression(C=1.0, class_weight='balanced', solver='lbfgs', max_iter=10000, random_state=0), L2, multinomial."
+        }
+      },
+      "acquisition": {
+        "detectors_present": [
+          "BSE",
+          "ETD",
+          "Inlens"
+        ],
+        "pixel_size_nm": null,
+        "pixel_size_confirmed": false,
+        "covariates": {
+          "noise_sigma_BSE": {
+            "value": 44.36395384615384,
+            "training_p05": 30.203223076923077,
+            "training_p95": 47.79959423076923,
+            "flag": false,
+            "justification": {
+              "rule": "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images used for that prediction; reported only, not a model input.",
+              "numbers": {
+                "value": 44.36395384615384,
+                "training_p05": 30.203223076923077,
+                "training_p95": 47.79959423076923,
+                "n_training_images": 31,
+                "flag": false
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "inputs.3806gxp0.covariates"
+                },
+                {
+                  "file": "img_3806gxp0_BSE.tif",
+                  "selector": "TIFF metadata"
+                }
+              ]
+            }
+          },
+          "sharpness_BSE": {
+            "value": 2186.6342533307197,
+            "training_p05": 1015.7933762623713,
+            "training_p95": 2525.597429000414,
+            "flag": false,
+            "justification": {
+              "rule": "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images used for that prediction; reported only, not a model input.",
+              "numbers": {
+                "value": 2186.6342533307197,
+                "training_p05": 1015.7933762623713,
+                "training_p95": 2525.597429000414,
+                "n_training_images": 31,
+                "flag": false
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "inputs.3806gxp0.covariates"
+                },
+                {
+                  "file": "img_3806gxp0_BSE.tif",
+                  "selector": "TIFF metadata"
+                }
+              ]
+            }
+          },
+          "curtaining_score_BSE": {
+            "value": 0.023925863336218045,
+            "training_p05": 0.019745805591529674,
+            "training_p95": 0.02669978772811719,
+            "flag": false,
+            "justification": {
+              "rule": "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images used for that prediction; reported only, not a model input.",
+              "numbers": {
+                "value": 0.023925863336218045,
+                "training_p05": 0.019745805591529674,
+                "training_p95": 0.02669978772811719,
+                "n_training_images": 31,
+                "flag": false
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "inputs.3806gxp0.covariates"
+                },
+                {
+                  "file": "img_3806gxp0_BSE.tif",
+                  "selector": "TIFF metadata"
+                }
+              ]
+            }
+          },
+          "hstripe_score_BSE": {
+            "value": 0.03131851888081217,
+            "training_p05": 0.031219751275595932,
+            "training_p95": 0.043262900640911914,
+            "flag": false,
+            "justification": {
+              "rule": "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images used for that prediction; reported only, not a model input.",
+              "numbers": {
+                "value": 0.03131851888081217,
+                "training_p05": 0.031219751275595932,
+                "training_p95": 0.043262900640911914,
+                "n_training_images": 31,
+                "flag": false
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "inputs.3806gxp0.covariates"
+                },
+                {
+                  "file": "img_3806gxp0_BSE.tif",
+                  "selector": "TIFF metadata"
+                }
+              ]
+            }
+          },
+          "edge_charging_BSE": {
+            "value": 0.07300336042448426,
+            "training_p05": -0.6996318321075112,
+            "training_p95": 1.061743261971936,
+            "flag": false,
+            "justification": {
+              "rule": "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images used for that prediction; reported only, not a model input.",
+              "numbers": {
+                "value": 0.07300336042448426,
+                "training_p05": -0.6996318321075112,
+                "training_p95": 1.061743261971936,
+                "n_training_images": 31,
+                "flag": false
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "inputs.3806gxp0.covariates"
+                },
+                {
+                  "file": "img_3806gxp0_BSE.tif",
+                  "selector": "TIFF metadata"
+                }
+              ]
+            }
+          },
+          "edge_charging_Inlens": {
+            "value": -6.26901222934709,
+            "training_p05": -5.527612730155483,
+            "training_p95": 2.0583482240589466,
+            "flag": true,
+            "justification": {
+              "rule": "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images used for that prediction; reported only, not a model input.",
+              "numbers": {
+                "value": -6.26901222934709,
+                "training_p05": -5.527612730155483,
+                "training_p95": 2.0583482240589466,
+                "n_training_images": 31,
+                "flag": true
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "inputs.3806gxp0.covariates"
+                },
+                {
+                  "file": "img_3806gxp0_BSE.tif",
+                  "selector": "TIFF metadata"
+                }
+              ]
+            }
+          },
+          "height": {
+            "value": 2048.0,
+            "training_p05": 1696.0,
+            "training_p95": 2294.0,
+            "flag": false,
+            "justification": {
+              "rule": "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images used for that prediction; reported only, not a model input.",
+              "numbers": {
+                "value": 2048.0,
+                "training_p05": 1696.0,
+                "training_p95": 2294.0,
+                "n_training_images": 31,
+                "flag": false
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "inputs.3806gxp0.covariates"
+                },
+                {
+                  "file": "img_3806gxp0_BSE.tif",
+                  "selector": "TIFF metadata"
+                }
+              ]
+            }
+          },
+          "nm_per_px_if_tag_true": {
+            "value": 24.999707090046062,
+            "training_p05": 24.99920160030165,
+            "training_p95": 25.000548043509863,
+            "flag": false,
+            "justification": {
+              "rule": "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images used for that prediction; reported only, not a model input.",
+              "numbers": {
+                "value": 24.999707090046062,
+                "training_p05": 24.99920160030165,
+                "training_p95": 25.000548043509863,
+                "n_training_images": 31,
+                "flag": false
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "inputs.3806gxp0.covariates"
+                },
+                {
+                  "file": "img_3806gxp0_BSE.tif",
+                  "selector": "TIFF metadata"
+                }
+              ]
+            }
+          }
+        },
+        "acquisition_drift_suspected": true
+      },
+      "evidence": {
+        "drivers": [
+          {
+            "name": "embedding PC 3",
+            "units": "PC score (embedding units)",
+            "value": -1.497684126634094,
+            "standardised_value": -1.497684126634094,
+            "coefficient": -0.44412446464043204,
+            "effect_size": 0.66515816094184,
+            "direction": "lower",
+            "tag": "embedding: acquisition and material not separable (Phase B residualisation)",
+            "justification": {
+              "rule": "contribution_k = coef[pred_batch, k] x x_k (x_k = standardised F value or embedding PC score); top 3 by signed contribution, i.e. the largest support for the bet.",
+              "numbers": {
+                "coefficient": -0.44412446464043204,
+                "standardised_value": -1.497684126634094,
+                "contribution": 0.66515816094184
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "images[subject.id == '3806gxp0']"
+                },
+                {
+                  "file": "results/v1/final_model.csv",
+                  "selector": "all rows"
+                }
+              ]
+            }
+          },
+          {
+            "name": "embedding PC 8",
+            "units": "PC score (embedding units)",
+            "value": -1.7978339748433843,
+            "standardised_value": -1.7978339748433843,
+            "coefficient": -0.2732608625294538,
+            "effect_size": 0.4912776626504595,
+            "direction": "lower",
+            "tag": "embedding: acquisition and material not separable (Phase B residualisation)",
+            "justification": {
+              "rule": "contribution_k = coef[pred_batch, k] x x_k (x_k = standardised F value or embedding PC score); top 3 by signed contribution, i.e. the largest support for the bet.",
+              "numbers": {
+                "coefficient": -0.2732608625294538,
+                "standardised_value": -1.7978339748433843,
+                "contribution": 0.4912776626504595
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "images[subject.id == '3806gxp0']"
+                },
+                {
+                  "file": "results/v1/final_model.csv",
+                  "selector": "all rows"
+                }
+              ]
+            }
+          },
+          {
+            "name": "F09_c0_chord_anisotropy_h_over_v",
+            "units": "px-based image feature (standardised)",
+            "value": 1.091712680124707,
+            "standardised_value": -1.5688548777980604,
+            "coefficient": -0.2578635968585138,
+            "effect_size": 0.40455056173803194,
+            "direction": "lower",
+            "tag": "material (segmentation-derived; Phase B status: investigate)",
+            "justification": {
+              "rule": "contribution_k = coef[pred_batch, k] x x_k (x_k = standardised F value or embedding PC score); top 3 by signed contribution, i.e. the largest support for the bet.",
+              "numbers": {
+                "coefficient": -0.2578635968585138,
+                "standardised_value": -1.5688548777980604,
+                "contribution": 0.40455056173803194
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "images[subject.id == '3806gxp0']"
+                },
+                {
+                  "file": "results/v1/final_model.csv",
+                  "selector": "all rows"
+                }
+              ]
+            }
+          }
+        ],
+        "embedding": {
+          "backbone": "dinov2_vits14",
+          "energy_distance": 0.17749929262364458
+        }
+      },
+      "uncertainty": {
+        "sampling": "model trained on n=31 images; LOIO accuracy 18/31 (Wilson 95 % CI 0.41-0.74), permutation p=0.0350",
+        "segmentation": "F-feature drivers carry their Phase B status; 17/23 Phase B features were dropped for +/-10 % threshold sensitivity (results/stats/feature_status.csv)",
+        "decision_margin": "probability margin 0.906 to Batch_3; E1 is +0.0671 from band99"
+      },
+      "routing": {
+        "stakeholder": "microscopy_team",
+        "reason": "acquisition covariates out of training range: edge_charging_Inlens"
+      },
+      "next_action": "Check the acquisition settings for this image before interpreting the bet.",
+      "caveats": [
+        "phase_identity: stated by Polaron, not image-verified; Si vs SiOx is indistinguishable in BSE; binder and conductive additive are lumped.",
+        "Pixel size unconfirmed; all lengths in px.",
+        "Embedding batch differences vanished after acquisition residualisation in Phase B; embedding drivers may reflect acquisition rather than material.",
+        "Batch_1 / Batch_2 are variations relative to the Batch_3 baseline, not better or worse."
+      ]
+    },
+    {
+      "subject": {
+        "kind": "image",
+        "id": "4ih2ggld",
+        "batch": null,
+        "n_images": 1,
+        "n_tiles": 52,
+        "note": "heldout_dryrun: training image copied to a temporary folder; its score does not count",
+        "file_hashes": {
+          "img_4ih2ggld_BSE.tif": "a7fa8987f58071205743249f0b089912c3cdab5289d48aa4dc21e5b73aa21b09",
+          "img_4ih2ggld_ETD.tif": "297533fcdc52070bbf80c81ce61d6fa0b6956c8988310bc632926eef2cdcc2a1",
+          "img_4ih2ggld_Inlens.tif": "bcb9b0d7958dc1547db0915118f981d9cdc05ee8e7a63f1478693ed664b74dc1"
+        }
+      },
+      "verdict": {
+        "label": "outside_bounds",
+        "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch.",
+        "reason": "Bet Batch_1 with p=0.969 (runner-up Batch_2 p=0.028, margin 0.942); tier low because outside the Batch_3 embedding band (OOD caps the tier at low). Top drivers: embedding PC 1 (+2.20), embedding PC 2 (+1.87), F06_c2_clark_evans_R (+0.94). Most top drivers are embedding components, whose batch signal could not be separated from acquisition in Phase B; the bet stands. Batch_3 embedding check: E1=0.4562 vs band95 0.2198 / band99 0.2446 -> outside_bounds (outside the Batch_3 distribution; the bet still stands). Acquisition covariates outside the training 5-95 % range: noise_sigma_BSE, sharpness_BSE, hstripe_score_BSE, height.",
+        "closed_set": {
+          "predicted_batch": "Batch_1",
+          "confidence": 0.9693091471891538,
+          "probabilities": {
+            "Batch_1": 0.9693091471891538,
+            "Batch_2": 0.027739893957998876,
+            "Batch_3": 0.002950958852847224
+          },
+          "runner_up": "Batch_2",
+          "margin": 0.9415692532311549,
+          "tier": "low",
+          "note": "assumes the image is from one of the known batches",
+          "justification": {
+            "rule": "pred_batch = argmax of the image's predicted probability (out-of-fold for training images); always one of Batch_1, Batch_2, Batch_3. confidence = that probability; margin = top minus runner-up. Tier: low if p_max < 0.5, or LOIO permutation p >= 0.05, or OOD label = outside_bounds; medium if 0.5 <= p_max < 0.75; high if p_max >= 0.75 and LOIO permutation p < 0.05. Model: StandardScaler(F01-F11) + PCA(n_components=29, svd_solver='full') of the raw mean-pooled BSE DINOv2 embedding, both fitted on the training images only; LogisticRegression(C=1.0, class_weight='balanced', solver='lbfgs', max_iter=10000, random_state=0), L2, multinomial.",
+            "numbers": {
+              "Batch_1": 0.9693091471891538,
+              "Batch_2": 0.027739893957998876,
+              "Batch_3": 0.002950958852847224,
+              "margin": 0.9415692532311549,
+              "tier_reason": "outside the Batch_3 embedding band (OOD caps the tier at low)",
+              "loio_accuracy": "18/31",
+              "loio_permutation_p": 0.03496503496503497,
+              "chance_majority": "17/31",
+              "ood_label": "outside_bounds"
+            },
+            "evidence": [
+              {
+                "file": "results/v1/heldout_dryrun.json",
+                "selector": "images[subject.id == '4ih2ggld']"
+              },
+              {
+                "file": "results/v1/loio_summary.json",
+                "selector": "loio_accuracy, permutation_p"
+              },
+              {
+                "file": "results/v1/final_model.csv",
+                "selector": "all rows"
+              },
+              {
+                "file": "docs/Log/2026-10-04_phase_c.md",
+                "selector": "Frozen choices"
+              }
+            ]
+          }
+        },
+        "open_set": {
+          "nearest_batch": "Batch_1",
+          "distance_to_each_batch": {
+            "Batch_1": 0.21661790743465453,
+            "Batch_2": 0.37814419821508793,
+            "Batch_3": 0.45623226684636375
+          },
+          "null_band_95": 0.21979105149424963,
+          "null_band_99": 0.24460859976440058,
+          "matches_known_batch": false,
+          "justification": {
+            "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch.",
+            "numbers": {
+              "e1_to_batch3": 0.45623226684636375,
+              "band95": 0.21979105149424963,
+              "band99": 0.24460859976440058,
+              "n_reference": 17,
+              "null_max": 0.2508129868319383
+            },
+            "evidence": [
+              {
+                "file": "results/v1/heldout_dryrun.json",
+                "selector": "images[subject.id == '4ih2ggld']"
+              },
+              {
+                "file": "results/emb_per_image.parquet",
+                "selector": "channel == 'BSE'"
+              }
+            ]
+          }
+        },
+        "justification": {
+          "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch.",
+          "numbers": {
+            "e1_to_batch3": 0.45623226684636375,
+            "band95": 0.21979105149424963,
+            "band99": 0.24460859976440058
+          },
+          "evidence": [
+            {
+              "file": "results/v1/heldout_dryrun.json",
+              "selector": "images[subject.id == '4ih2ggld']"
+            }
+          ]
+        }
+      },
+      "pipeline": {
+        "git_sha": "e6046e6",
+        "git_tag": null,
+        "config_path": "configs/v1.yaml",
+        "config_hash": "45629944e398",
+        "timestamp_utc": "2026-10-04T02:39:14.794826+00:00",
+        "frozen": false,
+        "exploratory": true,
+        "model_revisions": {
+          "dinov2_hub_ref": "7764ea0f912e53c92e82eb78a2a1631e92725fc8",
+          "dinov2_weights_sha256": "b938bf1bc15cd2ec0feacfe3a1bb553fe8ea9ca46a7e1d8d00217f29aef60cd9",
+          "classifier": "StandardScaler(F01-F11) + PCA(n_components=29, svd_solver='full') of the raw mean-pooled BSE DINOv2 embedding, both fitted on the training images only; LogisticRegression(C=1.0, class_weight='balanced', solver='lbfgs', max_iter=10000, random_state=0), L2, multinomial."
+        }
+      },
+      "acquisition": {
+        "detectors_present": [
+          "BSE",
+          "ETD",
+          "Inlens"
+        ],
+        "pixel_size_nm": null,
+        "pixel_size_confirmed": false,
+        "covariates": {
+          "noise_sigma_BSE": {
+            "value": 47.956407692307685,
+            "training_p05": 30.203223076923077,
+            "training_p95": 47.79959423076923,
+            "flag": true,
+            "justification": {
+              "rule": "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images used for that prediction; reported only, not a model input.",
+              "numbers": {
+                "value": 47.956407692307685,
+                "training_p05": 30.203223076923077,
+                "training_p95": 47.79959423076923,
+                "n_training_images": 31,
+                "flag": true
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "inputs.4ih2ggld.covariates"
+                },
+                {
+                  "file": "img_4ih2ggld_BSE.tif",
+                  "selector": "TIFF metadata"
+                }
+              ]
+            }
+          },
+          "sharpness_BSE": {
+            "value": 2580.3561737353984,
+            "training_p05": 1015.7933762623713,
+            "training_p95": 2525.597429000414,
+            "flag": true,
+            "justification": {
+              "rule": "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images used for that prediction; reported only, not a model input.",
+              "numbers": {
+                "value": 2580.3561737353984,
+                "training_p05": 1015.7933762623713,
+                "training_p95": 2525.597429000414,
+                "n_training_images": 31,
+                "flag": true
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "inputs.4ih2ggld.covariates"
+                },
+                {
+                  "file": "img_4ih2ggld_BSE.tif",
+                  "selector": "TIFF metadata"
+                }
+              ]
+            }
+          },
+          "curtaining_score_BSE": {
+            "value": 0.022490463937336322,
+            "training_p05": 0.019745805591529674,
+            "training_p95": 0.02669978772811719,
+            "flag": false,
+            "justification": {
+              "rule": "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images used for that prediction; reported only, not a model input.",
+              "numbers": {
+                "value": 0.022490463937336322,
+                "training_p05": 0.019745805591529674,
+                "training_p95": 0.02669978772811719,
+                "n_training_images": 31,
+                "flag": false
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "inputs.4ih2ggld.covariates"
+                },
+                {
+                  "file": "img_4ih2ggld_BSE.tif",
+                  "selector": "TIFF metadata"
+                }
+              ]
+            }
+          },
+          "hstripe_score_BSE": {
+            "value": 0.031120983670379694,
+            "training_p05": 0.031219751275595932,
+            "training_p95": 0.043262900640911914,
+            "flag": true,
+            "justification": {
+              "rule": "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images used for that prediction; reported only, not a model input.",
+              "numbers": {
+                "value": 0.031120983670379694,
+                "training_p05": 0.031219751275595932,
+                "training_p95": 0.043262900640911914,
+                "n_training_images": 31,
+                "flag": true
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "inputs.4ih2ggld.covariates"
+                },
+                {
+                  "file": "img_4ih2ggld_BSE.tif",
+                  "selector": "TIFF metadata"
+                }
+              ]
+            }
+          },
+          "edge_charging_BSE": {
+            "value": 0.621777777517249,
+            "training_p05": -0.6996318321075112,
+            "training_p95": 1.061743261971936,
+            "flag": false,
+            "justification": {
+              "rule": "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images used for that prediction; reported only, not a model input.",
+              "numbers": {
+                "value": 0.621777777517249,
+                "training_p05": -0.6996318321075112,
+                "training_p95": 1.061743261971936,
+                "n_training_images": 31,
+                "flag": false
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "inputs.4ih2ggld.covariates"
+                },
+                {
+                  "file": "img_4ih2ggld_BSE.tif",
+                  "selector": "TIFF metadata"
+                }
+              ]
+            }
+          },
+          "edge_charging_Inlens": {
+            "value": -0.40071573951418343,
+            "training_p05": -5.527612730155483,
+            "training_p95": 2.0583482240589466,
+            "flag": false,
+            "justification": {
+              "rule": "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images used for that prediction; reported only, not a model input.",
+              "numbers": {
+                "value": -0.40071573951418343,
+                "training_p05": -5.527612730155483,
+                "training_p95": 2.0583482240589466,
+                "n_training_images": 31,
+                "flag": false
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "inputs.4ih2ggld.covariates"
+                },
+                {
+                  "file": "img_4ih2ggld_BSE.tif",
+                  "selector": "TIFF metadata"
+                }
+              ]
+            }
+          },
+          "height": {
+            "value": 2316.0,
+            "training_p05": 1696.0,
+            "training_p95": 2294.0,
+            "flag": true,
+            "justification": {
+              "rule": "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images used for that prediction; reported only, not a model input.",
+              "numbers": {
+                "value": 2316.0,
+                "training_p05": 1696.0,
+                "training_p95": 2294.0,
+                "n_training_images": 31,
+                "flag": true
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "inputs.4ih2ggld.covariates"
+                },
+                {
+                  "file": "img_4ih2ggld_BSE.tif",
+                  "selector": "TIFF metadata"
+                }
+              ]
+            }
+          },
+          "nm_per_px_if_tag_true": {
+            "value": 25.000055118231757,
+            "training_p05": 24.99920160030165,
+            "training_p95": 25.000548043509863,
+            "flag": false,
+            "justification": {
+              "rule": "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images used for that prediction; reported only, not a model input.",
+              "numbers": {
+                "value": 25.000055118231757,
+                "training_p05": 24.99920160030165,
+                "training_p95": 25.000548043509863,
+                "n_training_images": 31,
+                "flag": false
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "inputs.4ih2ggld.covariates"
+                },
+                {
+                  "file": "img_4ih2ggld_BSE.tif",
+                  "selector": "TIFF metadata"
+                }
+              ]
+            }
+          }
+        },
+        "acquisition_drift_suspected": true
+      },
+      "evidence": {
+        "drivers": [
+          {
+            "name": "embedding PC 1",
+            "units": "PC score (embedding units)",
+            "value": -4.614998814303735,
+            "standardised_value": -4.614998814303735,
+            "coefficient": -0.4773556012154206,
+            "effect_size": 2.2029955336104123,
+            "direction": "lower",
+            "tag": "embedding: acquisition and material not separable (Phase B residualisation)",
+            "justification": {
+              "rule": "contribution_k = coef[pred_batch, k] x x_k (x_k = standardised F value or embedding PC score); top 3 by signed contribution, i.e. the largest support for the bet.",
+              "numbers": {
+                "coefficient": -0.4773556012154206,
+                "standardised_value": -4.614998814303735,
+                "contribution": 2.2029955336104123
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "images[subject.id == '4ih2ggld']"
+                },
+                {
+                  "file": "results/v1/final_model.csv",
+                  "selector": "all rows"
+                }
+              ]
+            }
+          },
+          {
+            "name": "embedding PC 2",
+            "units": "PC score (embedding units)",
+            "value": -4.692315867499199,
+            "standardised_value": -4.692315867499199,
+            "coefficient": -0.3977764741382944,
+            "effect_size": 1.8664928613170038,
+            "direction": "lower",
+            "tag": "embedding: acquisition and material not separable (Phase B residualisation)",
+            "justification": {
+              "rule": "contribution_k = coef[pred_batch, k] x x_k (x_k = standardised F value or embedding PC score); top 3 by signed contribution, i.e. the largest support for the bet.",
+              "numbers": {
+                "coefficient": -0.3977764741382944,
+                "standardised_value": -4.692315867499199,
+                "contribution": 1.8664928613170038
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "images[subject.id == '4ih2ggld']"
+                },
+                {
+                  "file": "results/v1/final_model.csv",
+                  "selector": "all rows"
+                }
+              ]
+            }
+          },
+          {
+            "name": "F06_c2_clark_evans_R",
+            "units": "px-based image feature (standardised)",
+            "value": 0.8519519289196332,
+            "standardised_value": 2.533777025319557,
+            "coefficient": 0.3697204919053791,
+            "effect_size": 0.9367892881796948,
+            "direction": "higher",
+            "tag": "material (segmentation-derived; Phase B status: drop)",
+            "justification": {
+              "rule": "contribution_k = coef[pred_batch, k] x x_k (x_k = standardised F value or embedding PC score); top 3 by signed contribution, i.e. the largest support for the bet.",
+              "numbers": {
+                "coefficient": 0.3697204919053791,
+                "standardised_value": 2.533777025319557,
+                "contribution": 0.9367892881796948
+              },
+              "evidence": [
+                {
+                  "file": "results/v1/heldout_dryrun.json",
+                  "selector": "images[subject.id == '4ih2ggld']"
+                },
+                {
+                  "file": "results/v1/final_model.csv",
+                  "selector": "all rows"
+                }
+              ]
+            }
+          }
+        ],
+        "embedding": {
+          "backbone": "dinov2_vits14",
+          "energy_distance": 0.45623226684636375
+        }
+      },
+      "uncertainty": {
+        "sampling": "model trained on n=31 images; LOIO accuracy 18/31 (Wilson 95 % CI 0.41-0.74), permutation p=0.0350",
+        "segmentation": "F-feature drivers carry their Phase B status; 17/23 Phase B features were dropped for +/-10 % threshold sensitivity (results/stats/feature_status.csv)",
+        "decision_margin": "probability margin 0.942 to Batch_2; E1 is -0.2116 from band99"
+      },
+      "routing": {
+        "stakeholder": "materials_expert_review",
+        "reason": "BSE embedding outside the Batch_3 99 % band"
+      },
+      "next_action": "Review this image against Batch_3 before accepting the material; check acquisition settings first.",
+      "caveats": [
+        "phase_identity: stated by Polaron, not image-verified; Si vs SiOx is indistinguishable in BSE; binder and conductive additive are lumped.",
+        "Pixel size unconfirmed; all lengths in px.",
+        "Embedding batch differences vanished after acquisition residualisation in Phase B; embedding drivers may reflect acquisition rather than material.",
+        "Batch_1 / Batch_2 are variations relative to the Batch_3 baseline, not better or worse."
+      ]
+    }
+  ],
+  "inputs": {
+    "0grcilhi": {
+      "F01_c0_area_fraction": 0.1397652867571398,
+      "F02_c2_area_fraction": 0.12552935766012388,
+      "F03_c2_eqdiam_median_px": 8.214724333230155,
+      "F04_c2_eqdiam_p90_px": 25.780439141949365,
+      "F05_c2_count_density_per_Mpx": 192.9349408818219,
+      "F06_c2_clark_evans_R": 0.7589025293269391,
+      "F07_c2_solidity_area_weighted_median": 0.6663169196232492,
+      "F08_c0_local_thickness_median_px": 38.4,
+      "F09_c0_chord_anisotropy_h_over_v": 1.1839536896963723,
+      "F10_c0_fraction_iqr_512px": 0.04763221740722656,
+      "F11_c2_perimeter_fraction_adjacent_c0": 0.0002175805047867711,
+      "covariates": {
+        "noise_sigma_BSE": 37.217061538461536,
+        "sharpness_BSE": 1631.5720306787734,
+        "curtaining_score_BSE": 0.021310860219088512,
+        "hstripe_score_BSE": 0.03598502761458415,
+        "edge_charging_BSE": 0.6176895183363231,
+        "edge_charging_Inlens": 2.0143079317953676,
+        "height": 1904.0,
+        "nm_per_px_if_tag_true": 25.000548043509866
+      },
+      "BSE_embedding": [
+        -0.27605095505714417,
+        -0.07291705161333084,
+        -0.6284480094909668,
+        -1.8738584518432617,
+        -2.293795585632324,
+        0.5785729289054871,
+        -1.0763745307922363,
+        -1.2857732772827148,
+        0.9529872536659241,
+        0.8017367124557495,
+        -0.784274160861969,
+        -1.4149582386016846,
+        2.4370391368865967,
+        -2.453113079071045,
+        0.6717543601989746,
+        0.5668862462043762,
+        -2.259679079055786,
+        -0.9967581033706665,
+        -0.06909399479627609,
+        -1.136226773262024,
+        0.7091317176818848,
+        -2.304333448410034,
+        0.9297552108764648,
+        1.9618078470230103,
+        -3.130671262741089,
+        1.8847171068191528,
+        -1.2856441736221313,
+        -1.44772207736969,
+        0.1324281096458435,
+        -2.0093352794647217,
+        -1.0336227416992188,
+        -3.9069290161132812,
+        -1.4812043905258179,
+        0.8354109525680542,
+        0.7997946739196777,
+        0.3178030848503113,
+        -1.0459928512573242,
+        -0.3422667384147644,
+        0.8677960634231567,
+        -0.7780967354774475,
+        0.6656310558319092,
+        -0.3570089638233185,
+        -1.1989988088607788,
+        0.49114590883255005,
+        1.770425796508789,
+        -0.6405867338180542,
+        -1.478667140007019,
+        -1.8443964719772339,
+        -0.4138498902320862,
+        0.6486737728118896,
+        -0.0781237930059433,
+        0.7863954901695251,
+        0.05158136039972305,
+        2.7663023471832275,
+        2.730417251586914,
+        1.156270980834961,
+        -0.5348223447799683,
+        -1.4761658906936646,
+        0.027002651244401932,
+        -0.8938905596733093,
+        2.918409585952759,
+        0.3680241107940674,
+        -1.4442185163497925,
+        0.17708678543567657,
+        -0.09050643444061279,
+        -0.5838057994842529,
+        0.948850154876709,
+        -2.4789042472839355,
+        2.857506513595581,
+        0.9632219076156616,
+        -1.6454743146896362,
+        2.5377423763275146,
+        -1.0426913499832153,
+        1.5001909732818604,
+        -2.0207908153533936,
+        2.6766631603240967,
+        -0.524929404258728,
+        0.4447285234928131,
+        -1.359084129333496,
+        -3.9187862873077393,
+        -1.6291542053222656,
+        3.121270179748535,
+        0.3194964528083801,
+        1.0107327699661255,
+        -1.0369453430175781,
+        0.7560300827026367,
+        -0.09062853455543518,
+        0.22666366398334503,
+        -0.27224043011665344,
+        -0.4527241587638855,
+        -0.17122919857501984,
+        -1.8783204555511475,
+        2.0750105381011963,
+        -0.9788284301757812,
+        0.8513433933258057,
+        2.348015308380127,
+        1.216488003730774,
+        1.6023746728897095,
+        -0.46042850613594055,
+        0.5821985006332397,
+        2.734452724456787,
+        3.4600155353546143,
+        1.391337275505066,
+        1.0139271020889282,
+        1.1554144620895386,
+        -1.4469313621520996,
+        -0.2889759838581085,
+        2.1843316555023193,
+        3.4088821411132812,
+        -1.4718573093414307,
+        1.8688424825668335,
+        -2.4519097805023193,
+        -0.503788948059082,
+        -1.5011250972747803,
+        1.866757869720459,
+        -0.0053354352712631226,
+        0.4565350115299225,
+        -1.1337448358535767,
+        -1.6570714712142944,
+        0.11096099019050598,
+        0.37867027521133423,
+        0.16641195118427277,
+        -1.8174912929534912,
+        1.6811342239379883,
+        1.659875750541687,
+        2.040412425994873,
+        2.9686295986175537,
+        1.1271467208862305,
+        -1.1248149871826172,
+        -1.8593558073043823,
+        0.4948802590370178,
+        1.1035746335983276,
+        -2.269902229309082,
+        -0.7660677433013916,
+        -1.9950551986694336,
+        2.1435883045196533,
+        1.8620961904525757,
+        -0.2159700095653534,
+        2.4536237716674805,
+        0.4884336292743683,
+        -2.5678186416625977,
+        -0.2057817578315735,
+        2.2957966327667236,
+        0.43803173303604126,
+        -1.3045291900634766,
+        -0.1857418417930603,
+        1.099877953529358,
+        -1.9701554775238037,
+        -1.0100418329238892,
+        2.022218704223633,
+        0.4338667690753937,
+        -2.714256763458252,
+        0.2835436761379242,
+        2.386650323867798,
+        2.0392019748687744,
+        1.0562721490859985,
+        -0.15458637475967407,
+        4.387109584058635e-05,
+        -1.9488070011138916,
+        1.2676922082901,
+        -1.4337807893753052,
+        0.40167132019996643,
+        0.6335508227348328,
+        1.9568138122558594,
+        1.2582778930664062,
+        1.1822855472564697,
+        -1.6504623889923096,
+        -2.2706384658813477,
+        -1.4476200342178345,
+        0.9422726035118103,
+        -0.8417451977729797,
+        0.7308937311172485,
+        -0.24732112884521484,
+        1.8432607650756836,
+        3.9574947357177734,
+        0.6352360844612122,
+        0.695901095867157,
+        1.4601936340332031,
+        -1.2025887966156006,
+        1.3412059545516968,
+        0.8389209508895874,
+        1.3312690258026123,
+        -0.7048938274383545,
+        -0.30811208486557007,
+        1.3641889095306396,
+        0.9073851704597473,
+        0.9007017612457275,
+        1.105992317199707,
+        1.6060459613800049,
+        -2.0336687564849854,
+        -0.5760473012924194,
+        -4.302015781402588,
+        -0.4236404299736023,
+        1.2219479084014893,
+        0.16691453754901886,
+        -0.1409243494272232,
+        -1.1490174531936646,
+        -3.9047770500183105,
+        0.08222881704568863,
+        -0.6046513319015503,
+        0.16643516719341278,
+        1.784168004989624,
+        4.544966220855713,
+        -0.51743084192276,
+        0.28071990609169006,
+        3.4783177375793457,
+        1.53277587890625,
+        0.2983724772930145,
+        5.477066993713379,
+        -0.1333557665348053,
+        -0.3171387016773224,
+        0.1515544354915619,
+        0.5187677145004272,
+        -0.3742102384567261,
+        1.6459208726882935,
+        0.817687451839447,
+        -1.0688488483428955,
+        -2.409080743789673,
+        0.05142160505056381,
+        5.358178615570068,
+        2.43410062789917,
+        1.25770103931427,
+        -1.3559389114379883,
+        -0.26387473940849304,
+        0.7010470032691956,
+        -1.2032839059829712,
+        0.8181978464126587,
+        0.10791897028684616,
+        2.228527069091797,
+        1.9819858074188232,
+        1.0041542053222656,
+        -0.19238048791885376,
+        2.860828399658203,
+        -1.0284489393234253,
+        -1.3277409076690674,
+        -0.18878643214702606,
+        1.4141303300857544,
+        2.9502615928649902,
+        -1.807860016822815,
+        0.5092760324478149,
+        1.6231755018234253,
+        1.1859323978424072,
+        -2.36128306388855,
+        -2.6091127395629883,
+        -0.5943081974983215,
+        -0.7118555903434753,
+        2.245736598968506,
+        0.5690769553184509,
+        -0.2120673954486847,
+        1.9363536834716797,
+        0.006722252815961838,
+        0.268667608499527,
+        -1.2499430179595947,
+        -1.2077720165252686,
+        -1.7917460203170776,
+        2.061282157897949,
+        2.3833017349243164,
+        -3.6814823150634766,
+        0.4491400718688965,
+        -0.6797991991043091,
+        0.8575966954231262,
+        -0.41942331194877625,
+        1.6562131643295288,
+        -0.038066014647483826,
+        2.924084424972534,
+        2.1002650260925293,
+        -2.731445550918579,
+        -3.2459261417388916,
+        0.05737140029668808,
+        -0.8176126480102539,
+        0.3235223591327667,
+        0.7573825120925903,
+        -1.1596425771713257,
+        -0.006847748998552561,
+        0.6525875926017761,
+        0.7797378301620483,
+        0.6762065887451172,
+        -0.8827725052833557,
+        -4.949398517608643,
+        -0.7227046489715576,
+        -1.5793486833572388,
+        -1.388370394706726,
+        -0.460422545671463,
+        1.4499735832214355,
+        -0.36325371265411377,
+        0.7882558107376099,
+        -1.9070194959640503,
+        -0.43218502402305603,
+        1.446501612663269,
+        -2.8488221168518066,
+        -0.1343095749616623,
+        2.1531903743743896,
+        1.470027208328247,
+        3.140899658203125,
+        1.6205426454544067,
+        -0.5615437626838684,
+        -0.8954532742500305,
+        1.4889342784881592,
+        1.2259316444396973,
+        -0.9088315963745117,
+        1.7569841146469116,
+        -1.2346059083938599,
+        1.0809171199798584,
+        1.9303793907165527,
+        0.6189063787460327,
+        -0.31998950242996216,
+        0.17420551180839539,
+        0.8534827828407288,
+        0.4488297998905182,
+        -2.1144278049468994,
+        -0.350707471370697,
+        1.9687713384628296,
+        1.0016045570373535,
+        -1.392999291419983,
+        -0.936795175075531,
+        -2.9791760444641113,
+        -2.1338775157928467,
+        1.5764960050582886,
+        -4.798231601715088,
+        0.9285243153572083,
+        -2.4056828022003174,
+        2.115626811981201,
+        0.5311577320098877,
+        2.1725878715515137,
+        -0.6090186834335327,
+        -0.698928952217102,
+        3.4766604900360107,
+        -0.6895118355751038,
+        0.6231771111488342,
+        0.6171745657920837,
+        -0.9216914176940918,
+        0.07912061363458633,
+        0.1286165416240692,
+        -0.8488765954971313,
+        2.001333475112915,
+        -1.7293400764465332,
+        1.238053798675537,
+        0.6349830627441406,
+        -0.46105730533599854,
+        0.30755698680877686,
+        -2.2682671546936035,
+        -1.8120172023773193,
+        -0.6082095503807068,
+        0.7503225207328796,
+        -1.223375678062439,
+        -1.3567264080047607,
+        0.6681982278823853,
+        -2.010105609893799,
+        1.480162262916565,
+        1.8518458604812622,
+        -0.32040125131607056,
+        1.1387412548065186,
+        -1.2396249771118164,
+        -0.2622331976890564,
+        0.17309817671775818,
+        0.18266645073890686,
+        -4.181020259857178,
+        -0.8601793050765991,
+        -1.4458309412002563,
+        -0.3112476170063019,
+        -0.24739506840705872,
+        -0.23012517392635345,
+        2.7739274501800537,
+        -0.3078596889972687,
+        -0.6469230651855469,
+        1.250288486480713,
+        0.7976155877113342,
+        0.5562132000923157,
+        -0.11432085186243057,
+        2.862830400466919,
+        -2.049074411392212,
+        -0.15414832532405853,
+        0.8614726662635803,
+        3.462953567504883,
+        0.2874813377857208,
+        2.685668706893921,
+        2.58496356010437,
+        -0.839069128036499,
+        -1.0057477951049805,
+        -0.04275552183389664,
+        -5.046858787536621,
+        -0.14718922972679138,
+        -0.7179316878318787,
+        1.1951630115509033
+      ]
+    },
+    "3806gxp0": {
+      "F01_c0_area_fraction": 0.10819753362015315,
+      "F02_c2_area_fraction": 0.08405454029908632,
+      "F03_c2_eqdiam_median_px": 7.978845608028654,
+      "F04_c2_eqdiam_p90_px": 27.139742770629788,
+      "F05_c2_count_density_per_Mpx": 69.61919708490046,
+      "F06_c2_clark_evans_R": 0.6767310451442574,
+      "F07_c2_solidity_area_weighted_median": 0.8977559335187221,
+      "F08_c0_local_thickness_median_px": 26.0,
+      "F09_c0_chord_anisotropy_h_over_v": 1.091712680124707,
+      "F10_c0_fraction_iqr_512px": 0.04874610900878906,
+      "F11_c2_perimeter_fraction_adjacent_c0": 0.00012924906294429367,
+      "covariates": {
+        "noise_sigma_BSE": 44.36395384615384,
+        "sharpness_BSE": 2186.6342533307197,
+        "curtaining_score_BSE": 0.023925863336218045,
+        "hstripe_score_BSE": 0.03131851888081217,
+        "edge_charging_BSE": 0.07300336042448426,
+        "edge_charging_Inlens": -6.26901222934709,
+        "height": 2048.0,
+        "nm_per_px_if_tag_true": 24.999707090046062
+      },
+      "BSE_embedding": [
+        -0.03206545487046242,
+        0.2915997803211212,
+        -0.2540591359138489,
+        -1.170357346534729,
+        -2.6960723400115967,
+        0.6097294688224792,
+        -1.453575849533081,
+        -1.3341904878616333,
+        1.4266718626022339,
+        0.4364283084869385,
+        -0.977536678314209,
+        -1.4619722366333008,
+        2.680565357208252,
+        -2.3780415058135986,
+        0.4604434669017792,
+        0.7939462661743164,
+        -2.1085948944091797,
+        -1.0175701379776,
+        -0.026487287133932114,
+        -1.1255450248718262,
+        0.4119202196598053,
+        -2.2977523803710938,
+        0.19819815456867218,
+        1.8596969842910767,
+        -3.1180684566497803,
+        1.563917636871338,
+        -1.390128254890442,
+        -1.5650882720947266,
+        0.10841438174247742,
+        -1.5492610931396484,
+        -1.0920681953430176,
+        -4.4059224128723145,
+        -1.3804014921188354,
+        0.7548626661300659,
+        0.6976677775382996,
+        0.5524579882621765,
+        -1.3796305656433105,
+        -0.6725496053695679,
+        0.7385544180870056,
+        -0.46223247051239014,
+        1.1678493022918701,
+        -0.24796579778194427,
+        -0.9502401351928711,
+        0.4348268508911133,
+        1.751567006111145,
+        -0.6243858337402344,
+        -1.8634599447250366,
+        -1.9000064134597778,
+        -0.5804193019866943,
+        0.7420857548713684,
+        -0.25021791458129883,
+        0.5463827848434448,
+        -0.3017122447490692,
+        2.661511182785034,
+        2.8045201301574707,
+        1.2953214645385742,
+        -0.4640059173107147,
+        -1.5679994821548462,
+        -0.5123773217201233,
+        -0.4210266172885895,
+        3.055666446685791,
+        -0.12081033736467361,
+        -1.3529293537139893,
+        0.142458975315094,
+        0.0313461534678936,
+        -0.9485945701599121,
+        1.1325039863586426,
+        -2.4654085636138916,
+        2.118521213531494,
+        1.9559892416000366,
+        -1.7053844928741455,
+        2.647226333618164,
+        -1.0111756324768066,
+        1.7101576328277588,
+        -1.6346746683120728,
+        2.6905200481414795,
+        -0.2805720269680023,
+        0.09066292643547058,
+        -1.500640869140625,
+        -3.8826470375061035,
+        -1.0670663118362427,
+        2.9837260246276855,
+        -0.36958274245262146,
+        0.8453894853591919,
+        -1.1100926399230957,
+        1.5154404640197754,
+        -0.25548022985458374,
+        -0.03759656473994255,
+        -0.2280355989933014,
+        -0.08488062024116516,
+        -0.46495959162712097,
+        -2.4149389266967773,
+        1.643166422843933,
+        -0.28512075543403625,
+        0.3507814407348633,
+        2.0192759037017822,
+        1.084856390953064,
+        2.106504440307617,
+        -1.5776444673538208,
+        0.4979862868785858,
+        2.874335527420044,
+        3.4468319416046143,
+        1.1913236379623413,
+        1.296284794807434,
+        1.0860364437103271,
+        -1.769577980041504,
+        -0.44269728660583496,
+        2.036160945892334,
+        3.6028902530670166,
+        -1.0224529504776,
+        2.349501848220825,
+        -2.030073642730713,
+        -1.0843746662139893,
+        -1.4514973163604736,
+        1.6334432363510132,
+        -0.42006880044937134,
+        0.018608996644616127,
+        -1.3519737720489502,
+        -1.2783063650131226,
+        0.11928009241819382,
+        0.7006583213806152,
+        -0.016360126435756683,
+        -1.689068078994751,
+        1.3022350072860718,
+        1.3369561433792114,
+        1.646716833114624,
+        2.966892719268799,
+        0.9618533849716187,
+        -1.028519868850708,
+        -2.062293767929077,
+        0.7095919251441956,
+        0.36320745944976807,
+        -2.2437126636505127,
+        -1.1591050624847412,
+        -1.514594554901123,
+        2.103121042251587,
+        1.214768648147583,
+        -1.0467404127120972,
+        2.317000389099121,
+        0.8004480004310608,
+        -2.514127731323242,
+        -0.11515065282583237,
+        2.472170114517212,
+        0.4391898214817047,
+        -1.137403130531311,
+        -0.24092422425746918,
+        0.6467122435569763,
+        -2.5479891300201416,
+        -1.0696853399276733,
+        2.41291880607605,
+        -0.2686649560928345,
+        -2.5399982929229736,
+        0.061899203807115555,
+        2.4439477920532227,
+        1.9389373064041138,
+        0.38113242387771606,
+        -0.13592930138111115,
+        -0.17398002743721008,
+        -1.7069694995880127,
+        1.5726248025894165,
+        -1.3053247928619385,
+        0.5838494300842285,
+        1.1444907188415527,
+        2.584951400756836,
+        1.615983486175537,
+        1.6024445295333862,
+        -2.060420513153076,
+        -2.225316286087036,
+        -1.4003297090530396,
+        1.0830788612365723,
+        -0.009048590436577797,
+        0.5103974342346191,
+        -0.2571607530117035,
+        1.6656105518341064,
+        4.3345818519592285,
+        0.8047134876251221,
+        0.6478057503700256,
+        1.4052847623825073,
+        -1.4950716495513916,
+        1.5604405403137207,
+        1.337700366973877,
+        1.477827787399292,
+        -0.6290152668952942,
+        -0.7564375996589661,
+        0.530157744884491,
+        1.0339617729187012,
+        0.4367251694202423,
+        1.0516481399536133,
+        1.489532232284546,
+        -2.067434072494507,
+        -0.664578914642334,
+        -3.985868215560913,
+        -0.40342414379119873,
+        1.5251439809799194,
+        0.21896688640117645,
+        -0.16569271683692932,
+        -0.7547768354415894,
+        -4.361363410949707,
+        0.06645085662603378,
+        -0.6603637933731079,
+        0.11050522327423096,
+        1.68253493309021,
+        4.830953121185303,
+        -0.5942009091377258,
+        0.9010534286499023,
+        3.689398765563965,
+        1.3231232166290283,
+        0.28043460845947266,
+        5.358100414276123,
+        0.029114482924342155,
+        -0.7695654630661011,
+        0.43695008754730225,
+        0.4996393918991089,
+        -0.1448875218629837,
+        2.0813519954681396,
+        1.3515973091125488,
+        -0.8887057900428772,
+        -1.8101720809936523,
+        0.06257478892803192,
+        5.206798553466797,
+        2.6022067070007324,
+        1.254513144493103,
+        -1.3327409029006958,
+        -0.21882733702659607,
+        0.563334047794342,
+        -1.598062515258789,
+        1.2816195487976074,
+        -0.025209011510014534,
+        2.783543825149536,
+        2.0029678344726562,
+        0.9106454849243164,
+        0.09450193494558334,
+        2.9338643550872803,
+        -1.1601378917694092,
+        -1.2935105562210083,
+        -0.4748198390007019,
+        1.0207483768463135,
+        3.2189438343048096,
+        -1.6985195875167847,
+        0.12277856469154358,
+        1.933121919631958,
+        1.409571647644043,
+        -2.034076452255249,
+        -2.6112115383148193,
+        -0.3373871445655823,
+        -0.6295090913772583,
+        2.5145366191864014,
+        0.20316019654273987,
+        -0.6260621547698975,
+        2.124366044998169,
+        0.20094241201877594,
+        0.4806419610977173,
+        -1.006626844406128,
+        -0.843274712562561,
+        -1.6088387966156006,
+        1.5207494497299194,
+        2.239492893218994,
+        -4.025085926055908,
+        0.9997050762176514,
+        -1.1144757270812988,
+        1.2962324619293213,
+        -0.38507238030433655,
+        1.877204418182373,
+        0.242936909198761,
+        2.9043188095092773,
+        2.4847917556762695,
+        -2.861633062362671,
+        -3.736710548400879,
+        0.3614193797111511,
+        -1.0867077112197876,
+        0.35957831144332886,
+        0.4439657926559448,
+        -1.1010677814483643,
+        -0.19199448823928833,
+        0.9381396174430847,
+        0.6064251065254211,
+        0.31769153475761414,
+        -0.8940500617027283,
+        -4.922654151916504,
+        -0.17889255285263062,
+        -1.2212789058685303,
+        -1.0453741550445557,
+        -0.777199387550354,
+        1.5497758388519287,
+        -0.6586773991584778,
+        0.9957966208457947,
+        -1.543850302696228,
+        -0.5277621150016785,
+        1.433571219444275,
+        -3.069594383239746,
+        -0.45513448119163513,
+        1.721678614616394,
+        1.828886866569519,
+        3.4082932472229004,
+        1.2885655164718628,
+        -0.4198940396308899,
+        -0.9480341076850891,
+        1.5043318271636963,
+        1.2911815643310547,
+        -0.8800533413887024,
+        1.7341058254241943,
+        -1.3705358505249023,
+        0.608014702796936,
+        2.165297508239746,
+        0.6781004667282104,
+        0.2713114619255066,
+        -0.39413896203041077,
+        0.8475983738899231,
+        0.38629841804504395,
+        -1.6633110046386719,
+        -0.893248975276947,
+        1.693253993988037,
+        1.0980710983276367,
+        -1.5421253442764282,
+        -1.1301758289337158,
+        -2.694707155227661,
+        -2.0788941383361816,
+        1.9709606170654297,
+        -4.743729114532471,
+        1.1944891214370728,
+        -2.7114694118499756,
+        2.224857807159424,
+        0.6698542833328247,
+        2.273693323135376,
+        -0.8379787802696228,
+        -0.997870683670044,
+        3.5817601680755615,
+        -0.5912826061248779,
+        1.1617108583450317,
+        0.7726056575775146,
+        -1.023708462715149,
+        0.0941346138715744,
+        -0.337522953748703,
+        -1.5372666120529175,
+        2.4033992290496826,
+        -1.2673741579055786,
+        0.997957170009613,
+        0.23791734874248505,
+        -0.49707889556884766,
+        0.49887123703956604,
+        -2.050114631652832,
+        -1.9431266784667969,
+        -0.7493852972984314,
+        1.3898797035217285,
+        -1.183801293373108,
+        -1.2615997791290283,
+        0.513658881187439,
+        -2.058619499206543,
+        1.7587697505950928,
+        1.5931851863861084,
+        -0.030689626932144165,
+        1.522071361541748,
+        -1.5007126331329346,
+        -0.42097800970077515,
+        0.3138851821422577,
+        -0.09012718498706818,
+        -3.9889042377471924,
+        -0.5753446817398071,
+        -1.6414737701416016,
+        0.04882241412997246,
+        -0.31306132674217224,
+        -0.5143875479698181,
+        2.5737550258636475,
+        0.8136996030807495,
+        -0.5635074377059937,
+        1.7022411823272705,
+        0.5696806311607361,
+        0.3984973132610321,
+        -0.1082892119884491,
+        3.4648563861846924,
+        -2.008077621459961,
+        0.16297392547130585,
+        0.9872229695320129,
+        3.77890944480896,
+        0.09680064767599106,
+        2.7022454738616943,
+        2.500767230987549,
+        -0.7775475978851318,
+        -0.8031834363937378,
+        -0.09055495262145996,
+        -5.0728631019592285,
+        -0.6489507555961609,
+        -1.446972131729126,
+        1.4710347652435303
+      ]
+    },
+    "4ih2ggld": {
+      "F01_c0_area_fraction": 0.10039921514887255,
+      "F02_c2_area_fraction": 0.20345440388688177,
+      "F03_c2_eqdiam_median_px": 8.214724333230155,
+      "F04_c2_eqdiam_p90_px": 23.936536824085962,
+      "F05_c2_count_density_per_Mpx": 271.583406004734,
+      "F06_c2_clark_evans_R": 0.8519519289196332,
+      "F07_c2_solidity_area_weighted_median": 0.5255190503712266,
+      "F08_c0_local_thickness_median_px": 32.0,
+      "F09_c0_chord_anisotropy_h_over_v": 1.1118244878190777,
+      "F10_c0_fraction_iqr_512px": 0.07616519927978516,
+      "F11_c2_perimeter_fraction_adjacent_c0": 0.004194000407070501,
+      "covariates": {
+        "noise_sigma_BSE": 47.956407692307685,
+        "sharpness_BSE": 2580.3561737353984,
+        "curtaining_score_BSE": 0.022490463937336322,
+        "hstripe_score_BSE": 0.031120983670379694,
+        "edge_charging_BSE": 0.621777777517249,
+        "edge_charging_Inlens": -0.40071573951418343,
+        "height": 2316.0,
+        "nm_per_px_if_tag_true": 25.000055118231757
+      },
+      "BSE_embedding": [
+        0.6702969074249268,
+        0.24525552988052368,
+        -0.3903495669364929,
+        -1.056735634803772,
+        -2.7454159259796143,
+        0.3649267554283142,
+        -1.9246054887771606,
+        -1.0978270769119263,
+        1.4937214851379395,
+        -0.36319634318351746,
+        -0.6151905655860901,
+        -1.6249127388000488,
+        2.5926923751831055,
+        -1.5915266275405884,
+        0.5714816451072693,
+        0.8811585903167725,
+        -2.055310010910034,
+        -0.9813286662101746,
+        0.4396759867668152,
+        -1.0143760442733765,
+        -0.22702106833457947,
+        -1.347206950187683,
+        1.3337228298187256,
+        1.718430757522583,
+        -2.5101027488708496,
+        1.9761730432510376,
+        -1.7785093784332275,
+        -1.122108817100525,
+        0.36529412865638733,
+        -1.6623870134353638,
+        -1.4563871622085571,
+        -4.29741096496582,
+        -0.917479395866394,
+        1.2936122417449951,
+        1.2132831811904907,
+        0.13131381571292877,
+        -1.2605822086334229,
+        -1.3486438989639282,
+        -0.7495447397232056,
+        -0.8144676089286804,
+        1.356502890586853,
+        -0.04096720740199089,
+        -0.7148410081863403,
+        0.4231891930103302,
+        1.833735466003418,
+        -0.6290006041526794,
+        -2.2437822818756104,
+        -1.4360318183898926,
+        0.14265982806682587,
+        0.6143145561218262,
+        0.1301710307598114,
+        -0.07972665876150131,
+        -1.0496734380722046,
+        1.960028886795044,
+        2.2866687774658203,
+        1.7165225744247437,
+        -0.2427474856376648,
+        -1.6205108165740967,
+        -1.0414628982543945,
+        -0.8769057393074036,
+        2.0961122512817383,
+        0.2783372402191162,
+        -1.9518522024154663,
+        1.7200822830200195,
+        0.17856624722480774,
+        -1.2312697172164917,
+        1.0635673999786377,
+        -2.3838305473327637,
+        1.56672203540802,
+        1.4476165771484375,
+        -2.97098970413208,
+        2.193246364593506,
+        -0.8949049115180969,
+        0.9888488054275513,
+        -1.20393967628479,
+        2.7732014656066895,
+        -0.6705114841461182,
+        0.4996658265590668,
+        -0.8765144348144531,
+        -3.930675745010376,
+        -1.2578668594360352,
+        2.6791248321533203,
+        -0.00806558970361948,
+        0.8537307381629944,
+        -0.7874663472175598,
+        1.5604541301727295,
+        -0.716334879398346,
+        0.7096469402313232,
+        -0.5719119310379028,
+        0.6828961372375488,
+        -0.8662296533584595,
+        -2.409792423248291,
+        1.2187176942825317,
+        -0.7307158708572388,
+        1.017542839050293,
+        1.4683018922805786,
+        1.3533560037612915,
+        1.090521216392517,
+        -1.8114049434661865,
+        0.6095744371414185,
+        3.2478809356689453,
+        2.683013439178467,
+        0.49464160203933716,
+        0.8024227023124695,
+        1.1580628156661987,
+        -1.2555710077285767,
+        -0.7555208802223206,
+        1.754031777381897,
+        3.5933737754821777,
+        -0.615161120891571,
+        1.8250620365142822,
+        -2.8372957706451416,
+        -1.0939135551452637,
+        -1.3526052236557007,
+        1.7820258140563965,
+        -0.46897077560424805,
+        0.5038622617721558,
+        -1.3492519855499268,
+        -1.578518271446228,
+        0.828778862953186,
+        -0.28714731335639954,
+        0.06320035457611084,
+        -1.643196702003479,
+        1.6910086870193481,
+        1.0373365879058838,
+        1.2226459980010986,
+        3.134428024291992,
+        1.0078086853027344,
+        -1.0243908166885376,
+        -1.9719792604446411,
+        0.8992671370506287,
+        0.5212250351905823,
+        -3.003852128982544,
+        -0.5030924081802368,
+        -1.0801113843917847,
+        2.340956449508667,
+        0.7078520655632019,
+        -0.29424425959587097,
+        1.8827978372573853,
+        0.3066404163837433,
+        -2.3766446113586426,
+        -0.1481679528951645,
+        2.399522542953491,
+        0.7494911551475525,
+        -1.4104682207107544,
+        0.26246508955955505,
+        0.5743624567985535,
+        -1.808030605316162,
+        -0.5478094816207886,
+        1.9850623607635498,
+        -0.12359204143285751,
+        -2.550673007965088,
+        0.4751162827014923,
+        1.817604422569275,
+        1.6511415243148804,
+        0.29502493143081665,
+        -0.38828161358833313,
+        0.8986172080039978,
+        -1.6337071657180786,
+        1.3771079778671265,
+        -0.9558475017547607,
+        -0.19764354825019836,
+        1.3959195613861084,
+        2.394688606262207,
+        0.8084471225738525,
+        1.5337753295898438,
+        -1.5061123371124268,
+        -2.062260627746582,
+        -1.447138786315918,
+        1.386972427368164,
+        0.1866178959608078,
+        0.15015996992588043,
+        0.35173603892326355,
+        1.9116261005401611,
+        3.6117539405822754,
+        0.15283368527889252,
+        0.8364644646644592,
+        1.6064373254776,
+        -1.6334216594696045,
+        1.8080573081970215,
+        1.2657982110977173,
+        1.9450207948684692,
+        -1.7407675981521606,
+        0.1192420944571495,
+        0.5618526339530945,
+        0.8657445907592773,
+        0.9028522968292236,
+        0.6715800166130066,
+        1.5940284729003906,
+        -1.946434497833252,
+        0.13441474735736847,
+        -3.4742512702941895,
+        -0.12092814594507217,
+        1.7075350284576416,
+        -0.5449258685112,
+        -0.01445944607257843,
+        -0.2501718997955322,
+        -4.067658424377441,
+        0.7904666662216187,
+        -0.7315114736557007,
+        0.09931732714176178,
+        0.8751451969146729,
+        5.2860331535339355,
+        -0.15772883594036102,
+        1.1071995496749878,
+        3.8875420093536377,
+        1.0906422138214111,
+        0.48419782519340515,
+        5.653772830963135,
+        0.6311758160591125,
+        -0.027860116213560104,
+        0.6365212798118591,
+        -0.34832456707954407,
+        0.2015557438135147,
+        1.8419910669326782,
+        1.4659796953201294,
+        -0.6355183720588684,
+        -2.4914541244506836,
+        0.24669797718524933,
+        5.4031901359558105,
+        2.8984224796295166,
+        1.4586458206176758,
+        -0.9683526158332825,
+        -0.4636509120464325,
+        1.0537469387054443,
+        -1.4013891220092773,
+        1.3038535118103027,
+        0.11440227180719376,
+        2.230224132537842,
+        0.9170495867729187,
+        1.0772796869277954,
+        -0.8271579742431641,
+        2.3490400314331055,
+        0.013605085201561451,
+        -0.2470579892396927,
+        -0.44035863876342773,
+        0.20002304017543793,
+        2.6884992122650146,
+        -1.4699701070785522,
+        -0.011168627999722958,
+        1.8150079250335693,
+        1.0640482902526855,
+        -3.239689826965332,
+        -2.394423246383667,
+        -0.31148359179496765,
+        -1.078362226486206,
+        2.5048248767852783,
+        -0.24624162912368774,
+        -1.3909385204315186,
+        1.8296787738800049,
+        0.8331437110900879,
+        -0.6499649286270142,
+        -0.7540189623832703,
+        -1.116149663925171,
+        -1.033724069595337,
+        0.7462570667266846,
+        1.52607262134552,
+        -4.05344295501709,
+        1.0502359867095947,
+        -0.4293470084667206,
+        1.8428955078125,
+        0.3627254068851471,
+        0.9769686460494995,
+        -0.39424046874046326,
+        1.8858661651611328,
+        2.7881760597229004,
+        -1.8982588052749634,
+        -4.4249043464660645,
+        0.804192304611206,
+        -1.2973098754882812,
+        0.37208566069602966,
+        0.20384401082992554,
+        -1.0925769805908203,
+        0.8754274249076843,
+        1.488977074623108,
+        0.6659619808197021,
+        0.5763633251190186,
+        -0.8749666810035706,
+        -5.150629997253418,
+        0.023282723501324654,
+        -1.3458054065704346,
+        -0.6006415486335754,
+        0.3438843786716461,
+        1.3253356218338013,
+        -1.6876987218856812,
+        0.882173478603363,
+        -1.8816956281661987,
+        0.2498455047607422,
+        1.9864507913589478,
+        -2.0379481315612793,
+        -0.4082811176776886,
+        1.4078775644302368,
+        1.3585375547409058,
+        2.800740957260132,
+        0.7930493950843811,
+        0.2657215893268585,
+        -0.5642699599266052,
+        1.726011872291565,
+        0.8250613808631897,
+        -0.7767127156257629,
+        0.7534123659133911,
+        -1.5995932817459106,
+        1.2087407112121582,
+        2.5733642578125,
+        1.028336524963379,
+        0.508884072303772,
+        0.06376657634973526,
+        0.8313337564468384,
+        0.5692711472511292,
+        -1.2385077476501465,
+        -0.8046237826347351,
+        2.1924641132354736,
+        0.5480271577835083,
+        -2.500617504119873,
+        -0.3477282226085663,
+        -2.738236904144287,
+        -1.2912718057632446,
+        1.6426827907562256,
+        -4.847744464874268,
+        1.1368359327316284,
+        -1.806947946548462,
+        2.1028101444244385,
+        0.2998304069042206,
+        1.8368357419967651,
+        -2.0042471885681152,
+        -1.030002236366272,
+        3.805914878845215,
+        -0.685397207736969,
+        0.647824764251709,
+        0.26513975858688354,
+        -1.449357271194458,
+        0.8468250632286072,
+        0.11085087060928345,
+        -0.3283025920391083,
+        1.7862963676452637,
+        -0.6334929466247559,
+        0.4696364402770996,
+        0.9112973809242249,
+        -0.6666752099990845,
+        1.078345775604248,
+        -2.250714063644409,
+        -1.847396731376648,
+        -1.6096274852752686,
+        1.734965205192566,
+        -1.8499655723571777,
+        -0.9258692264556885,
+        0.8220282196998596,
+        -1.6836540699005127,
+        1.875556230545044,
+        1.4659862518310547,
+        -0.10735496133565903,
+        2.0540192127227783,
+        -1.898461103439331,
+        -0.9283169507980347,
+        0.6999838352203369,
+        0.953606128692627,
+        -3.9108846187591553,
+        -1.9354621171951294,
+        -1.3296481370925903,
+        -0.10305730253458023,
+        -0.6733790636062622,
+        -0.1011730208992958,
+        2.1785550117492676,
+        1.178100824356079,
+        -0.3111150562763214,
+        1.8074431419372559,
+        0.6148101091384888,
+        -0.4203537702560425,
+        -0.1356208473443985,
+        2.577697515487671,
+        -2.528531312942505,
+        -0.06761059910058975,
+        0.516043484210968,
+        3.1441774368286133,
+        0.20856310427188873,
+        2.583888530731201,
+        3.3994646072387695,
+        -1.290382981300354,
+        -0.5601465702056885,
+        0.12468919157981873,
+        -5.311470031738281,
+        0.38093534111976624,
+        -1.4742119312286377,
+        1.4751639366149902
+      ]
+    }
+  },
+  "summary_table": [
+    {
+      "sample_id": "0grcilhi",
+      "pred_batch": "Batch_3",
+      "confidence": 0.9911299942295257,
+      "tier": "high",
+      "ood_label": "within_bounds",
+      "driver1": "embedding PC 1",
+      "driver2": "embedding PC 3",
+      "driver3": "embedding PC 9"
+    },
+    {
+      "sample_id": "3806gxp0",
+      "pred_batch": "Batch_2",
+      "confidence": 0.9470215022574918,
+      "tier": "high",
+      "ood_label": "within_bounds",
+      "driver1": "embedding PC 3",
+      "driver2": "embedding PC 8",
+      "driver3": "F09_c0_chord_anisotropy_h_over_v"
+    },
+    {
+      "sample_id": "4ih2ggld",
+      "pred_batch": "Batch_1",
+      "confidence": 0.9693091471891538,
+      "tier": "low",
+      "ood_label": "outside_bounds",
+      "driver1": "embedding PC 1",
+      "driver2": "embedding PC 2",
+      "driver3": "F06_c2_clark_evans_R"
+    }
+  ]
+}

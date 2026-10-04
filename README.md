@@ -77,6 +77,30 @@ not billed totals. The timed `qc run` stages were measured with a wrapper around
 CLI stage dispatch path; Modal command wall times include startup/CLI overhead. The Modal
 reported times above are remote execution timings.
 
+## Phase C: classify and held-out
+
+After Phase B outputs and the frozen classifier artifacts are available, fit and check the
+image-level model, then process held-out TIFFs once from the tagged `v1-frozen` revision:
+
+```bash
+qc classify
+python -m qc heldout --input-dir data/heldout --out results/v1/heldout.json
+```
+
+For a non-scoring training-image dry-run, specify a separate output path. Exploratory runs
+use an automatically timestamped path under `results/v1/exploratory/`:
+
+```bash
+python -m qc heldout --input-dir /path/to/copied/images \
+  --out results/v1/heldout_dryrun.json --dryrun
+python -m qc heldout --input-dir /path/to/images \
+  --exploratory
+```
+
+Held-out tiles are embedded on Modal L4; a local CPU fallback is recorded if Modal fails.
+Each image is the independent observation, and held-out inference does not write tiles to
+`data/tiles` or overwrite classifier training outputs.
+
 ## Layout
 
 See `docs/FRAMEWORK.md` Section 3. Stages live in `src/qc/<stage>.py`; each docstring states what it reads, writes and who owns it.

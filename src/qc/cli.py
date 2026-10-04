@@ -29,7 +29,7 @@ def _run(stage: str, cfg_path: str) -> None:
     importlib.import_module(f"qc.{stage}").run(cfg)
 
 
-for _s in STAGES:
+for _s in (stage for stage in STAGES if stage != "heldout"):
     def _make(stage: str):
         def cmd(config: str = typer.Option("configs/v1.yaml", "--config", "-c")) -> None:
             _run(stage, config)
@@ -37,6 +37,26 @@ for _s in STAGES:
         cmd.__doc__ = importlib.import_module(f"qc.{stage}").__doc__.splitlines()[0]
         return cmd
     app.command(name=_s)(_make(_s))
+
+
+@app.command()
+def heldout(
+    config: str = typer.Option("configs/v1.yaml", "--config", "-c"),
+    input_dir: str | None = typer.Option(None, "--input-dir"),
+    out: str | None = typer.Option(None, "--out"),
+    dryrun: bool = typer.Option(False, "--dryrun"),
+    exploratory: bool = typer.Option(False, "--exploratory"),
+) -> None:
+    """Run frozen image-level inference on held-out TIFFs."""
+    cfg = _config.load(config)
+    typer.echo(f"[qc] heldout  config={cfg['_path']}@{cfg['_hash']}  git={_config.git_sha()}")
+    importlib.import_module("qc.heldout").run(
+        cfg,
+        input_dir=input_dir,
+        out_path=out,
+        dryrun=dryrun,
+        exploratory=exploratory,
+    )
 
 
 @app.command()

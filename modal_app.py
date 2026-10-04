@@ -195,6 +195,74 @@ class DINOv2ImageEncoder:
         }
 
 
+@app.cls(
+    image=gpu_image,
+    gpu="L4",
+    cpu=4,
+    memory=8192,
+    volumes={"/mnt/weights": weights_volume},
+    timeout=60 * 60,
+    max_containers=10,
+)
+class DINOv2TileEncoder:
+    weights_cfg_json: str = modal.parameter()
+
+    @modal.enter()
+    def load_model(self):
+        import json
+        import torch
+        from qc import embed
+
+        self.weights_cfg = json.loads(self.weights_cfg_json)
+        weights_volume.reload()
+        weights_path = Path("/mnt/weights") / embed.WEIGHT_FILENAME
+        if not weights_path.is_file():
+            raise FileNotFoundError(
+                f"missing checksum-verified DINOv2 weights in aixscience-weights: {weights_path}"
+            )
+        expected = str(self.weights_cfg["weights_sha256"]).lower()
+        actual = embed._sha256(weights_path)
+        if actual != expected:
+            raise ValueError(
+                f"DINOv2 weights SHA-256 mismatch: expected {expected}, got {actual}"
+            )
+        torch.set_num_threads(1)
+        self.model = embed.load_frozen_model(self.weights_cfg, weights_path, "cuda")
+
+    @modal.method()
+    def embed_tiles(self, payload: dict) -> dict:
+        import time
+
+        import numpy as np
+        from qc import embed
+
+        started = time.perf_counter()
+        sample_id = str(payload["sample_id"])
+        tiles = np.asarray(payload["tiles"])
+        if tiles.dtype != np.uint8 or tiles.ndim != 3 or tiles.shape[1:] != (1024, 1024):
+            raise ValueError("held-out DINOv2 tiles must be uint8 arrays shaped (n, 1024, 1024)")
+        batches = []
+        for start in range(0, len(tiles), 16):
+            batches.append(
+                embed.embed_batch(
+                    self.model,
+                    list(tiles[start : start + 16]),
+                    int(self.weights_cfg["input_px"]),
+                    "cuda",
+                )
+            )
+        embeddings = (
+            np.concatenate(batches, axis=0)
+            if batches
+            else np.empty((0, embed.EMBEDDING_WIDTH), dtype=np.float32)
+        )
+        return {
+            "sample_id": sample_id,
+            "embeddings": embeddings,
+            "wall_s": time.perf_counter() - started,
+        }
+
+
 def _append_modal_run(
     cfg: dict,
     function: str,

@@ -1,0 +1,4 @@
+sample_id,feature_max_abs_diff,embedding_max_abs_diff,covariate_max_abs_diff,features_exact,covariates_exact,embedding_within_1e-4,covariates_compared,differing_covariates,note
+0grcilhi,0.0,0.0,3.552713678800501e-15,True,False,True,8,nm_per_px_if_tag_true,Only nm_per_px_if_tag_true differs at one-ULP scale: held-out value is directly from audit.inspect_file; training value is parsed from audit/images.csv by pandas.
+3806gxp0,0.0,0.0,3.552713678800501e-15,True,False,True,8,nm_per_px_if_tag_true,Only nm_per_px_if_tag_true differs at one-ULP scale: held-out value is directly from audit.inspect_file; training value is parsed from audit/images.csv by pandas.
+4ih2ggld,0.0,0.0,3.552713678800501e-15,True,False,True,8,nm_per_px_if_tag_true,Only nm_per_px_if_tag_true differs at one-ULP scale: held-out value is directly from audit.inspect_file; training value is parsed from audit/images.csv by pandas.
