@@ -61,8 +61,10 @@ BET_RULE = (
     "always one of Batch_1, Batch_2, Batch_3. confidence = that probability; margin = top minus runner-up."
 )
 TIER_RULE = (
-    "low if p_max < 0.5, or LOIO permutation p >= 0.05, or OOD label = outside_bounds; "
-    "medium if 0.5 <= p_max < 0.75; high if p_max >= 0.75 and LOIO permutation p < 0.05."
+    "high if p_max >= 0.75 and LOIO permutation p < 0.05 and OOD label = within_bounds; otherwise low "
+    "(p_max < 0.75, or LOIO permutation p >= 0.05, or OOD label = outside_bounds). Two tiers only: the v1 "
+    "'medium' band (0.5 <= p_max < 0.75, 1/5 correct in LOIO) is reported as low since v1.1, a score-neutral "
+    "presentation change; bets and probabilities are unchanged."
 )
 DRIVER_RULE = (
     "contribution_k = coef[pred_batch, k] x x_k (x_k = standardised F value or embedding PC score); "
@@ -213,7 +215,7 @@ def tier(p_max: float, perm_p: float, ood_label: str) -> tuple[str, str]:
     if ood_label == "outside_bounds":
         return "low", "outside the Batch_3 embedding band (OOD caps the tier at low)"
     if p_max < 0.75:
-        return "medium", f"0.5 <= p_max={p_max:.3f} < 0.75 and LOIO permutation p={perm_p:.4f} < 0.05"
+        return "low", f"p_max={p_max:.3f} < 0.75 (v1 'medium' band, reported as low since v1.1)"
     return "high", f"p_max={p_max:.3f} >= 0.75 and LOIO permutation p={perm_p:.4f} < 0.05"
 
 

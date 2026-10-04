@@ -1,0 +1,10 @@
+metric,value,note
+Accuracy,26/31,Wilson 95 % CI 67%-93%
+Precision (bet Batch 3 -> is Batch 3),14/16,
+Recall / sensitivity (Batch 3 found),14/17,
+Specificity (non-Batch 3 kept out),12/14,
+Negative predictive value,12/15,
+F1,0.848,
+Balanced accuracy,0.840,
+ROC AUC (p_Batch_3),0.937,
+Matthews correlation,0.678,

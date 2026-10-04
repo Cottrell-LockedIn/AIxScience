@@ -7,3 +7,4 @@ timestamp_utc,function,n_inputs,wall_s,hardware,git_sha,config_hash,est_cost_usd
 2026-10-04T11:57:40.216554+00:00,dino_embed_heldout_exploratory,6,35.11992560700128,local-cpu fallback,778178d,45629944e398,0.0,local CPU fallback; no Modal charge,,
 2026-10-04T12:01:26.794644+00:00,dino_embed_heldout_exploratory,3,34.40235087900146,local-cpu fallback,778178d,45629944e398,0.0,local CPU fallback; no Modal charge,,
 2026-10-04T12:04:09.351090+00:00,dino_embed_heldout_exploratory,6,19.161221301001206,L4,778178d,45629944e398,0.0020095467108816006,"https://modal.com/pricing; CPU=$0.0000131/physical-core-s, memory=$0.00000222/GiB-s, L4=$0.000222/GPU-s",,
+2026-10-04T13:17:00.906793+00:00,dino_embed_heldout_exploratory,6,66.96154807700077,L4,8ba9359,45629944e398,0.0024641585640671998,"https://modal.com/pricing; CPU=$0.0000131/physical-core-s, memory=$0.00000222/GiB-s, L4=$0.000222/GPU-s",,

@@ -52,11 +52,11 @@ W9 aspect-ratio panel, W12b rule-based second opinion, tile galleries and heat m
 | Embedding PC profiles: correlates, exemplar tiles, plain-language tag (patch heat maps deferred) | no | yes (M9a/b/d) | same |
 | F09 evidence: horizontal/vertical chords, direction map | no | yes (M3) | same |
 | Aspect-ratio panel, labelled "not used by the model" | no | yes (M4) | same |
-| Guideline card for low/medium confidence, filled from existing fields | fields exist; card text proposed | yes (M5a) | same |
-| Second opinion from pre-registered expert rules on low/medium tiers | no | no | yes (M5b) |
+| Guideline card for low confidence, filled from existing fields | fields exist; card text proposed | yes (M5a) | same |
+| Second opinion from pre-registered expert rules on the low tier | no | no | yes (M5b) |
 
 Performance context the UI must keep showing (LOIO, 31 images): 18/31 correct; Batch_3 bets right 14/16;
-Batch_1 or Batch_2 bets right 4/15; high tier right 14/18, medium 1/5, low 3/8. v1.1 does not change these. v1.2
+Batch_1 or Batch_2 bets right 4/15; high tier right 14/18, low 4/13 (two tiers since v1.1; the former medium band was 1/5). v1.1 does not change these. v1.2
 adds a separately scored track record for the rules.
 
 ## 2. Features
@@ -138,7 +138,7 @@ Each feature lists: what the user does, what the model provides (and from which 
 - UI says: if drift is suspected, "check acquisition settings before interpreting the bet".
 
 ### W12. Low-confidence guidance
-- W12a Guideline card (v1 fields; text from M5a): on low or medium tier, a short card chosen by situation
+- W12a Guideline card (v1 fields; text from M5a): on low tier, a short card chosen by situation
   (outside baseline, no batch favoured, medium evidence, imaging drift) and filled with the bet, runner-up,
   track record and flags, ending with what to do next (check imaging, image more sections, compare measurements
   with the Batch_1/2 ranges). Guidance only; it never names a batch the model did not name.
@@ -171,7 +171,7 @@ Each feature lists: what the user does, what the model provides (and from which 
 ### W17. Model accuracy panel (model card)
 - Always visible from the results list and every report: 18/31 leave-one-image-out accuracy with the 95 %
   interval (0.41-0.74), the 17/31 "always Batch_3" baseline, the confusion matrix, accuracy by tier
-  (high 14/18, medium 1/5, low 3/8) and by bet (Batch_3 bets 14/16, Batch_1 2/6, Batch_2 2/9), and the held-out
+  (high 14/18, low 4/13) and by bet (Batch_3 bets 14/16, Batch_1 2/6, Batch_2 2/9), and the held-out
   score: 2/3 correct, 5/6 under the confidence scoring (exploratory, n = 3; the one miss was a low-tier
   Batch_1 bet on a true Batch_2 image).
 - Provides (v1 data today in `results/v1/`; v1.1 M8 puts it in every run output as `run.model_card`).
