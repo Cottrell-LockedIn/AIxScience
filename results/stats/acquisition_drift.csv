@@ -1,0 +1,4 @@
+pair,drift,drifting_covariates,config_hash,git_sha,stats_config_hash,phase_identity
+Batch_1_vs_Batch_2,False,[],45629944e398,12d77a4,e718e5866dea,"stated by Polaron, not image-verified"
+Batch_1_vs_Batch_3,False,[],45629944e398,12d77a4,e718e5866dea,"stated by Polaron, not image-verified"
+Batch_2_vs_Batch_3,False,[],45629944e398,12d77a4,e718e5866dea,"stated by Polaron, not image-verified"
