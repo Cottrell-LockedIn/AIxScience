@@ -375,6 +375,7 @@ def _saved_mask(field_id: str, evidence: dict[str, Any] | None) -> dict[str, Any
     )
     return {
         "maskUrl": f"/api/saved-mask/{field_id}/mask",
+        "compareUrl": f"/api/compare/saved/{field_id}",
         "overlayUrl": overlay,
         "layers": layers,
         "offset": evidence.get("mask_offset_px"),
@@ -488,7 +489,7 @@ def _normalise_run(run_id: str, image: dict[str, Any], raw_inputs: dict[str, Any
             ],
             "maskMeta": {"maskUrl": f"/api/runs/{run_id}/mask/{field_id}", "cropOffsetPx": segmentation.get("mask_offset_px"), "offset": segmentation.get("mask_offset_px"), "sha256": segmentation.get("mask_sha256"), "shape": segmentation.get("mask_shape"), "note": segmentation.get("note")},
         })
-        field["mask"] = {**field["maskMeta"], "overlayUrl": field["overlayUrl"], "originalCroppedPreviewUrl": field["originalCroppedPreviewUrl"], "layers": field["layers"], "width": segmentation["mask_shape"][1], "height": segmentation["mask_shape"][0]}
+        field["mask"] = {**field["maskMeta"], "overlayUrl": field["overlayUrl"], "originalCroppedPreviewUrl": field["originalCroppedPreviewUrl"], "layers": field["layers"], "compareUrl": f"/api/compare/run/{field_id}?run_id={run_id}", "width": segmentation["mask_shape"][1], "height": segmentation["mask_shape"][0]}
     return field
 
 
@@ -669,10 +670,15 @@ def preview(field_id: str, channel: str) -> Response:
 
 @app.get("/api/crop/{field_id}/{channel}")
 def saved_crop(field_id: str, channel: str, x: int, y: int, width: int, height: int, dataset: str = "validation") -> Response:
-    if dataset != "validation":
-        raise HTTPException(422, "Only the explicitly bound validation dataset supports saved-image crops.")
-    if field_id not in {record[0]["subject"]["id"] for record in _validation_records()}:
-        raise HTTPException(404, "Unknown validation field.")
+    if dataset == "validation":
+        known = {record[0]["subject"]["id"] for record in _validation_records()}
+    elif dataset in ("heldout", "test"):
+        source = HELDOUT if dataset == "heldout" else TEST_SET
+        known = {item["subject"]["id"] for item in json.loads(source.read_text(encoding="utf-8")).get("images", [])} if source.is_file() else set()
+    else:
+        raise HTTPException(422, "dataset must be 'validation', 'heldout' or 'test'.")
+    if field_id not in known:
+        raise HTTPException(404, "Unknown saved field for this dataset.")
     return _native_crop(_source_or_404(field_id, channel), x, y, width, height)
 
 
@@ -969,6 +975,12 @@ def _known_field(field_id: str) -> bool:
             pass
     if field_id in saved_ids or field_id in {item[0]["subject"]["id"] for item in _validation_records()}:
         return True
+    if TEST_SET.is_file():
+        try:
+            if field_id in {item["subject"]["id"] for item in json.loads(TEST_SET.read_text(encoding="utf-8"))["images"]}:
+                return True
+        except (OSError, json.JSONDecodeError, KeyError):
+            pass
     if jobs.RUNS.is_dir():
         for path in jobs.RUNS.iterdir():
             result = path / "result.json"
@@ -1147,3 +1159,230 @@ async def save_review_alias(review: dict[str, Any]) -> dict[str, Any]:
     if not isinstance(field_id, str):
         raise HTTPException(422, "fieldId is required.")
     return _store_review(field_id, review)
+
+
+# ---------------------------------------------------------------------------
+# Side-by-side comparison: this image next to one representative training image
+# per batch, same mask-derived layer on each. Everything is read from the frozen
+# mask the measurements came from (no new segmentation, no inferred layers).
+# ---------------------------------------------------------------------------
+REFERENCE_DIR = ROOT / "results" / "v1_1" / "reference"
+TRAINING_KPIS = ROOT / "results" / "kpi_per_image.parquet"
+COMPARE_ZOOM_PX = 600
+COMPARE_FULL_WIDTH = 1400
+CRACK_ASPECT_MIN = 5.0  # configs/v1.yaml kpi_extra.crack_aspect_min (Phase B c0_cracklike_frac)
+COMPARE_LAYERS = [
+    {"id": "bse", "label": "BSE", "legend": []},
+    {"id": "phases", "label": "Phase mask", "legend": [["pore", "Pore / void"], ["silicon", "Silicon"], ["graphite", "Graphite (unshaded)"]]},
+    {"id": "pore", "label": "Pores", "legend": [["pore", "Pore / void (class 0)"]]},
+    {"id": "graphite", "label": "Graphite", "legend": [["graphite", "Graphite (class 1)"]]},
+    {"id": "silicon", "label": "Silicon", "legend": [["silicon", "Silicon (class 2)"]]},
+    {"id": "cracklike", "label": "Crack-like voids", "legend": [["crack", "Crack-like void: void component with major/minor axis >= 5 (Phase B c0_cracklike_frac)"]]},
+]
+COMPARE_COLORS = {"pore": (31, 119, 180), "silicon": (255, 127, 14), "graphite": (46, 160, 96), "crack": (220, 38, 38)}
+
+
+@lru_cache(maxsize=1)
+def _reference_manifest() -> dict[str, Any]:
+    path = REFERENCE_DIR / "manifest.json"
+    return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else {"references": []}
+
+
+def _reference_entry(field_id: str) -> dict[str, Any]:
+    for item in _reference_manifest().get("references", []):
+        if item["id"] == field_id:
+            return item
+    raise HTTPException(404, "Unknown reference image.")
+
+
+def _saved_evidence(field_id: str) -> dict[str, Any] | None:
+    for source in (HELDOUT, TEST_SET):
+        if source.is_file():
+            for item in json.loads(source.read_text(encoding="utf-8")).get("images", []):
+                if item["subject"]["id"] == field_id:
+                    evidence = item.get("evidence", {}).get("segmentation_mask")
+                    return evidence if isinstance(evidence, dict) else None
+    return None
+
+
+def _compare_source(scope: str, field_id: str, run_id: str | None) -> tuple[Path, Path, int, str]:
+    """(BSE TIFF, mask PNG, border offset, cache key) for one comparable image; hash-bound."""
+    if not re.fullmatch(r"[A-Za-z0-9-]+", field_id):
+        raise HTTPException(404, "Unknown field.")
+    if scope == "saved":
+        mask = _saved_mask_file(field_id, "mask")
+        evidence = _saved_evidence(field_id)
+        if mask is None or evidence is None:
+            raise HTTPException(404, "No committed mask for this saved field.")
+        mask_sha = _sha256(mask)
+        if evidence.get("mask_sha256") and mask_sha != evidence["mask_sha256"]:
+            raise HTTPException(409, "Committed mask checksum does not match the saved record.")
+        return _source_or_404(field_id, "BSE"), mask, int((evidence.get("mask_offset_px") or [0])[0]), f"saved:{field_id}:{mask_sha}"
+    if scope == "reference":
+        entry = _reference_entry(field_id)
+        mask = ROOT / "results" / "v1_1" / str(entry["mask_path"])
+        tif = ROOT / str(entry["source"]["path"])
+        if not mask.is_file():
+            raise HTTPException(404, "Reference mask is unavailable.")
+        if not tif.is_file():
+            raise HTTPException(404, "The reference training TIFF is not present on this machine.")
+        mask_sha = _sha256(mask)
+        if mask_sha != entry["mask_sha256"] or _sha256(tif) != entry["source"]["sha256"]:
+            raise HTTPException(409, "Reference artefact checksum does not match the manifest.")
+        return tif, mask, int(entry["mask_offset_px"][0]), f"reference:{field_id}:{mask_sha}"
+    if scope == "run":
+        if not run_id:
+            raise HTTPException(422, "run_id is required for run fields.")
+        mask, evidence = _mask_path(run_id, field_id)
+        return _run_source(run_id, field_id, "BSE"), mask, int((evidence.get("mask_offset_px") or [0])[0]), f"run:{run_id}:{field_id}:{evidence.get('mask_sha256')}"
+    raise HTTPException(404, "scope must be 'saved', 'reference' or 'run'.")
+
+
+@lru_cache(maxsize=6)
+def _compare_arrays(key: str, tif: str, mask_path: str, offset: int) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Cropped grayscale BSE, class mask and crack-like void mask (full resolution)."""
+    from skimage.measure import label, regionprops_table
+
+    image = tifffile.imread(tif, key=0)
+    if image.ndim == 3:
+        image = image[..., 0]
+    if offset:
+        image = image[offset:-offset, offset:-offset]
+    mask = np.asarray(Image.open(mask_path), dtype=np.uint8)
+    if mask.shape != image.shape:
+        raise HTTPException(409, "Mask and BSE image shapes differ; cannot align the comparison layers.")
+    labels = label(mask == 0, connectivity=1)
+    props = regionprops_table(labels, properties=("label", "major_axis_length", "minor_axis_length"))
+    minor = np.asarray(props["minor_axis_length"], dtype=np.float64)
+    aspect = np.divide(np.asarray(props["major_axis_length"], dtype=np.float64), minor, out=np.full_like(minor, np.inf), where=minor > 0)
+    crack = np.isin(labels, np.asarray(props["label"])[aspect >= CRACK_ASPECT_MIN]) if len(minor) else np.zeros_like(mask, dtype=bool)
+    return image.astype(np.uint8, copy=False), mask, crack
+
+
+@lru_cache(maxsize=64)
+def _zoom_origin(key: str, tif: str, mask_path: str, offset: int, size: int) -> tuple[int, int]:
+    """Deterministic zoom window: the size x size window with the most pore + silicon area (stride 50 px).
+
+    The same rule is applied to every image so the four panels are chosen alike; it is a
+    display choice, not a measurement."""
+    _, mask, _ = _compare_arrays(key, tif, mask_path, offset)
+    height, width = mask.shape
+    size = min(size, height, width)
+    ys = list(range(0, height - size + 1, 50)) or [0]
+    xs = list(range(0, width - size + 1, 50)) or [0]
+    interest = (mask != 1).astype(np.int64)
+    integral = np.zeros((height + 1, width + 1), dtype=np.int64)
+    integral[1:, 1:] = interest.cumsum(axis=0).cumsum(axis=1)
+    best, origin = -1, (0, 0)
+    for y in ys:
+        for x in xs:
+            total = integral[y + size, x + size] - integral[y, x + size] - integral[y + size, x] + integral[y, x]
+            if total > best:
+                best, origin = int(total), (y, x)
+    return origin
+
+
+def _compare_stats_from(mask: np.ndarray, crack: np.ndarray) -> dict[str, float | int]:
+    total = float(mask.size)
+    void = float((mask == 0).sum())
+    return {
+        "poreFraction": void / total,
+        "graphiteFraction": float((mask == 1).sum()) / total,
+        "siliconFraction": float((mask == 2).sum()) / total,
+        "crackLikeFractionOfVoid": float(crack.sum()) / void if void else 0.0,
+        "crackLikeAreaFraction": float(crack.sum()) / total,
+        "maskWidth": int(mask.shape[1]),
+        "maskHeight": int(mask.shape[0]),
+    }
+
+
+@lru_cache(maxsize=1)
+def _training_kpi_ranges() -> dict[str, dict[str, dict[str, float]]]:
+    """Per-batch min / median / max of the Phase B per-image KPIs behind the comparison numbers (31 training images)."""
+    if not TRAINING_KPIS.is_file():
+        return {}
+    table = pq.read_table(TRAINING_KPIS, columns=["batch", "frac_c0", "frac_c1", "frac_c2", "c0_cracklike_frac"]).to_pydict()
+    keys = {"frac_c0": "poreFraction", "frac_c1": "graphiteFraction", "frac_c2": "siliconFraction", "c0_cracklike_frac": "crackLikeFractionOfVoid"}
+    out: dict[str, dict[str, dict[str, float]]] = {}
+    for batch in sorted(set(table["batch"])):
+        rows = [i for i, b in enumerate(table["batch"]) if b == batch]
+        out[batch] = {}
+        for column, name in keys.items():
+            values = np.asarray([table[column][i] for i in rows], dtype=np.float64)
+            out[batch][name] = {"min": float(values.min()), "median": float(np.median(values)), "max": float(values.max()), "n": int(len(values))}
+    return out
+
+
+@lru_cache(maxsize=256)
+def _compare_png(key: str, tif: str, mask_path: str, offset: int, layer: str, zoom: int) -> bytes:
+    import cv2
+
+    gray, mask, crack = _compare_arrays(key, tif, mask_path, offset)
+    height, width = gray.shape
+    if zoom:
+        size = min(zoom, height, width)
+        y0, x0 = _zoom_origin(key, tif, mask_path, offset, size)
+        gray, mask, crack = gray[y0:y0 + size, x0:x0 + size], mask[y0:y0 + size, x0:x0 + size], crack[y0:y0 + size, x0:x0 + size]
+    elif width > COMPARE_FULL_WIDTH:
+        target = (COMPARE_FULL_WIDTH, max(1, round(height * COMPARE_FULL_WIDTH / width)))
+        gray = cv2.resize(gray, target, interpolation=cv2.INTER_AREA)
+        mask = cv2.resize(mask, target, interpolation=cv2.INTER_NEAREST)
+        crack = cv2.resize(crack.astype(np.uint8), target, interpolation=cv2.INTER_NEAREST).astype(bool)
+    rgb = np.repeat(gray[..., None], 3, axis=2).astype(np.float64)
+
+    def tint(selected: np.ndarray, color: tuple[int, int, int], alpha: float) -> None:
+        rgb[selected] = (1 - alpha) * rgb[selected] + alpha * np.asarray(color, dtype=np.float64)
+
+    if layer in ("phases", "pore"):
+        tint(mask == 0, COMPARE_COLORS["pore"], 0.45)
+    if layer in ("phases", "silicon"):
+        tint(mask == 2, COMPARE_COLORS["silicon"], 0.45)
+    if layer == "graphite":
+        tint(mask == 1, COMPARE_COLORS["graphite"], 0.4)
+    if layer == "cracklike":
+        tint(crack, COMPARE_COLORS["crack"], 0.85)
+    encoded = io.BytesIO()
+    Image.fromarray(np.rint(rgb).astype(np.uint8)).save(encoded, format="PNG", compress_level=6)
+    return encoded.getvalue()
+
+
+@app.get("/api/compare/references")
+def compare_references() -> dict[str, Any]:
+    manifest = _reference_manifest()
+    references = []
+    for item in manifest.get("references", []):
+        tif = ROOT / str(item["source"]["path"])
+        references.append({
+            "id": item["id"],
+            "batch": item["batch"],
+            "compareUrl": f"/api/compare/reference/{item['id']}",
+            "available": tif.is_file() and (ROOT / "results" / "v1_1" / str(item["mask_path"])).is_file(),
+            "distanceToBatchCentre": item.get("distance_to_batch_centre"),
+        })
+    return {
+        "selectionRule": manifest.get("selection_rule"),
+        "segmentation": manifest.get("segmentation"),
+        "layers": COMPARE_LAYERS,
+        "colors": {name: list(color) for name, color in COMPARE_COLORS.items()},
+        "zoomPx": COMPARE_ZOOM_PX,
+        "references": references,
+        "trainingRanges": _training_kpi_ranges(),
+        "phaseIdentity": "stated by Polaron, not image-verified",
+    }
+
+
+@app.get("/api/compare/{scope}/{field_id}")
+def compare_stats(scope: str, field_id: str, run_id: str | None = None) -> dict[str, Any]:
+    tif, mask_path, offset, key = _compare_source(scope, field_id, run_id)
+    _, mask, crack = _compare_arrays(key, str(tif), str(mask_path), offset)
+    return {"id": field_id, "scope": scope, **_compare_stats_from(mask, crack), "phaseIdentity": "stated by Polaron, not image-verified"}
+
+
+@app.get("/api/compare/{scope}/{field_id}/image")
+def compare_image(scope: str, field_id: str, layer: str = "bse", zoom: int = 0, run_id: str | None = None) -> Response:
+    if layer not in {item["id"] for item in COMPARE_LAYERS}:
+        raise HTTPException(404, "Unknown comparison layer.")
+    if zoom not in (0, COMPARE_ZOOM_PX):
+        raise HTTPException(422, f"zoom must be 0 or {COMPARE_ZOOM_PX}.")
+    tif, mask_path, offset, key = _compare_source(scope, field_id, run_id)
+    return Response(_compare_png(key, str(tif), str(mask_path), offset, layer, zoom), media_type="image/png", headers={"Cache-Control": "private, max-age=600"})
