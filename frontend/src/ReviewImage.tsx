@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Crosshair, LoaderCircle, RotateCcw, ZoomIn, ZoomOut } from 'lucide-react';
 import './ReviewImage.css';
 
-export type Region = { x:number; y:number; width:number; height:number; evidence?:unknown };
+export type Region = { x:number; y:number; width:number; height:number; evidence?:unknown; reviewSource?:unknown };
 type Suggestion = { id:string; roi:Region; title:string; reason:string; score?:number; scoreLabel?:string };
 type Props = { runId?:string|null; field:any; channel:any; savedMicrographPreviewUrl?:string; savedOverlayUrl?:string; roi:Region|null; onSelect:(roi:Region|null)=>void };
 const clamp = (v:number,lo:number,hi:number)=>Math.max(lo,Math.min(hi,v));
@@ -33,6 +33,7 @@ export default function ReviewImage({runId,field,channel,savedMicrographPreviewU
  },[runId,field?.id,channel?.sha256]);
  const roiStyle=(r:Region,v=viewport)=>({left:`${(r.x-v.x)/v.width*100}%`,top:`${(r.y-v.y)/v.height*100}%`,width:`${r.width/v.width*100}%`,height:`${r.height/v.height*100}%`});
  function point(e:React.PointerEvent<HTMLDivElement>){const b=e.currentTarget.getBoundingClientRect();return{x:Math.round(viewport.x+clamp((e.clientX-b.left)/b.width,0,1)*viewport.width),y:Math.round(viewport.y+clamp((e.clientY-b.top)/b.height,0,1)*viewport.height)};}
+ if(!available&&(savedMicrographPreviewUrl||savedOverlayUrl))return <SavedRegionImage field={field} channel={channel} url={savedMicrographPreviewUrl||savedOverlayUrl!} micrograph={!!savedMicrographPreviewUrl} roi={roi} onSelect={onSelect}/>;
  return <div className="region-review">
   <div className="region-toolbar"><span><Crosshair size={15}/>{available?(selected?selected.title:manual?'Draw your review area':'Magnified source image'):savedMicrographPreviewUrl?'Saved micrograph preview · reduced resolution':'Saved segmentation artifact'}</span>{available&&<div className="zoom-controls"><button aria-label="Zoom out" disabled={zoom<=1} onClick={()=>setZoom(z=>Math.max(1,z/1.5))}><ZoomOut size={17}/></button><span>{zoom.toFixed(1)}×</span><button aria-label="Zoom in" disabled={zoom>=8} onClick={()=>setZoom(z=>Math.min(8,z*1.5))}><ZoomIn size={17}/></button><button aria-label="Reset image view" onClick={()=>{setZoom(1);setCentre({x:.5,y:.5});}}><RotateCcw size={16}/></button></div>}</div>
   <div className={`region-main ${manual?'is-selecting':''}`} ref={canvas} onPointerDown={e=>{if(!manual||!available)return;pointer.current=point(e);e.currentTarget.setPointerCapture(e.pointerId);}} onPointerUp={e=>{if(!pointer.current)return;const p=pointer.current,end=point(e);pointer.current=null;const r={x:Math.min(p.x,end.x),y:Math.min(p.y,end.y),width:Math.abs(p.x-end.x),height:Math.abs(p.y-end.y)};if(r.width>=8&&r.height>=8)onSelect(r);}} onPointerCancel={()=>{pointer.current=null;}}>
@@ -49,5 +50,32 @@ export default function ReviewImage({runId,field,channel,savedMicrographPreviewU
   {!!regions.length&&<><p className="region-method">{'These areas contain many pixels close to a brightness cut-off. Small changes to that cut-off could change their material label, so their boundaries are worth checking.'}</p><div className="region-crops">{regions.map((r,i)=><button key={r.id} className={`region-crop ${selected?.id===r.id?'selected':''}`} onClick={()=>select(r)} aria-pressed={selected?.id===r.id}><div><img src={cropUrl(r.roi)} alt={`Native-resolution close-up of review region ${i+1}`}/><span>{String(i+1).padStart(2,'0')}</span></div><strong>{r.score===0?'Context region':'Ambiguous boundaries'}</strong><p>{r.score===0?'No local sensitivity was found here. This area is shown for comparison.':'Small changes in the brightness cut-off could change the labels here. Check the material boundaries.'}</p><small>{r.roi.width} × {r.roi.height} px</small></button>)}</div></>}
   {roi&&!selected&&<div className="manual-crop"><img src={cropUrl(roi)} alt="Magnified crop of your selected region"/><div><strong>Your selected region</strong><p>{roi.width} × {roi.height} original pixels. This is a manual selection.</p></div></div>}
   <p className="region-disclaimer">{available?'The classifier scores the whole image. These close-ups help review its mask; they are not a map of model confidence. Your tag stays separate from the measured result.':savedMicrographPreviewUrl?'This is a saved reduced-resolution micrograph preview, not a segmentation mask. The original TIFF is required for crop, annotation, and region review.':field.mask?.provenance?.kind==='exploratory replay artifact'?'This overlay comes from a later exploratory replay of the identical source files. The official prediction and measurements are unchanged. The original TIFF is required for a region review.':'This overlay is saved context from the completed run. The original TIFF is required for a region review.'}</p>
+ </div>;
+}
+
+function SavedRegionImage({field,channel,url,micrograph,roi,onSelect}:{field:any;channel:any;url:string;micrograph:boolean;roi:Region|null;onSelect:(roi:Region|null)=>void}){
+ const canvas=useRef<HTMLDivElement>(null);
+ const image=useRef<HTMLImageElement>(null);
+ const start=useRef<{x:number;y:number}|null>(null);
+ const [draft,setDraft]=useState<Region|null>(null);
+ const [box,setBox]=useState({left:0,top:0,width:0,height:0});
+ const [imageError,setImageError]=useState(false);
+ const reviewSource=micrograph?{kind:'saved-micrograph',sha256:channel.previewProvenance?.sha256,width:channel.previewWidth,height:channel.previewHeight,sourceHash:channel.sha256}:field.mask?.annotationSource;
+ const W=reviewSource?.width||1,H=reviewSource?.height||1;
+ const ready=!!reviewSource?.sha256&&box.width>0&&!imageError;
+ function measure(){const c=canvas.current?.getBoundingClientRect(),i=image.current?.getBoundingClientRect();if(c&&i)setBox({left:i.left-c.left,top:i.top-c.top,width:i.width,height:i.height});}
+ useEffect(()=>{setDraft(null);start.current=null;setImageError(false);const node=canvas.current;if(!node)return;const observer=new ResizeObserver(measure);observer.observe(node);return()=>observer.disconnect();},[url]);
+ function point(e:React.PointerEvent<HTMLDivElement>,inside=false){const b=image.current?.getBoundingClientRect();if(!b||!b.width||!b.height)return null;const x=(e.clientX-b.left)/b.width,y=(e.clientY-b.top)/b.height;if(inside&&(x<0||x>1||y<0||y>1))return null;return{x:Math.round(clamp(x,0,1)*W),y:Math.round(clamp(y,0,1)*H)};}
+ function rectangle(a:{x:number;y:number},b:{x:number;y:number}):Region{return{x:Math.min(a.x,b.x),y:Math.min(a.y,b.y),width:Math.abs(a.x-b.x),height:Math.abs(a.y-b.y)};}
+ const area=draft||roi;
+ return <div className="region-review">
+  <div className="region-toolbar"><span><Crosshair size={15}/>{micrograph?'Saved micrograph preview · reduced resolution':'Saved segmentation artifact'}</span><button className="text-button" disabled={!roi&&!draft} onClick={()=>{start.current=null;setDraft(null);onSelect(null);}}>Clear selected area</button></div>
+  <div className={`region-main ${ready?'is-selecting':''}`} ref={canvas} onPointerDown={e=>{if(!ready||e.button!==0)return;const p=point(e,true);if(!p)return;e.preventDefault();start.current=p;setDraft({...p,width:0,height:0});e.currentTarget.setPointerCapture(e.pointerId);}} onPointerMove={e=>{if(!start.current)return;const end=point(e);if(end)setDraft(rectangle(start.current,end));}} onPointerUp={e=>{if(!start.current)return;const end=point(e),p=start.current;start.current=null;setDraft(null);if(end){const r=rectangle(p,end);if(r.width>=1&&r.height>=1)onSelect({...r,reviewSource});}if(e.currentTarget.hasPointerCapture(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId);}} onPointerCancel={()=>{start.current=null;setDraft(null);}}>
+   <div className="region-saved-overlay" style={{position:'relative',width:'100%',height:'100%',display:'grid',placeItems:'center',background:'#e6e6e0'}}><img ref={image} src={url} onLoad={measure} onError={()=>setImageError(true)} alt={`${micrograph?'Saved reduced-resolution micrograph preview':'Saved segmentation overlay'} for ${field.id}`} draggable={false} style={{display:'block',maxWidth:'100%',maxHeight:'100%',objectFit:'contain',pointerEvents:'none'}}/><span style={{position:'absolute',left:10,bottom:10,background:'#202024e8',color:'#fff',padding:'6px 8px',fontSize:10,pointerEvents:'none'}}>{micrograph?'Saved micrograph preview · reduced resolution':'Saved segmentation overlay'} · Original TIFF unavailable</span></div>
+   {area&&box.width>0&&<div className="region-highlight manual" style={{left:box.left+area.x/W*box.width,top:box.top+area.y/H*box.height,width:area.width/W*box.width,height:area.height/H*box.height}}><span>Your region</span></div>}
+  </div>
+  <div className="region-section-title"><h3>{micrograph?'Saved micrograph preview':'Saved image preview'}</h3><span>{roi?'Review area selected':'Draw your review area'}</span></div>
+  <p className="inline-note" role="status">{imageError?'The saved image could not be opened. Reload to retry.':roi?`Selected area: ${roi.width} × ${roi.height} saved-image pixels. Choose a tag, then save your review.`:'Click and drag on the image to draw the area you want to review.'}</p>
+  <p className="region-disclaimer">{micrograph?'This is a saved reduced-resolution micrograph preview, not a segmentation mask.':field.mask?.provenance?.kind==='exploratory replay artifact'?'This overlay comes from a later exploratory replay of the identical source files.':'This overlay is saved context from the completed run.'} Your drawn area is recorded in saved-image coordinates as a review note. The official prediction and measurements are unchanged.</p>
  </div>;
 }

@@ -370,6 +370,9 @@ def _saved_mask(field_id: str, evidence: dict[str, Any] | None) -> dict[str, Any
         return None
     overlay = f"/api/saved-mask/{field_id}/overlay" if _saved_mask_file(field_id, "overlay") else None
     layers = [{"id": "overlay", "label": "Segmentation overlay: void blue, silicon orange, graphite unshaded (Polaron-stated)", "imageUrl": overlay, "verified": True}] if overlay else []
+    annotation_source = _saved_segmentation_annotation_source(
+        field_id, "overlay" if overlay else "mask", evidence
+    )
     return {
         "maskUrl": f"/api/saved-mask/{field_id}/mask",
         "overlayUrl": overlay,
@@ -380,7 +383,41 @@ def _saved_mask(field_id: str, evidence: dict[str, Any] | None) -> dict[str, Any
         "height": (evidence.get("mask_shape") or [None, None])[0],
         "note": evidence.get("note"),
         "provenance": evidence.get("artifact_provenance"),
+        # Drawing on a saved segmentation is deliberately in the artifact's own
+        # pixel frame, not a claim about native TIFF coordinates or model output.
+        "annotationSource": {key: value for key, value in annotation_source.items() if key != "coordinateSpace"},
     }
+
+
+def _recorded_source_hash(field_id: str, channel: str) -> str | None:
+    return next((digest for digest, pair in _recorded_files().items() if pair == (field_id, channel)), None)
+
+
+def _saved_segmentation_annotation_source(field_id: str, artifact: str, evidence: dict[str, Any]) -> dict[str, Any]:
+    """Describe a displayed committed artifact in its actual PNG coordinate frame."""
+    path = _saved_mask_file(field_id, artifact)
+    if path is None:  # guarded by callers; keeps the returned document honest.
+        raise HTTPException(404, "No committed segmentation artifact for this saved field.")
+    try:
+        with Image.open(path) as image:
+            width, height = image.size
+    except (OSError, ValueError) as exc:
+        raise HTTPException(409, "Saved segmentation artifact is unreadable.") from exc
+    digest = _sha256(path)
+    if artifact == "mask" and digest != evidence.get("mask_sha256"):
+        raise HTTPException(409, "Committed mask checksum does not match the saved record.")
+    source = {
+        "kind": "saved-segmentation",
+        "artifact": artifact,
+        "sha256": digest,
+        "width": width,
+        "height": height,
+        "coordinateSpace": "saved-preview",
+    }
+    source_hash = _recorded_source_hash(field_id, "BSE")
+    if source_hash is not None:
+        source["sourceHash"] = source_hash
+    return source
 
 
 @app.get("/api/saved-mask/{field_id}/{kind}")
@@ -944,12 +981,96 @@ def _known_field(field_id: str) -> bool:
     return False
 
 
+def _review_roi(roi: Any, width: int, height: int, *, bounds_label: str) -> dict[str, int]:
+    if not isinstance(roi, dict) or any(not isinstance(roi.get(key), int) for key in ("x", "y", "width", "height")):
+        raise HTTPException(422, "roi must have integer x, y, width and height coordinates.")
+    if roi["x"] < 0 or roi["y"] < 0 or roi["width"] < 1 or roi["height"] < 1 or roi["x"] + roi["width"] > width or roi["y"] + roi["height"] > height:
+        raise HTTPException(422, f"roi is outside the {bounds_label} bounds.")
+    return {key: roi[key] for key in ("x", "y", "width", "height")}
+
+
+def _saved_segmentation_evidence_for_field(field_id: str) -> dict[str, Any] | None:
+    """Resolve only a saved mask whose provenance remains bound to this field."""
+    for saved_path in (HELDOUT, TEST_SET):
+        if not saved_path.is_file():
+            continue
+        try:
+            image = next(
+                item for item in json.loads(saved_path.read_text(encoding="utf-8")).get("images", [])
+                if item.get("subject", {}).get("id") == field_id
+            )
+        except (OSError, json.JSONDecodeError, StopIteration, AttributeError, TypeError):
+            continue
+        evidence = _saved_segmentation_evidence(image)
+        if evidence is not None:
+            return evidence
+    return None
+
+
+def _saved_micrograph_annotation_source(field_id: str, channel: str) -> dict[str, Any]:
+    saved_preview = _validation_preview(field_id, channel)
+    if saved_preview is None:
+        raise HTTPException(422, "No hash-bound saved micrograph preview is available for this field and channel.")
+    _, metadata = saved_preview
+    return {
+        "kind": "saved-micrograph",
+        "sha256": metadata["preview_sha256"],
+        "width": metadata["preview_width"],
+        "height": metadata["preview_height"],
+        "sourceHash": metadata.get("source_sha256"),
+        "coordinateSpace": "saved-preview",
+    }
+
+
+def _verified_saved_annotation_source(field_id: str, review_source: Any, channel: str) -> dict[str, Any]:
+    """Validate an annotation against a committed display artifact, never TIFF pixels."""
+    if not isinstance(review_source, dict):
+        raise HTTPException(422, "reviewSource must be an object.")
+    kind = review_source.get("kind")
+    if kind == "saved-micrograph":
+        expected = _saved_micrograph_annotation_source(field_id, channel)
+    elif kind == "saved-segmentation":
+        artifact = review_source.get("artifact")
+        if artifact not in ("mask", "overlay"):
+            raise HTTPException(422, "saved-segmentation reviewSource.artifact must be mask or overlay.")
+        evidence = _saved_segmentation_evidence_for_field(field_id)
+        if evidence is None:
+            raise HTTPException(422, "No provenance-bound saved segmentation artifact is available for this field.")
+        expected = _saved_segmentation_annotation_source(field_id, artifact, evidence)
+    else:
+        raise HTTPException(422, "reviewSource.kind must be saved-micrograph or saved-segmentation.")
+    if review_source.get("sha256") != expected["sha256"]:
+        raise HTTPException(422, "reviewSource sha256 does not match the displayed saved artifact.")
+    if review_source.get("width") != expected["width"] or review_source.get("height") != expected["height"]:
+        raise HTTPException(422, "reviewSource dimensions do not match the displayed saved artifact coordinate frame.")
+    supplied_source_hash = review_source.get("sourceHash")
+    if supplied_source_hash is not None and supplied_source_hash != expected.get("sourceHash"):
+        raise HTTPException(422, "reviewSource sourceHash does not match the recorded original source.")
+    return expected
+
+
 def _store_review(field_id: str, review: dict[str, Any]) -> dict[str, Any]:
     if not _known_field(field_id):
         raise HTTPException(404, "Unknown saved-result field.")
     run_id = review.get("runId")
     source_verified = False
-    if run_id:
+    artifact_verified = False
+    coordinate_space: str | None = None
+    review_source = review.get("reviewSource")
+    if review_source is not None:
+        if run_id:
+            raise HTTPException(422, "reviewSource is only for saved display artifacts, not exploratory runs.")
+        detector = review.get("detector", review.get("channel", "BSE"))
+        if detector not in CHANNELS:
+            raise HTTPException(422, "Unsupported review detector channel.")
+        expected_source = _verified_saved_annotation_source(field_id, review_source, detector)
+        _review_roi(review.get("roi"), expected_source["width"], expected_source["height"], bounds_label="saved artifact coordinate frame")
+        # A saved PNG can be verified byte-for-byte, while sourceVerified remains
+        # false because no original TIFF was read for this annotation.
+        source_verified = False
+        artifact_verified = True
+        coordinate_space = expected_source["coordinateSpace"]
+    elif run_id:
         _id_or_422(str(run_id), "run id")
         _, run_result = _run_result(str(run_id))
         match = next((item for item in run_result["images"] if item["subject"]["id"] == field_id), None)
@@ -1001,9 +1122,15 @@ def _store_review(field_id: str, review: dict[str, Any]) -> dict[str, Any]:
             raise HTTPException(422, "roi is outside the bound validation source-image bounds.")
         source_verified = True
     safe = {key: review.get(key) for key in ("runId", "tag", "note", "channel", "detector", "sourceHash", "roi", "regionEvidence", "skipped", "taskType", "reviewer", "time", "timestamp", "taskVersion")}
+    if review_source is not None:
+        # Persist the server-resolved evidence, not merely client-provided labels.
+        safe["reviewSource"] = expected_source
     safe["channel"] = safe.get("detector") or safe.get("channel")
     safe["fieldId"] = field_id
     safe["sourceVerified"] = source_verified
+    safe["artifactVerified"] = artifact_verified
+    if coordinate_space is not None:
+        safe["coordinateSpace"] = coordinate_space
     _REVIEWS.setdefault(field_id, []).append(safe)
     _save_reviews()
     return {"saved": True, "review": safe, "note": "Review annotations do not change saved probabilities or measurements."}

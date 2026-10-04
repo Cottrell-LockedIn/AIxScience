@@ -8,6 +8,7 @@ import numpy as np
 import pytest
 import tifffile
 from fastapi import HTTPException
+from PIL import Image
 
 from app import api
 
@@ -66,6 +67,78 @@ def test_saved_test_field_rejects_non_skipped_review_without_bound_source(saved_
     with pytest.raises(HTTPException, match="bound validation image") as error:
         api._store_review(saved_test_review, {"note": "Trying to annotate without a verified original."})
     assert error.value.status_code == 422
+
+
+@pytest.fixture
+def saved_preview_review(tmp_path, monkeypatch):
+    previews = tmp_path / "validation_previews"
+    previews.mkdir()
+    artifact = previews / "fixture_BSE.png"
+    Image.new("L", (8, 6), color=127).save(artifact)
+    artifact_hash = hashlib.sha256(artifact.read_bytes()).hexdigest()
+    source_hash = "a" * 64
+    (previews / "manifest.json").write_text(json.dumps({"entries": {"fixture_BSE": {
+        "filename": artifact.name,
+        "source_sha256": source_hash,
+        "preview_sha256": artifact_hash,
+        "width": 80,
+        "height": 60,
+        "preview_width": 8,
+        "preview_height": 6,
+        "method": "fixture",
+    }}}))
+    monkeypatch.setattr(api, "VALIDATION_PREVIEWS", previews)
+    monkeypatch.setattr(api, "_validation_records", lambda: [({"subject": {"id": "fixture"}}, {})])
+    monkeypatch.setattr(api, "_known_field", lambda field: field == "fixture")
+    monkeypatch.setattr(api, "REVIEWS_FILE", tmp_path / "reviews.json")
+    monkeypatch.setattr(api, "_REVIEWS", {})
+    return artifact_hash, source_hash
+
+
+def test_saved_micrograph_review_binds_roi_to_the_displayed_preview(saved_preview_review):
+    artifact_hash, source_hash = saved_preview_review
+    result = api._store_review("fixture", {
+        "detector": "BSE",
+        "roi": {"x": 2, "y": 1, "width": 4, "height": 3},
+        "reviewSource": {"kind": "saved-micrograph", "sha256": artifact_hash, "width": 8, "height": 6, "sourceHash": source_hash},
+    })
+
+    review = result["review"]
+    assert review["sourceVerified"] is False
+    assert review["artifactVerified"] is True
+    assert review["coordinateSpace"] == "saved-preview"
+    assert review["reviewSource"] == {
+        "kind": "saved-micrograph", "sha256": artifact_hash, "width": 8, "height": 6,
+        "sourceHash": source_hash, "coordinateSpace": "saved-preview",
+    }
+
+
+def test_saved_micrograph_review_rejects_a_mismatched_display_frame(saved_preview_review):
+    artifact_hash, _ = saved_preview_review
+    with pytest.raises(HTTPException, match="dimensions"):
+        api._store_review("fixture", {
+            "detector": "BSE", "roi": {"x": 0, "y": 0, "width": 2, "height": 2},
+            "reviewSource": {"kind": "saved-micrograph", "sha256": artifact_hash, "width": 80, "height": 60},
+        })
+
+
+def test_saved_segmentation_review_binds_roi_to_the_displayed_artifact(tmp_path, monkeypatch):
+    official = json.loads(api.HELDOUT.read_text(encoding="utf-8"))
+    field_id = official["images"][0]["subject"]["id"]
+    evidence = api._saved_segmentation_evidence(official["images"][0])
+    assert evidence is not None
+    source = api._saved_segmentation_annotation_source(field_id, "overlay", evidence)
+    monkeypatch.setattr(api, "REVIEWS_FILE", tmp_path / "reviews.json")
+    monkeypatch.setattr(api, "_REVIEWS", {})
+
+    result = api._store_review(field_id, {
+        "roi": {"x": 0, "y": 0, "width": 1, "height": 1},
+        "reviewSource": {key: source[key] for key in ("kind", "artifact", "sha256", "width", "height", "sourceHash")},
+    })
+
+    assert result["review"]["sourceVerified"] is False
+    assert result["review"]["artifactVerified"] is True
+    assert result["review"]["reviewSource"] == source
 
 
 def test_native_crop_clamps_source_edge_without_resampling(bound_validation):
