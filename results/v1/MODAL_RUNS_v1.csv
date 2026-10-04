@@ -1,3 +1,4 @@
 timestamp_utc,function,n_inputs,wall_s,hardware,git_sha,config_hash,est_cost_usd,cost_source,local_remote_max_abs_diff,repeat_max_abs_diff
 2026-10-04T02:35:32.444676+00:00,dino_embed_heldout,3,18.386058136999054,L4,e6046e6,45629944e398,0.0014744129956547202,"https://modal.com/pricing; CPU=$0.0000131/physical-core-s, memory=$0.00000222/GiB-s, L4=$0.000222/GPU-s",,
 2026-10-04T02:39:14.733008+00:00,dino_embed_heldout,3,23.353657093000947,L4,e6046e6,45629944e398,0.0013885920748937604,"https://modal.com/pricing; CPU=$0.0000131/physical-core-s, memory=$0.00000222/GiB-s, L4=$0.000222/GPU-s",,
+2026-10-04T02:56:45.432758+00:00,dino_embed_heldout,3,20.564847118002945,L4,b7d5556,45629944e398,0.0008807637293875202,"https://modal.com/pricing; CPU=$0.0000131/physical-core-s, memory=$0.00000222/GiB-s, L4=$0.000222/GPU-s",,

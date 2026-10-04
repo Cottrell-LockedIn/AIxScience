@@ -55,9 +55,9 @@ def _sha256(path: Path) -> str:
 
 def _file_key(path: Path, root: Path) -> str:
     try:
-        return path.relative_to(root).as_posix()
+        return path.resolve().relative_to(root.resolve()).as_posix()
     except ValueError:
-        return str(path)
+        return str(path.resolve())
 
 
 def _discover_files(
@@ -72,7 +72,7 @@ def _discover_files(
         if path.is_file() and path.suffix.lower() in {".tif", ".tiff"}
     )
     for path in paths:
-        key = _file_key(path, input_dir)
+        key = _file_key(path, _config.ROOT)
         file_hashes[key] = _sha256(path)
         parsed = parse_filename(path)
         if parsed is None:
@@ -85,7 +85,7 @@ def _discover_files(
         if channel in channels:
             message = (
                 f"Duplicate {channel} files for {sample_id}; keeping "
-                f"{_file_key(channels[channel], input_dir)} and skipping {key}."
+                f"{_file_key(channels[channel], _config.ROOT)} and skipping {key}."
             )
             warnings.warn(message)
             notes.append(message)
@@ -265,6 +265,48 @@ def _run_once_guard(out_path: Path, frozen: bool) -> None:
         raise SystemExit("heldout: src, configs, or schema has uncommitted changes")
 
 
+def _canonical_output_path() -> Path:
+    return (_config.ROOT / "results" / "v1" / "heldout.json").resolve()
+
+
+def _validate_dryrun_inputs(
+    source: Path,
+    configured_heldout: Path,
+    groups: dict[str, dict[str, Path]],
+    training_ids: set[str],
+    file_hashes: dict[str, str],
+) -> None:
+    if source.resolve() == configured_heldout.resolve():
+        raise SystemExit("heldout: dry-run input directory cannot be the configured data/heldout")
+
+    unknown = sorted(set(groups) - training_ids)
+    if unknown:
+        raise SystemExit(f"heldout: dry-run includes non-training sample ids: {unknown}")
+
+    audit_path = _config.ROOT / "results" / "audit" / "images.csv"
+    if not audit_path.is_file():
+        raise SystemExit(f"heldout: dry-run requires the audit hash table {audit_path}")
+    audit = pd.read_csv(audit_path, dtype=str, keep_default_na=False)
+    required = {"sample_id", "sha256_BSE"}
+    missing = required - set(audit.columns)
+    if missing:
+        raise SystemExit(f"heldout: {audit_path} is missing columns {sorted(missing)}")
+    if audit["sample_id"].duplicated().any():
+        raise SystemExit(f"heldout: {audit_path} has duplicate sample ids")
+    reference_hashes = audit.set_index("sample_id")["sha256_BSE"].to_dict()
+    for sample_id, files in groups.items():
+        expected = reference_hashes.get(sample_id, "").strip().lower()
+        if not expected:
+            raise SystemExit(f"heldout: no audited BSE hash found for dry-run sample {sample_id}")
+        bse_key = _file_key(files["BSE"], _config.ROOT)
+        actual = file_hashes.get(bse_key, "").lower()
+        if actual != expected:
+            raise SystemExit(
+                f"heldout: BSE sha256 mismatch for dry-run sample {sample_id}; "
+                "only byte-identical training BSE images are allowed"
+            )
+
+
 def _append_modal_run(
     cfg: dict[str, Any],
     columns: list[str] | None,
@@ -381,6 +423,7 @@ def _safe_error(exc: Exception) -> str:
 def _embedding_vectors(
     cfg: dict[str, Any],
     payloads: list[dict[str, Any]],
+    allow_local_fallback: bool = True,
 ) -> tuple[dict[str, np.ndarray], dict[str, Any]]:
     modal_attempt_started = time.perf_counter()
     modal_app = None
@@ -400,6 +443,11 @@ def _embedding_vectors(
     except Exception as exc:
         embedding_error = _safe_error(exc)
         modal_wall = time.perf_counter() - modal_attempt_started
+        if not allow_local_fallback:
+            raise SystemExit(
+                "heldout: Modal embedding failed; CPU fallback is disabled for a frozen real run: "
+                f"{embedding_error}"
+            ) from exc
         vectors, local_wall = _embed_local_cpu(cfg, payloads)
         container_seconds = 0.0
         cost = modal_app._dino_cost(0.0) if modal_app is not None else 0.0
@@ -435,35 +483,69 @@ def run(
     dryrun: bool = False,
     exploratory: bool = False,
 ) -> None:
+    canonical_output = _canonical_output_path()
+    if dryrun and input_dir is None:
+        raise SystemExit("heldout: --dryrun requires an explicit --input-dir")
     if exploratory and out_path is not None:
         raise SystemExit("heldout: exploratory output path is generated automatically; omit --out")
-    output = _out_path(None, True) if exploratory else _out_path(out_path, False)
+
     tag = _exact_tag()
     frozen = _is_frozen_tag()
     if frozen:
         tag = "v1-frozen"
     exploratory_run = bool(dryrun or exploratory)
-    if not dryrun and not exploratory:
+    configured_heldout = _config.resolve(cfg["data"]["heldout_dir"]).expanduser().resolve()
+    source = (
+        Path(input_dir).expanduser().resolve()
+        if input_dir is not None
+        else configured_heldout
+    )
+
+    if dryrun:
+        if source == configured_heldout:
+            raise SystemExit(
+                "heldout: dry-run input directory cannot be the configured data/heldout"
+            )
+        output = _out_path(out_path, False)
+        if output.resolve() == canonical_output:
+            raise SystemExit("heldout: dry-run output cannot be the canonical heldout.json")
+    elif exploratory:
+        if not canonical_output.is_file():
+            raise SystemExit(
+                "heldout: exploratory inference requires canonical results/v1/heldout.json"
+            )
+        output = _out_path(None, True)
+    else:
+        output = _out_path(out_path, False)
+        if output.resolve() != canonical_output:
+            raise SystemExit(
+                "heldout: real inference always writes to canonical results/v1/heldout.json"
+            )
+        output = canonical_output
         _run_once_guard(output, frozen)
+
     if output.exists():
         raise SystemExit(f"heldout: refusing to overwrite existing output {output}")
     if output.suffix.lower() != ".json":
         raise SystemExit("heldout: output path must be a JSON file")
 
-    source = (
-        Path(input_dir)
-        if input_dir is not None
-        else _config.resolve(cfg["data"]["heldout_dir"])
-    )
-    source = source.expanduser().resolve()
     if not source.is_dir():
         raise SystemExit(f"heldout: input directory does not exist: {source}")
     groups, file_hashes, discovery_notes = _discover_files(source)
     if not groups:
         raise SystemExit(f"heldout: no images with a BSE TIFF found under {source}")
 
-    feature_cfg, _ = features._feature_config()
     train = classify.load_training()
+    if dryrun:
+        _validate_dryrun_inputs(
+            source,
+            configured_heldout,
+            groups,
+            set(train["sample_id"].astype(str)),
+            file_hashes,
+        )
+
+    feature_cfg, _ = features._feature_config()
     model = classify.final_model(train)
     model_diff = classify.check_frozen_model(model)
     train_xe = train[classify.EMB_COLS].to_numpy(dtype=np.float64)
@@ -498,7 +580,7 @@ def run(
         if not ({"ETD", "SE"} & set(files)):
             caveats.append("Neither ETD nor SE channel is present.")
         hashes = {
-            _file_key(path, source): file_hashes[_file_key(path, source)]
+            _file_key(path, _config.ROOT): file_hashes[_file_key(path, _config.ROOT)]
             for path in files.values()
         }
         prepared.append(
@@ -522,7 +604,11 @@ def run(
     if not prepared:
         raise SystemExit("heldout: no images with usable BSE tiles")
 
-    vectors_by_sample, embedding_info = _embedding_vectors(cfg, bse_payloads)
+    vectors_by_sample, embedding_info = _embedding_vectors(
+        cfg,
+        bse_payloads,
+        allow_local_fallback=exploratory_run,
+    )
     out_rel = _file_key(output, _config.ROOT)
     image_docs = []
     input_rows: dict[str, Any] = {}
@@ -540,7 +626,10 @@ def run(
         available_names = [name for name in covariate_names if name in item["covariate_values"]]
         evidence = [
             {"file": out_rel, "selector": f"inputs.{sample_id}.covariates"},
-            {"file": _file_key(groups[sample_id]["BSE"], source), "selector": "TIFF metadata"},
+            {
+                "file": _file_key(groups[sample_id]["BSE"], _config.ROOT),
+                "selector": "TIFF metadata",
+            },
         ]
         covariate_block = classify.covariate_block(
             item["covariate_values"],

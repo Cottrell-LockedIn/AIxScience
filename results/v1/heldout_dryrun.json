@@ -1,27 +1,27 @@
 {
   "run": {
-    "timestamp_utc": "2026-10-04T02:39:14.813015+00:00",
-    "git_sha": "e6046e6",
+    "timestamp_utc": "2026-10-04T02:56:45.551442+00:00",
+    "git_sha": "b7d5556",
     "git_tag": null,
     "config_hash": "45629944e398",
     "input_dir": "/home/ubuntu/heldout_dryrun",
     "n_images": 3,
     "file_hashes": {
-      "img_0grcilhi_BSE.tif": "17b8f934fbb4f6904fcf12c7624c58f017f62b5633c856ad159bf6bd2cd9b95a",
-      "img_0grcilhi_ETD.tif": "8b1083c09b5369ab2e964cec1e5f4eff61bdb5864d570772a854a9ba091ccb98",
-      "img_0grcilhi_Inlens.tif": "94eab6358b2110e804065e3fd4d3af80cfd2b57257c325c3cdcd776839bad89a",
-      "img_3806gxp0_BSE.tif": "806d025a34c813c44a6626c882c5358456304dd58d978aa474b42e55f7bfce20",
-      "img_3806gxp0_ETD.tif": "8d11855c77e82d59aac88cf847d4e2e5d6026c4128acfe504c659ae012eacc45",
-      "img_3806gxp0_Inlens.tif": "446eee0eb9055c046e4d6617dd33b5565fc43ca570df60d802b9f614bcada518",
-      "img_4ih2ggld_BSE.tif": "a7fa8987f58071205743249f0b089912c3cdab5289d48aa4dc21e5b73aa21b09",
-      "img_4ih2ggld_ETD.tif": "297533fcdc52070bbf80c81ce61d6fa0b6956c8988310bc632926eef2cdcc2a1",
-      "img_4ih2ggld_Inlens.tif": "bcb9b0d7958dc1547db0915118f981d9cdc05ee8e7a63f1478693ed664b74dc1"
+      "/home/ubuntu/heldout_dryrun/img_0grcilhi_BSE.tif": "17b8f934fbb4f6904fcf12c7624c58f017f62b5633c856ad159bf6bd2cd9b95a",
+      "/home/ubuntu/heldout_dryrun/img_0grcilhi_ETD.tif": "8b1083c09b5369ab2e964cec1e5f4eff61bdb5864d570772a854a9ba091ccb98",
+      "/home/ubuntu/heldout_dryrun/img_0grcilhi_Inlens.tif": "94eab6358b2110e804065e3fd4d3af80cfd2b57257c325c3cdcd776839bad89a",
+      "/home/ubuntu/heldout_dryrun/img_3806gxp0_BSE.tif": "806d025a34c813c44a6626c882c5358456304dd58d978aa474b42e55f7bfce20",
+      "/home/ubuntu/heldout_dryrun/img_3806gxp0_ETD.tif": "8d11855c77e82d59aac88cf847d4e2e5d6026c4128acfe504c659ae012eacc45",
+      "/home/ubuntu/heldout_dryrun/img_3806gxp0_Inlens.tif": "446eee0eb9055c046e4d6617dd33b5565fc43ca570df60d802b9f614bcada518",
+      "/home/ubuntu/heldout_dryrun/img_4ih2ggld_BSE.tif": "a7fa8987f58071205743249f0b089912c3cdab5289d48aa4dc21e5b73aa21b09",
+      "/home/ubuntu/heldout_dryrun/img_4ih2ggld_ETD.tif": "297533fcdc52070bbf80c81ce61d6fa0b6956c8988310bc632926eef2cdcc2a1",
+      "/home/ubuntu/heldout_dryrun/img_4ih2ggld_Inlens.tif": "bcb9b0d7958dc1547db0915118f981d9cdc05ee8e7a63f1478693ed664b74dc1"
     },
     "embedding_backend": "modal_l4",
     "embedding_error": null,
-    "modal_wall_s": 23.353657093000947,
-    "modal_container_s": 4.752848011000001,
-    "modal_cost_usd": 0.0013885920748937604,
+    "modal_wall_s": 20.564847118002945,
+    "modal_container_s": 3.0146622720000007,
+    "modal_cost_usd": 0.0008807637293875202,
     "dryrun": true,
     "frozen": false,
     "exploratory": true,
@@ -38,15 +38,15 @@
         "n_tiles": 39,
         "note": "heldout_dryrun: training image copied to a temporary folder; its score does not count",
         "file_hashes": {
-          "img_0grcilhi_BSE.tif": "17b8f934fbb4f6904fcf12c7624c58f017f62b5633c856ad159bf6bd2cd9b95a",
-          "img_0grcilhi_ETD.tif": "8b1083c09b5369ab2e964cec1e5f4eff61bdb5864d570772a854a9ba091ccb98",
-          "img_0grcilhi_Inlens.tif": "94eab6358b2110e804065e3fd4d3af80cfd2b57257c325c3cdcd776839bad89a"
+          "/home/ubuntu/heldout_dryrun/img_0grcilhi_BSE.tif": "17b8f934fbb4f6904fcf12c7624c58f017f62b5633c856ad159bf6bd2cd9b95a",
+          "/home/ubuntu/heldout_dryrun/img_0grcilhi_ETD.tif": "8b1083c09b5369ab2e964cec1e5f4eff61bdb5864d570772a854a9ba091ccb98",
+          "/home/ubuntu/heldout_dryrun/img_0grcilhi_Inlens.tif": "94eab6358b2110e804065e3fd4d3af80cfd2b57257c325c3cdcd776839bad89a"
         }
       },
       "verdict": {
         "label": "within_bounds",
-        "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch.",
-        "reason": "Bet Batch_3 with p=0.991 (runner-up Batch_2 p=0.008, margin 0.983); tier high because p_max=0.991 >= 0.75 and LOIO permutation p=0.0350 < 0.05. Top drivers: embedding PC 1 (+2.31), embedding PC 3 (+0.99), embedding PC 9 (+0.51). Most top drivers are embedding components, whose batch signal could not be separated from acquisition in Phase B; the bet stands. Batch_3 embedding check: E1=0.1750 vs band95 0.2198 / band99 0.2446 -> within_bounds. Acquisition covariates outside the training 5-95 % range: nm_per_px_if_tag_true.",
+        "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch. The null has only 16-17 values, so band99 interpolates between the two largest null values; rank_p = (1 + #{null >= E1}) / (1 + n_null) is reported, minimum about 1/18.",
+        "reason": "Bet Batch_3 with p=0.991 (runner-up Batch_2 p=0.008, margin 0.983); tier high because p_max=0.991 >= 0.75 and LOIO permutation p=0.0350 < 0.05. In LOIO (this image excluded), bets on Batch_3 were right 13/15, and 12/13 at tier high. Top drivers: embedding PC 1 (+2.31), embedding PC 3 (+0.99), embedding PC 9 (+0.51). Most top drivers are embedding components, whose batch signal could not be separated from acquisition in Phase B; the bet stands. Batch_3 embedding check: E1=0.1750 vs band95 0.2198 / band99 0.2446 -> within_bounds. Acquisition covariates outside the training 5-95 % range: nm_per_px_if_tag_true.",
         "closed_set": {
           "predicted_batch": "Batch_3",
           "confidence": 0.9911299942295257,
@@ -70,7 +70,13 @@
               "loio_accuracy": "18/31",
               "loio_permutation_p": 0.03496503496503497,
               "chance_majority": "17/31",
-              "ood_label": "within_bounds"
+              "ood_label": "within_bounds",
+              "loio_reliability": {
+                "pred_batch_correct": 13,
+                "pred_batch_n": 15,
+                "pred_batch_tier_correct": 12,
+                "pred_batch_tier_n": 13
+              }
             },
             "evidence": [
               {
@@ -88,6 +94,15 @@
               {
                 "file": "docs/Log/2026-10-04_phase_c.md",
                 "selector": "Frozen choices"
+              },
+              {
+                "file": "results/v1/loio_predictions.csv",
+                "selector": "pred_batch == 'Batch_3' and sample_id != '0grcilhi'",
+                "rule": "Reported, not a rule change: precision of the frozen model's LOIO bets on the same predicted batch (and within the same tier), from results/v1/loio_predictions.csv, excluding this image."
+              },
+              {
+                "file": "results/v1/loio_predictions.csv",
+                "selector": "pred_batch == 'Batch_3' and tier == 'high' and sample_id != '0grcilhi'"
               }
             ]
           }
@@ -103,13 +118,15 @@
           "null_band_99": 0.24460859976440058,
           "matches_known_batch": true,
           "justification": {
-            "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch.",
+            "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch. The null has only 16-17 values, so band99 interpolates between the two largest null values; rank_p = (1 + #{null >= E1}) / (1 + n_null) is reported, minimum about 1/18.",
             "numbers": {
               "e1_to_batch3": 0.17497431678471811,
               "band95": 0.21979105149424963,
               "band99": 0.24460859976440058,
               "n_reference": 17,
-              "null_max": 0.2508129868319383
+              "null_max": 0.2508129868319383,
+              "rank_p": 0.5,
+              "n_null": 17
             },
             "evidence": [
               {
@@ -124,7 +141,7 @@
           }
         },
         "justification": {
-          "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch.",
+          "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch. The null has only 16-17 values, so band99 interpolates between the two largest null values; rank_p = (1 + #{null >= E1}) / (1 + n_null) is reported, minimum about 1/18.",
           "numbers": {
             "e1_to_batch3": 0.17497431678471811,
             "band95": 0.21979105149424963,
@@ -139,11 +156,11 @@
         }
       },
       "pipeline": {
-        "git_sha": "e6046e6",
+        "git_sha": "b7d5556",
         "git_tag": null,
         "config_path": "configs/v1.yaml",
         "config_hash": "45629944e398",
-        "timestamp_utc": "2026-10-04T02:39:14.746136+00:00",
+        "timestamp_utc": "2026-10-04T02:56:45.450199+00:00",
         "frozen": false,
         "exploratory": true,
         "model_revisions": {
@@ -181,7 +198,7 @@
                   "selector": "inputs.0grcilhi.covariates"
                 },
                 {
-                  "file": "img_0grcilhi_BSE.tif",
+                  "file": "/home/ubuntu/heldout_dryrun/img_0grcilhi_BSE.tif",
                   "selector": "TIFF metadata"
                 }
               ]
@@ -207,7 +224,7 @@
                   "selector": "inputs.0grcilhi.covariates"
                 },
                 {
-                  "file": "img_0grcilhi_BSE.tif",
+                  "file": "/home/ubuntu/heldout_dryrun/img_0grcilhi_BSE.tif",
                   "selector": "TIFF metadata"
                 }
               ]
@@ -233,7 +250,7 @@
                   "selector": "inputs.0grcilhi.covariates"
                 },
                 {
-                  "file": "img_0grcilhi_BSE.tif",
+                  "file": "/home/ubuntu/heldout_dryrun/img_0grcilhi_BSE.tif",
                   "selector": "TIFF metadata"
                 }
               ]
@@ -259,7 +276,7 @@
                   "selector": "inputs.0grcilhi.covariates"
                 },
                 {
-                  "file": "img_0grcilhi_BSE.tif",
+                  "file": "/home/ubuntu/heldout_dryrun/img_0grcilhi_BSE.tif",
                   "selector": "TIFF metadata"
                 }
               ]
@@ -285,7 +302,7 @@
                   "selector": "inputs.0grcilhi.covariates"
                 },
                 {
-                  "file": "img_0grcilhi_BSE.tif",
+                  "file": "/home/ubuntu/heldout_dryrun/img_0grcilhi_BSE.tif",
                   "selector": "TIFF metadata"
                 }
               ]
@@ -311,7 +328,7 @@
                   "selector": "inputs.0grcilhi.covariates"
                 },
                 {
-                  "file": "img_0grcilhi_BSE.tif",
+                  "file": "/home/ubuntu/heldout_dryrun/img_0grcilhi_BSE.tif",
                   "selector": "TIFF metadata"
                 }
               ]
@@ -337,7 +354,7 @@
                   "selector": "inputs.0grcilhi.covariates"
                 },
                 {
-                  "file": "img_0grcilhi_BSE.tif",
+                  "file": "/home/ubuntu/heldout_dryrun/img_0grcilhi_BSE.tif",
                   "selector": "TIFF metadata"
                 }
               ]
@@ -363,7 +380,7 @@
                   "selector": "inputs.0grcilhi.covariates"
                 },
                 {
-                  "file": "img_0grcilhi_BSE.tif",
+                  "file": "/home/ubuntu/heldout_dryrun/img_0grcilhi_BSE.tif",
                   "selector": "TIFF metadata"
                 }
               ]
@@ -376,9 +393,9 @@
         "drivers": [
           {
             "name": "embedding PC 1",
-            "units": "PC score (embedding units)",
+            "units": "model_input is the raw PC score (not standardised; embedding units)",
             "value": 3.968569544715101,
-            "standardised_value": 3.968569544715101,
+            "model_input": 3.968569544715101,
             "coefficient": 0.582396641160881,
             "effect_size": 2.3112815730554415,
             "direction": "higher",
@@ -387,7 +404,7 @@
               "rule": "contribution_k = coef[pred_batch, k] x x_k (x_k = standardised F value or embedding PC score); top 3 by signed contribution, i.e. the largest support for the bet.",
               "numbers": {
                 "coefficient": 0.582396641160881,
-                "standardised_value": 3.968569544715101,
+                "model_input": 3.968569544715101,
                 "contribution": 2.3112815730554415
               },
               "evidence": [
@@ -404,9 +421,9 @@
           },
           {
             "name": "embedding PC 3",
-            "units": "PC score (embedding units)",
+            "units": "model_input is the raw PC score (not standardised; embedding units)",
             "value": 2.051036082034022,
-            "standardised_value": 2.051036082034022,
+            "model_input": 2.051036082034022,
             "coefficient": 0.48355530540751257,
             "effect_size": 0.9917893790497896,
             "direction": "higher",
@@ -415,7 +432,7 @@
               "rule": "contribution_k = coef[pred_batch, k] x x_k (x_k = standardised F value or embedding PC score); top 3 by signed contribution, i.e. the largest support for the bet.",
               "numbers": {
                 "coefficient": 0.48355530540751257,
-                "standardised_value": 2.051036082034022,
+                "model_input": 2.051036082034022,
                 "contribution": 0.9917893790497896
               },
               "evidence": [
@@ -432,9 +449,9 @@
           },
           {
             "name": "embedding PC 9",
-            "units": "PC score (embedding units)",
+            "units": "model_input is the raw PC score (not standardised; embedding units)",
             "value": -1.1511910355731292,
-            "standardised_value": -1.1511910355731292,
+            "model_input": -1.1511910355731292,
             "coefficient": -0.4425924051921326,
             "effect_size": 0.5095084092699331,
             "direction": "lower",
@@ -443,7 +460,7 @@
               "rule": "contribution_k = coef[pred_batch, k] x x_k (x_k = standardised F value or embedding PC score); top 3 by signed contribution, i.e. the largest support for the bet.",
               "numbers": {
                 "coefficient": -0.4425924051921326,
-                "standardised_value": -1.1511910355731292,
+                "model_input": -1.1511910355731292,
                 "contribution": 0.5095084092699331
               },
               "evidence": [
@@ -490,15 +507,15 @@
         "n_tiles": 39,
         "note": "heldout_dryrun: training image copied to a temporary folder; its score does not count",
         "file_hashes": {
-          "img_3806gxp0_BSE.tif": "806d025a34c813c44a6626c882c5358456304dd58d978aa474b42e55f7bfce20",
-          "img_3806gxp0_ETD.tif": "8d11855c77e82d59aac88cf847d4e2e5d6026c4128acfe504c659ae012eacc45",
-          "img_3806gxp0_Inlens.tif": "446eee0eb9055c046e4d6617dd33b5565fc43ca570df60d802b9f614bcada518"
+          "/home/ubuntu/heldout_dryrun/img_3806gxp0_BSE.tif": "806d025a34c813c44a6626c882c5358456304dd58d978aa474b42e55f7bfce20",
+          "/home/ubuntu/heldout_dryrun/img_3806gxp0_ETD.tif": "8d11855c77e82d59aac88cf847d4e2e5d6026c4128acfe504c659ae012eacc45",
+          "/home/ubuntu/heldout_dryrun/img_3806gxp0_Inlens.tif": "446eee0eb9055c046e4d6617dd33b5565fc43ca570df60d802b9f614bcada518"
         }
       },
       "verdict": {
         "label": "within_bounds",
-        "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch.",
-        "reason": "Bet Batch_2 with p=0.947 (runner-up Batch_3 p=0.041, margin 0.906); tier high because p_max=0.947 >= 0.75 and LOIO permutation p=0.0350 < 0.05. Top drivers: embedding PC 3 (+0.67), embedding PC 8 (+0.49), F09_c0_chord_anisotropy_h_over_v (+0.40). Most top drivers are embedding components, whose batch signal could not be separated from acquisition in Phase B; the bet stands. Batch_3 embedding check: E1=0.1775 vs band95 0.2198 / band99 0.2446 -> within_bounds. Acquisition covariates outside the training 5-95 % range: edge_charging_Inlens.",
+        "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch. The null has only 16-17 values, so band99 interpolates between the two largest null values; rank_p = (1 + #{null >= E1}) / (1 + n_null) is reported, minimum about 1/18.",
+        "reason": "Bet Batch_2 with p=0.947 (runner-up Batch_3 p=0.041, margin 0.906); tier high because p_max=0.947 >= 0.75 and LOIO permutation p=0.0350 < 0.05. In LOIO (this image excluded), bets on Batch_2 were right 1/8, and 0/2 at tier high. Top drivers: embedding PC 3 (+0.67), embedding PC 8 (+0.49), F09_c0_chord_anisotropy_h_over_v (+0.40). Most top drivers are embedding components, whose batch signal could not be separated from acquisition in Phase B; the bet stands. Batch_3 embedding check: E1=0.1775 vs band95 0.2198 / band99 0.2446 -> within_bounds. Acquisition covariates outside the training 5-95 % range: edge_charging_Inlens.",
         "closed_set": {
           "predicted_batch": "Batch_2",
           "confidence": 0.9470215022574918,
@@ -522,7 +539,13 @@
               "loio_accuracy": "18/31",
               "loio_permutation_p": 0.03496503496503497,
               "chance_majority": "17/31",
-              "ood_label": "within_bounds"
+              "ood_label": "within_bounds",
+              "loio_reliability": {
+                "pred_batch_correct": 1,
+                "pred_batch_n": 8,
+                "pred_batch_tier_correct": 0,
+                "pred_batch_tier_n": 2
+              }
             },
             "evidence": [
               {
@@ -540,6 +563,15 @@
               {
                 "file": "docs/Log/2026-10-04_phase_c.md",
                 "selector": "Frozen choices"
+              },
+              {
+                "file": "results/v1/loio_predictions.csv",
+                "selector": "pred_batch == 'Batch_2' and sample_id != '3806gxp0'",
+                "rule": "Reported, not a rule change: precision of the frozen model's LOIO bets on the same predicted batch (and within the same tier), from results/v1/loio_predictions.csv, excluding this image."
+              },
+              {
+                "file": "results/v1/loio_predictions.csv",
+                "selector": "pred_batch == 'Batch_2' and tier == 'high' and sample_id != '3806gxp0'"
               }
             ]
           }
@@ -555,13 +587,15 @@
           "null_band_99": 0.24460859976440058,
           "matches_known_batch": true,
           "justification": {
-            "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch.",
+            "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch. The null has only 16-17 values, so band99 interpolates between the two largest null values; rank_p = (1 + #{null >= E1}) / (1 + n_null) is reported, minimum about 1/18.",
             "numbers": {
               "e1_to_batch3": 0.17749929262364458,
               "band95": 0.21979105149424963,
               "band99": 0.24460859976440058,
               "n_reference": 17,
-              "null_max": 0.2508129868319383
+              "null_max": 0.2508129868319383,
+              "rank_p": 0.4444444444444444,
+              "n_null": 17
             },
             "evidence": [
               {
@@ -576,7 +610,7 @@
           }
         },
         "justification": {
-          "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch.",
+          "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch. The null has only 16-17 values, so band99 interpolates between the two largest null values; rank_p = (1 + #{null >= E1}) / (1 + n_null) is reported, minimum about 1/18.",
           "numbers": {
             "e1_to_batch3": 0.17749929262364458,
             "band95": 0.21979105149424963,
@@ -591,11 +625,11 @@
         }
       },
       "pipeline": {
-        "git_sha": "e6046e6",
+        "git_sha": "b7d5556",
         "git_tag": null,
         "config_path": "configs/v1.yaml",
         "config_hash": "45629944e398",
-        "timestamp_utc": "2026-10-04T02:39:14.770859+00:00",
+        "timestamp_utc": "2026-10-04T02:56:45.497637+00:00",
         "frozen": false,
         "exploratory": true,
         "model_revisions": {
@@ -633,7 +667,7 @@
                   "selector": "inputs.3806gxp0.covariates"
                 },
                 {
-                  "file": "img_3806gxp0_BSE.tif",
+                  "file": "/home/ubuntu/heldout_dryrun/img_3806gxp0_BSE.tif",
                   "selector": "TIFF metadata"
                 }
               ]
@@ -659,7 +693,7 @@
                   "selector": "inputs.3806gxp0.covariates"
                 },
                 {
-                  "file": "img_3806gxp0_BSE.tif",
+                  "file": "/home/ubuntu/heldout_dryrun/img_3806gxp0_BSE.tif",
                   "selector": "TIFF metadata"
                 }
               ]
@@ -685,7 +719,7 @@
                   "selector": "inputs.3806gxp0.covariates"
                 },
                 {
-                  "file": "img_3806gxp0_BSE.tif",
+                  "file": "/home/ubuntu/heldout_dryrun/img_3806gxp0_BSE.tif",
                   "selector": "TIFF metadata"
                 }
               ]
@@ -711,7 +745,7 @@
                   "selector": "inputs.3806gxp0.covariates"
                 },
                 {
-                  "file": "img_3806gxp0_BSE.tif",
+                  "file": "/home/ubuntu/heldout_dryrun/img_3806gxp0_BSE.tif",
                   "selector": "TIFF metadata"
                 }
               ]
@@ -737,7 +771,7 @@
                   "selector": "inputs.3806gxp0.covariates"
                 },
                 {
-                  "file": "img_3806gxp0_BSE.tif",
+                  "file": "/home/ubuntu/heldout_dryrun/img_3806gxp0_BSE.tif",
                   "selector": "TIFF metadata"
                 }
               ]
@@ -763,7 +797,7 @@
                   "selector": "inputs.3806gxp0.covariates"
                 },
                 {
-                  "file": "img_3806gxp0_BSE.tif",
+                  "file": "/home/ubuntu/heldout_dryrun/img_3806gxp0_BSE.tif",
                   "selector": "TIFF metadata"
                 }
               ]
@@ -789,7 +823,7 @@
                   "selector": "inputs.3806gxp0.covariates"
                 },
                 {
-                  "file": "img_3806gxp0_BSE.tif",
+                  "file": "/home/ubuntu/heldout_dryrun/img_3806gxp0_BSE.tif",
                   "selector": "TIFF metadata"
                 }
               ]
@@ -815,7 +849,7 @@
                   "selector": "inputs.3806gxp0.covariates"
                 },
                 {
-                  "file": "img_3806gxp0_BSE.tif",
+                  "file": "/home/ubuntu/heldout_dryrun/img_3806gxp0_BSE.tif",
                   "selector": "TIFF metadata"
                 }
               ]
@@ -828,9 +862,9 @@
         "drivers": [
           {
             "name": "embedding PC 3",
-            "units": "PC score (embedding units)",
+            "units": "model_input is the raw PC score (not standardised; embedding units)",
             "value": -1.497684126634094,
-            "standardised_value": -1.497684126634094,
+            "model_input": -1.497684126634094,
             "coefficient": -0.44412446464043204,
             "effect_size": 0.66515816094184,
             "direction": "lower",
@@ -839,7 +873,7 @@
               "rule": "contribution_k = coef[pred_batch, k] x x_k (x_k = standardised F value or embedding PC score); top 3 by signed contribution, i.e. the largest support for the bet.",
               "numbers": {
                 "coefficient": -0.44412446464043204,
-                "standardised_value": -1.497684126634094,
+                "model_input": -1.497684126634094,
                 "contribution": 0.66515816094184
               },
               "evidence": [
@@ -856,9 +890,9 @@
           },
           {
             "name": "embedding PC 8",
-            "units": "PC score (embedding units)",
+            "units": "model_input is the raw PC score (not standardised; embedding units)",
             "value": -1.7978339748433843,
-            "standardised_value": -1.7978339748433843,
+            "model_input": -1.7978339748433843,
             "coefficient": -0.2732608625294538,
             "effect_size": 0.4912776626504595,
             "direction": "lower",
@@ -867,7 +901,7 @@
               "rule": "contribution_k = coef[pred_batch, k] x x_k (x_k = standardised F value or embedding PC score); top 3 by signed contribution, i.e. the largest support for the bet.",
               "numbers": {
                 "coefficient": -0.2732608625294538,
-                "standardised_value": -1.7978339748433843,
+                "model_input": -1.7978339748433843,
                 "contribution": 0.4912776626504595
               },
               "evidence": [
@@ -884,9 +918,9 @@
           },
           {
             "name": "F09_c0_chord_anisotropy_h_over_v",
-            "units": "px-based image feature (standardised)",
+            "units": "px-based image feature; model_input is the fold-standardised value",
             "value": 1.091712680124707,
-            "standardised_value": -1.5688548777980604,
+            "model_input": -1.5688548777980604,
             "coefficient": -0.2578635968585138,
             "effect_size": 0.40455056173803194,
             "direction": "lower",
@@ -895,7 +929,7 @@
               "rule": "contribution_k = coef[pred_batch, k] x x_k (x_k = standardised F value or embedding PC score); top 3 by signed contribution, i.e. the largest support for the bet.",
               "numbers": {
                 "coefficient": -0.2578635968585138,
-                "standardised_value": -1.5688548777980604,
+                "model_input": -1.5688548777980604,
                 "contribution": 0.40455056173803194
               },
               "evidence": [
@@ -942,15 +976,15 @@
         "n_tiles": 52,
         "note": "heldout_dryrun: training image copied to a temporary folder; its score does not count",
         "file_hashes": {
-          "img_4ih2ggld_BSE.tif": "a7fa8987f58071205743249f0b089912c3cdab5289d48aa4dc21e5b73aa21b09",
-          "img_4ih2ggld_ETD.tif": "297533fcdc52070bbf80c81ce61d6fa0b6956c8988310bc632926eef2cdcc2a1",
-          "img_4ih2ggld_Inlens.tif": "bcb9b0d7958dc1547db0915118f981d9cdc05ee8e7a63f1478693ed664b74dc1"
+          "/home/ubuntu/heldout_dryrun/img_4ih2ggld_BSE.tif": "a7fa8987f58071205743249f0b089912c3cdab5289d48aa4dc21e5b73aa21b09",
+          "/home/ubuntu/heldout_dryrun/img_4ih2ggld_ETD.tif": "297533fcdc52070bbf80c81ce61d6fa0b6956c8988310bc632926eef2cdcc2a1",
+          "/home/ubuntu/heldout_dryrun/img_4ih2ggld_Inlens.tif": "bcb9b0d7958dc1547db0915118f981d9cdc05ee8e7a63f1478693ed664b74dc1"
         }
       },
       "verdict": {
         "label": "outside_bounds",
-        "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch.",
-        "reason": "Bet Batch_1 with p=0.969 (runner-up Batch_2 p=0.028, margin 0.942); tier low because outside the Batch_3 embedding band (OOD caps the tier at low). Top drivers: embedding PC 1 (+2.20), embedding PC 2 (+1.87), F06_c2_clark_evans_R (+0.94). Most top drivers are embedding components, whose batch signal could not be separated from acquisition in Phase B; the bet stands. Batch_3 embedding check: E1=0.4562 vs band95 0.2198 / band99 0.2446 -> outside_bounds (outside the Batch_3 distribution; the bet still stands). Acquisition covariates outside the training 5-95 % range: noise_sigma_BSE, sharpness_BSE, hstripe_score_BSE, height.",
+        "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch. The null has only 16-17 values, so band99 interpolates between the two largest null values; rank_p = (1 + #{null >= E1}) / (1 + n_null) is reported, minimum about 1/18.",
+        "reason": "Bet Batch_1 with p=0.969 (runner-up Batch_2 p=0.028, margin 0.942); tier low because outside the Batch_3 embedding band (OOD caps the tier at low). In LOIO (this image excluded), bets on Batch_1 were right 1/5, and 1/3 at tier low. Top drivers: embedding PC 1 (+2.20), embedding PC 2 (+1.87), F06_c2_clark_evans_R (+0.94). Most top drivers are embedding components, whose batch signal could not be separated from acquisition in Phase B; the bet stands. Batch_3 embedding check: E1=0.4562 vs band95 0.2198 / band99 0.2446 -> outside_bounds (outside the Batch_3 distribution; the bet still stands). Acquisition covariates outside the training 5-95 % range: noise_sigma_BSE, sharpness_BSE, hstripe_score_BSE, height.",
         "closed_set": {
           "predicted_batch": "Batch_1",
           "confidence": 0.9693091471891538,
@@ -974,7 +1008,13 @@
               "loio_accuracy": "18/31",
               "loio_permutation_p": 0.03496503496503497,
               "chance_majority": "17/31",
-              "ood_label": "outside_bounds"
+              "ood_label": "outside_bounds",
+              "loio_reliability": {
+                "pred_batch_correct": 1,
+                "pred_batch_n": 5,
+                "pred_batch_tier_correct": 1,
+                "pred_batch_tier_n": 3
+              }
             },
             "evidence": [
               {
@@ -992,6 +1032,15 @@
               {
                 "file": "docs/Log/2026-10-04_phase_c.md",
                 "selector": "Frozen choices"
+              },
+              {
+                "file": "results/v1/loio_predictions.csv",
+                "selector": "pred_batch == 'Batch_1' and sample_id != '4ih2ggld'",
+                "rule": "Reported, not a rule change: precision of the frozen model's LOIO bets on the same predicted batch (and within the same tier), from results/v1/loio_predictions.csv, excluding this image."
+              },
+              {
+                "file": "results/v1/loio_predictions.csv",
+                "selector": "pred_batch == 'Batch_1' and tier == 'low' and sample_id != '4ih2ggld'"
               }
             ]
           }
@@ -1007,13 +1056,15 @@
           "null_band_99": 0.24460859976440058,
           "matches_known_batch": false,
           "justification": {
-            "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch.",
+            "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch. The null has only 16-17 values, so band99 interpolates between the two largest null values; rank_p = (1 + #{null >= E1}) / (1 + n_null) is reported, minimum about 1/18.",
             "numbers": {
               "e1_to_batch3": 0.45623226684636375,
               "band95": 0.21979105149424963,
               "band99": 0.24460859976440058,
               "n_reference": 17,
-              "null_max": 0.2508129868319383
+              "null_max": 0.2508129868319383,
+              "rank_p": 0.05555555555555555,
+              "n_null": 17
             },
             "evidence": [
               {
@@ -1028,7 +1079,7 @@
           }
         },
         "justification": {
-          "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch.",
+          "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch. The null has only 16-17 values, so band99 interpolates between the two largest null values; rank_p = (1 + #{null >= E1}) / (1 + n_null) is reported, minimum about 1/18.",
           "numbers": {
             "e1_to_batch3": 0.45623226684636375,
             "band95": 0.21979105149424963,
@@ -1043,11 +1094,11 @@
         }
       },
       "pipeline": {
-        "git_sha": "e6046e6",
+        "git_sha": "b7d5556",
         "git_tag": null,
         "config_path": "configs/v1.yaml",
         "config_hash": "45629944e398",
-        "timestamp_utc": "2026-10-04T02:39:14.794826+00:00",
+        "timestamp_utc": "2026-10-04T02:56:45.532273+00:00",
         "frozen": false,
         "exploratory": true,
         "model_revisions": {
@@ -1085,7 +1136,7 @@
                   "selector": "inputs.4ih2ggld.covariates"
                 },
                 {
-                  "file": "img_4ih2ggld_BSE.tif",
+                  "file": "/home/ubuntu/heldout_dryrun/img_4ih2ggld_BSE.tif",
                   "selector": "TIFF metadata"
                 }
               ]
@@ -1111,7 +1162,7 @@
                   "selector": "inputs.4ih2ggld.covariates"
                 },
                 {
-                  "file": "img_4ih2ggld_BSE.tif",
+                  "file": "/home/ubuntu/heldout_dryrun/img_4ih2ggld_BSE.tif",
                   "selector": "TIFF metadata"
                 }
               ]
@@ -1137,7 +1188,7 @@
                   "selector": "inputs.4ih2ggld.covariates"
                 },
                 {
-                  "file": "img_4ih2ggld_BSE.tif",
+                  "file": "/home/ubuntu/heldout_dryrun/img_4ih2ggld_BSE.tif",
                   "selector": "TIFF metadata"
                 }
               ]
@@ -1163,7 +1214,7 @@
                   "selector": "inputs.4ih2ggld.covariates"
                 },
                 {
-                  "file": "img_4ih2ggld_BSE.tif",
+                  "file": "/home/ubuntu/heldout_dryrun/img_4ih2ggld_BSE.tif",
                   "selector": "TIFF metadata"
                 }
               ]
@@ -1189,7 +1240,7 @@
                   "selector": "inputs.4ih2ggld.covariates"
                 },
                 {
-                  "file": "img_4ih2ggld_BSE.tif",
+                  "file": "/home/ubuntu/heldout_dryrun/img_4ih2ggld_BSE.tif",
                   "selector": "TIFF metadata"
                 }
               ]
@@ -1215,7 +1266,7 @@
                   "selector": "inputs.4ih2ggld.covariates"
                 },
                 {
-                  "file": "img_4ih2ggld_BSE.tif",
+                  "file": "/home/ubuntu/heldout_dryrun/img_4ih2ggld_BSE.tif",
                   "selector": "TIFF metadata"
                 }
               ]
@@ -1241,7 +1292,7 @@
                   "selector": "inputs.4ih2ggld.covariates"
                 },
                 {
-                  "file": "img_4ih2ggld_BSE.tif",
+                  "file": "/home/ubuntu/heldout_dryrun/img_4ih2ggld_BSE.tif",
                   "selector": "TIFF metadata"
                 }
               ]
@@ -1267,7 +1318,7 @@
                   "selector": "inputs.4ih2ggld.covariates"
                 },
                 {
-                  "file": "img_4ih2ggld_BSE.tif",
+                  "file": "/home/ubuntu/heldout_dryrun/img_4ih2ggld_BSE.tif",
                   "selector": "TIFF metadata"
                 }
               ]
@@ -1280,9 +1331,9 @@
         "drivers": [
           {
             "name": "embedding PC 1",
-            "units": "PC score (embedding units)",
+            "units": "model_input is the raw PC score (not standardised; embedding units)",
             "value": -4.614998814303735,
-            "standardised_value": -4.614998814303735,
+            "model_input": -4.614998814303735,
             "coefficient": -0.4773556012154206,
             "effect_size": 2.2029955336104123,
             "direction": "lower",
@@ -1291,7 +1342,7 @@
               "rule": "contribution_k = coef[pred_batch, k] x x_k (x_k = standardised F value or embedding PC score); top 3 by signed contribution, i.e. the largest support for the bet.",
               "numbers": {
                 "coefficient": -0.4773556012154206,
-                "standardised_value": -4.614998814303735,
+                "model_input": -4.614998814303735,
                 "contribution": 2.2029955336104123
               },
               "evidence": [
@@ -1308,9 +1359,9 @@
           },
           {
             "name": "embedding PC 2",
-            "units": "PC score (embedding units)",
+            "units": "model_input is the raw PC score (not standardised; embedding units)",
             "value": -4.692315867499199,
-            "standardised_value": -4.692315867499199,
+            "model_input": -4.692315867499199,
             "coefficient": -0.3977764741382944,
             "effect_size": 1.8664928613170038,
             "direction": "lower",
@@ -1319,7 +1370,7 @@
               "rule": "contribution_k = coef[pred_batch, k] x x_k (x_k = standardised F value or embedding PC score); top 3 by signed contribution, i.e. the largest support for the bet.",
               "numbers": {
                 "coefficient": -0.3977764741382944,
-                "standardised_value": -4.692315867499199,
+                "model_input": -4.692315867499199,
                 "contribution": 1.8664928613170038
               },
               "evidence": [
@@ -1336,9 +1387,9 @@
           },
           {
             "name": "F06_c2_clark_evans_R",
-            "units": "px-based image feature (standardised)",
+            "units": "px-based image feature; model_input is the fold-standardised value",
             "value": 0.8519519289196332,
-            "standardised_value": 2.533777025319557,
+            "model_input": 2.533777025319557,
             "coefficient": 0.3697204919053791,
             "effect_size": 0.9367892881796948,
             "direction": "higher",
@@ -1347,7 +1398,7 @@
               "rule": "contribution_k = coef[pred_batch, k] x x_k (x_k = standardised F value or embedding PC score); top 3 by signed contribution, i.e. the largest support for the bet.",
               "numbers": {
                 "coefficient": 0.3697204919053791,
-                "standardised_value": 2.533777025319557,
+                "model_input": 2.533777025319557,
                 "contribution": 0.9367892881796948
               },
               "evidence": [
@@ -1375,7 +1426,7 @@
       },
       "routing": {
         "stakeholder": "materials_expert_review",
-        "reason": "BSE embedding outside the Batch_3 99 % band"
+        "reason": "BSE embedding above the Batch_3 upper band (band99)"
       },
       "next_action": "Review this image against Batch_3 before accepting the material; check acquisition settings first.",
       "caveats": [
