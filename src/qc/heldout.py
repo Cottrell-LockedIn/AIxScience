@@ -9,11 +9,14 @@ import subprocess
 import time
 import warnings
 from datetime import datetime, timezone
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 
+import cv2
 import numpy as np
 import pandas as pd
+from PIL import Image, PngImagePlugin
 
 from qc import audit, artefacts, classify, config as _config, embed, features, segment, tiles
 
@@ -160,7 +163,7 @@ def _extract_features(
     bse: dict[str, Any],
     cfg: dict[str, Any],
     feature_cfg: dict[str, Any],
-) -> dict[str, float]:
+) -> tuple[dict[str, float], np.ndarray]:
     segmentation_cfg = segment.params(cfg["segmentation"])
     mask_arrays: dict[str, np.ndarray] = {}
     for row, tile in bse["tiles"]:
@@ -173,7 +176,69 @@ def _extract_features(
         int(feature_cfg["stitch"]["unanalysed_value"]),
         mask_arrays=mask_arrays,
     )
-    return features.extract_features(stitched, **_feature_parameters(cfg, feature_cfg))
+    return features.extract_features(stitched, **_feature_parameters(cfg, feature_cfg)), stitched
+
+
+def _segmentation_overlay(image: np.ndarray, mask: np.ndarray, downscale: int) -> np.ndarray:
+    if image.ndim != 2 or image.shape != mask.shape:
+        raise ValueError("mask and cropped grayscale image must have the same 2D shape")
+    if mask.dtype != np.uint8 or not np.isin(mask, [0, 1, 2]).all():
+        raise ValueError("mask must be uint8 with only class labels 0, 1, and 2")
+    if downscale < 1:
+        raise ValueError("overlay downscale must be positive")
+    height, width = image.shape
+    size = (max(1, width // downscale), max(1, height // downscale))
+    gray = cv2.resize(image, size, interpolation=cv2.INTER_AREA)
+    labels = cv2.resize(mask, size, interpolation=cv2.INTER_NEAREST)
+    rgb = np.repeat(gray[..., None], 3, axis=2).astype(np.float64)
+    for label, color in ((0, (31, 119, 180)), (2, (255, 127, 14))):
+        selected = labels == label
+        rgb[selected] = 0.55 * rgb[selected] + 0.45 * np.asarray(color)
+    return np.rint(rgb).astype(np.uint8)
+
+
+def _save_segmentation(
+    output: Path,
+    sample_id: str,
+    image: np.ndarray,
+    mask: np.ndarray,
+    cfg: dict[str, Any],
+) -> dict[str, Any]:
+    downscale = int(cfg["tiling"]["preview_downscale"])
+    overlay = _segmentation_overlay(image, mask, downscale)
+    mask_png = features._encode_label_png(mask)
+    metadata = PngImagePlugin.PngInfo()
+    metadata.add_text("exploratory", "true")
+    metadata.add_text("phase_identity", classify.PHASE_IDENTITY)
+    buffer = BytesIO()
+    Image.fromarray(overlay).save(buffer, format="PNG", pnginfo=metadata)
+    paths = {
+        output.parent / "masks" / f"{sample_id}_mask.png": mask_png,
+        output.parent / "masks" / f"{sample_id}_overlay.png": buffer.getvalue(),
+    }
+    for path, content in paths.items():
+        if path.exists() and path.read_bytes() != content:
+            raise FileExistsError(f"refusing to overwrite different segmentation artifact {path}")
+    for path, content in paths.items():
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if not path.exists():
+            path.write_bytes(content)
+    border = int(cfg["data"]["border_crop_px"])
+    return {
+        "kind": "segmentation_mask",
+        "exploratory": True,
+        "mask_path": f"masks/{sample_id}_mask.png",
+        "overlay_path": f"masks/{sample_id}_overlay.png",
+        "mask_sha256": hashlib.sha256(mask_png).hexdigest(),
+        "mask_shape": list(mask.shape),
+        "mask_offset_px": [border, border],
+        "class_values": {"0": "void", "1": "graphite", "2": "silicon"},
+        "overlay_downscale": downscale,
+        "overlay_alpha": 0.45,
+        "legend": "void (0): blue (31,119,180); graphite (1): unshaded; silicon (2): orange (255,127,14)",
+        "phase_identity": classify.PHASE_IDENTITY,
+        "note": "one fixed threshold segmentation, not ground truth; 7/11 measurements move under +-10 % threshold shifts",
+    }
 
 
 def _covariate_values(
@@ -316,13 +381,14 @@ def _append_modal_run(
     hardware: str,
     cost: float,
     cost_source: str,
+    exploratory: bool = False,
 ) -> None:
     path = _config.ROOT / V1_MODAL_RUN_PATH
     path.parent.mkdir(parents=True, exist_ok=True)
     columns = columns or V1_MODAL_RUN_COLUMNS
     record = {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
-        "function": "dino_embed_heldout",
+        "function": "dino_embed_heldout_exploratory" if exploratory else "dino_embed_heldout",
         "n_inputs": str(n_inputs),
         "wall_s": str(wall_s),
         "hardware": hardware,
@@ -461,6 +527,7 @@ def _embedding_vectors(
         n_inputs=len(payloads),
         hardware="L4" if backend == "modal_l4" else "local-cpu fallback",
         cost=cost,
+        exploratory=allow_local_fallback,
         cost_source=(
             modal_app.MODAL_PRICING
             if backend == "modal_l4"
@@ -486,8 +553,6 @@ def run(
     canonical_output = _canonical_output_path()
     if dryrun and input_dir is None:
         raise SystemExit("heldout: --dryrun requires an explicit --input-dir")
-    if exploratory and out_path is not None:
-        raise SystemExit("heldout: exploratory output path is generated automatically; omit --out")
 
     tag = _exact_tag()
     frozen = _is_frozen_tag()
@@ -514,7 +579,9 @@ def run(
             raise SystemExit(
                 "heldout: exploratory inference requires canonical results/v1/heldout.json"
             )
-        output = _out_path(None, True)
+        output = _out_path(out_path, True)
+        if output.resolve() == canonical_output:
+            raise SystemExit("heldout: exploratory output cannot be the canonical heldout.json")
     else:
         output = _out_path(out_path, False)
         if output.resolve() != canonical_output:
@@ -573,7 +640,12 @@ def run(
             warnings.warn(message)
             discovery_notes.append(message)
             continue
-        feature_values = _extract_features(bse, cfg, feature_cfg)
+        feature_values, stitched = _extract_features(bse, cfg, feature_cfg)
+        segmentation_evidence = (
+            _save_segmentation(output, sample_id, bse["image"], stitched, cfg)
+            if exploratory_run else None
+        )
+        del stitched
         cov_values, cov_notes = _covariate_values(channel_data, files["BSE"], covariate_names)
         channels_present = sorted(files)
         caveats = list(cov_notes)
@@ -587,6 +659,7 @@ def run(
             {
                 "sample_id": sample_id,
                 "feature_values": feature_values,
+                "segmentation_evidence": segmentation_evidence,
                 "covariate_values": cov_values,
                 "caveats": caveats,
                 "detectors": channels_present,
@@ -662,6 +735,8 @@ def run(
         )
         document["subject"]["file_hashes"] = item["file_hashes"]
         document["caveats"].extend(item["caveats"])
+        if item["segmentation_evidence"] is not None:
+            document["evidence"]["segmentation_mask"] = item["segmentation_evidence"]
         classify.validate(document)
         image_docs.append(document)
         input_rows[sample_id] = {
