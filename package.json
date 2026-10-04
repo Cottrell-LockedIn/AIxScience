@@ -1,0 +1,1 @@
+{"name":"cottrell-sites","private":true,"type":"module","scripts":{"build":"npm --prefix frontend run build && node scripts/build-sites.mjs","test:site":"node --test tests/site-worker.test.mjs"}}

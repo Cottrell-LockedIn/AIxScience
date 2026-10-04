@@ -44,3 +44,8 @@ app/local_reviews/
 .impeccable/review/
 
 frontend/*.tsbuildinfo
+
+# Hosted Sites build
+/dist/
+/node_modules/
+.sites-runtime/
