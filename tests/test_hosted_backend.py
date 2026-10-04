@@ -23,12 +23,17 @@ def test_hosted_adapter_requires_gateway_token_and_persistent_state():
     assert "run_exploratory.spawn(run_id)" in source
     assert "modal.FunctionCall.from_id(call_id).cancel(terminate_containers=True)" in source
     assert "modal.FunctionCall.from_id(call_id).get(timeout=0)" in source
+    assert "_persist_call_control(run_id, str(call.object_id))" in source
+    assert "refreshed = jobs.load_run(run_id)" in source
     assert "def _persist_cancel_control" in source
     assert "if _cancel_requested(current_run_id):" in source
     assert "heldout._extract_features = base_extract_features" in source
     assert "classify.predict_one = base_predict_one" in source
     assert "@modal.concurrent(max_inputs=1)" in source
     assert 'gpu="L4"' in source
+    assert 'request.url.path.startswith("/api/uploads")' in source
+    assert "def refresh_worker_state()" in source
+    assert "state_volume.commit()\n        state_volume.reload()" in source
 
 
 def test_hosted_bundle_excludes_untracked_runtime_files_and_bootstraps_verified_weights():

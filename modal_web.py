@@ -141,6 +141,7 @@ def _state_paths() -> dict[str, Path]:
         "uploads": root / "uploads",
         "runs": root / "runs",
         "controls": root / "controls",
+        "calls": root / "calls",
         "reviews": root / "reviews.json",
         "modal_runs": root / "modal-runs.csv",
     }
@@ -195,6 +196,27 @@ def _persist_cancel_control(run_id: str) -> None:
     temporary = path.with_suffix(".tmp")
     temporary.write_text("cancelled\n", encoding="utf-8")
     os.replace(temporary, path)
+
+
+def _call_control_path(run_id: str) -> Path:
+    return _state_paths()["calls"] / f"{run_id}.call-id"
+
+
+def _persist_call_control(run_id: str, call_id: str) -> None:
+    """Store the Modal call ID apart from worker-owned ``state.json``."""
+    path = _call_control_path(run_id)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = path.with_suffix(".tmp")
+    temporary.write_text(call_id + "\n", encoding="utf-8")
+    os.replace(temporary, path)
+
+
+def _read_call_control(run_id: str) -> str | None:
+    try:
+        value = _call_control_path(run_id).read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+    return value or None
 
 
 def _append_hosted_modal_run(
@@ -340,16 +362,23 @@ def run_exploratory(run_id: str) -> dict[str, str]:
     base_update_run = jobs.update_run
     base_is_cancelled = jobs.is_cancelled
 
-    def worker_load_run(current_run_id: str):
+    def refresh_worker_state() -> None:
+        # heldout.run writes masks, overlays and result JSON before its next
+        # stage callback. Commit those files before reload, otherwise a Volume
+        # refresh can discard the worker's own uncommitted artifacts.
+        state_volume.commit()
         state_volume.reload()
+
+    def worker_load_run(current_run_id: str):
+        refresh_worker_state()
         return base_load_run(current_run_id)
 
     def worker_is_cancelled(current_run_id: str) -> bool:
-        state_volume.reload()
+        refresh_worker_state()
         return _cancel_requested(current_run_id) or base_is_cancelled(current_run_id)
 
     def worker_update_run(current_run_id: str, **changes: Any):
-        state_volume.reload()
+        refresh_worker_state()
         if _cancel_requested(current_run_id):
             # Ensure an old, pre-cancellation state snapshot cannot write a
             # completed/failed status after the user has cancelled.
@@ -410,9 +439,12 @@ def hosted_api():
         # The worker container must see the uploaded TIFF and queued state.
         state_volume.commit()
         call = run_exploratory.spawn(run_id)
-        state = base_update_run(run_id, modalCallId=str(call.object_id))
+        # The L4 worker may begin and commit a progress state before this web
+        # handler resumes. Keep the call ID in its own control file instead of
+        # writing a stale queued ``state.json`` over worker progress.
+        _persist_call_control(run_id, str(call.object_id))
         state_volume.commit()
-        return state
+        return jobs.load_run(run_id) or {"id": run_id, "state": "queued", "stage": "Queued"}
 
     def hosted_reconcile(run_id: str) -> dict[str, Any] | None:
         state = jobs.load_run(run_id)
@@ -428,7 +460,7 @@ def hosted_api():
             return state
         if state is None or state.get("state") in jobs.TERMINAL:
             return state
-        call_id = state.get("modalCallId")
+        call_id = _read_call_control(run_id) or state.get("modalCallId")
         if not isinstance(call_id, str) or not call_id:
             return base_update_run(
                 run_id,
@@ -451,6 +483,12 @@ def hosted_api():
             )
             state_volume.commit()
             return failed
+        # The worker can finish and commit in the small window between the
+        # zero-timeout result and this request. Refresh before failing it.
+        state_volume.reload()
+        refreshed = jobs.load_run(run_id)
+        if refreshed is not None and refreshed.get("state") in jobs.TERMINAL:
+            return refreshed
         failed = base_update_run(
             run_id,
             state="failed",
@@ -472,7 +510,7 @@ def hosted_api():
             state_volume.commit()
             state = base_update_run(run_id, state="cancelled", stage="Cancelled", error="Cancelled by user.")
             state_volume.commit()
-            call_id = state.get("modalCallId")
+            call_id = _read_call_control(run_id) or state.get("modalCallId")
             if isinstance(call_id, str) and call_id:
                 try:
                     modal.FunctionCall.from_id(call_id).cancel(terminate_containers=True)
@@ -501,7 +539,10 @@ def hosted_api():
         # The worker uses another container and explicitly commits each stage;
         # reload before every serial web request to make polling truthful.
         state_volume.reload()
-        mutable_shared_paths = request.url.path.startswith("/api/uploads") or request.url.path.startswith("/api/reviews")
+        mutable_shared_paths = (
+            request.url.path.startswith("/api/uploads")
+            or request.url.path.startswith("/api/reviews")
+        )
         if request.method in {"POST", "PUT", "PATCH", "DELETE"} and mutable_shared_paths and jobs.active_run_exists():
             return JSONResponse(
                 {"detail": "An exploratory analysis is running. Wait for it to finish before changing shared uploads or reviews."},

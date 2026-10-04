@@ -61,6 +61,13 @@ that worker is active, avoiding unsafe last-write-wins behavior on a shared
 Volume. Cancellation is written as a separate durable control record before
 Modal is asked to terminate the FunctionCall; the worker checks that record
 before every state transition, so a late GPU completion cannot become accepted.
+Before each worker refresh it commits masks, overlays and result files already
+written by the frozen pipeline, preventing a Volume reload from discarding
+those uncommitted artifacts.
+
+The spawned Modal call ID is stored in a separate control file rather than the
+worker-owned run state, so a fast-starting worker cannot have progress replaced
+by the web request that launched it.
 
 ## Before publishing
 
