@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react'
+import { modelFeatures } from './criteria'
 import {
   ArrowDownToLine, ArrowLeft, ArrowRight, Check, ChevronDown, Download,
   Expand, Eye, FileDown, Info, Printer, ShieldAlert, Sparkles, TriangleAlert,
@@ -42,11 +43,7 @@ const views: { id: View; label: string }[] = [
 const routeName: Record<string, string> = {
   materials_expert_review: 'Materials expert', microscopy_team: 'Microscopy team', none: 'No model escalation',
 }
-const featureLabels: Record<string, string> = {
-  F01: 'Dark-area share', F02: 'Bright-area share', F03: 'Typical bright-object size', F04: 'Larger bright-object size',
-  F05: 'Bright-object count', F06: 'Bright-object clustering', F07: 'Bright-object shape fullness', F08: 'Typical width of dark regions',
-  F09: 'Dark-region length ratio', F10: 'Variation in dark-area coverage', F11: 'Bright boundary touching dark regions',
-}
+const featureLabels: Record<string, string> = Object.fromEntries(Object.values(modelFeatures).map((feature) => [feature.id, feature.name]))
 
 const pct = (value?: number) => value == null || !Number.isFinite(value) ? 'Unavailable' : `${(value * 100).toFixed(1)}%`
 const valueText = (value: number | null | undefined, scale = 1, unit = '') => value == null || !Number.isFinite(value)

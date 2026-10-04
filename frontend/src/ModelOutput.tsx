@@ -155,9 +155,8 @@ function makeGuidance({ tier, prediction, confidence, runnerUp, label, flags, re
 function isEmbedding(name?: string) { return /embedding\s*pc/i.test(name || '') }
 function driverPlainName(name?: string) {
   if (isEmbedding(name)) return `Image-pattern component ${(name || '').replace(/\D+/g, '') || ''}`.trim()
-  const names: Record<string, string> = {F01:'Dark-area share (void fraction)', F02:'Bright-area share (silicon fraction)', F03:'Typical bright-object size', F04:'Bright-object size at the 90th percentile', F05:'Bright-object count per image area', F06:'Bright-object spacing (clustering)', F07:'Bright-object outline fullness', F08:'Typical dark-region width', F09:'Horizontal versus vertical dark-region spans', F10:'Variation in dark-area share', F11:'Bright-object boundary touching dark regions'}
   const id = (name || '').match(/F(?:0[1-9]|1[01])/i)?.[0]?.toUpperCase()
-  return id ? `${metricLabel(id)} (${metricTechnicalName(id)})` : names[(name || '').slice(0,3)] || 'Segmentation-derived measurement'
+  return id ? `${metricLabel(id)} (${metricTechnicalName(id)})` : 'Segmentation-derived measurement'
 }
 function plainDriverTag(driver: RawDriver) {
   if (isEmbedding(driver.name)) return 'This image pattern helped the model match the field to a known batch. Acquisition and material effects could not be separated.'
