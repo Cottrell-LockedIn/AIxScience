@@ -284,11 +284,11 @@ def test_generated_verdicts_validate_schema_and_exclude_classifier_fields(genera
         assert document["acquisition"]["drift_justification"]["evidence"]
         if document["subject"]["batch"] in {"Batch_1", "Batch_2"}:
             residual_stats = {
-                item["selector"]
-                for item in document["verdict"]["justification"]["evidence"]
-                if item.get("file") == "distance_matrix.csv"
-                and "residualised == True" in item.get("selector", "")
-            }
+                    item["selector"]
+                    for item in document["verdict"]["justification"]["evidence"]
+                    if item.get("file", "").endswith("distance_matrix.csv")
+                    and "residualised == True" in item.get("selector", "")
+                }
             assert any("statistic == 'energy'" in selector for selector in residual_stats)
             assert any("statistic == 'mmd2'" in selector for selector in residual_stats)
         for driver in document["evidence"]["drivers"]:
