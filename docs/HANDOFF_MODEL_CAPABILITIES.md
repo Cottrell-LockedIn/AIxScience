@@ -80,6 +80,26 @@ Example: `results/v1/heldout.json`.
 - Each driver: `name` (F-feature column or `embedding PC k`), raw `value`, `model_input`, `coefficient`,
   `effect_size` (the contribution), `direction` (higher/lower), `tag` (material-derived with its Phase B status, or
   embedding with the acquisition caveat).
+- Embedding PC profiles (exploratory, output-only, `python -m qc pc-profiles`, `src/qc/pc_profiles.py`):
+  `results/v1/pc_tags.json` is keyed by the driver name (`embedding PC k`) and gives per PC `tag`,
+  `explained_variance_ratio`, `lr_coef_abs_max`, `top_measurement`, `top_covariate`, `top_kpi` and a fixed-template
+  `sentence`; `results/v1/pc_profiles.csv` has the long-format Spearman rho / permutation p / BH p table (29 PCs x
+  32 variables, n = 31). `p_bh` is BH within each PC (one family of 32 tests per PC); `p_bh_global` is BH across all
+  928 cells: there PC1 sharpness/F01 sit at about 0.06 while PC2 hstripe, PC3 F02/F05/F06/F07 and PC6 nm/px stay
+  below 0.05. Tag rule (code constants, cited in the JSON): `material:<F-id>` if |rho| >= 0.7 and BH
+  p < 0.05 with a measurement and |rho| < 0.5 with every covariate; `imaging:<covariate>` if |rho| >= 0.5 with a
+  covariate and that |rho| exceeds every measurement |rho|; otherwise `unresolved image-texture component`.
+  Result for the PCs that appear as drivers in LOIO (`loio_predictions.csv`) or in the official held-out run:
+  PC1 `imaging:sharpness_BSE` (rho -0.63, BH p 0.008; the sentence names the near tie with void fraction F01, rho
+  0.62, BH p 0.008; read PC1 as a BSE noise/sharpness component, since sharpness_BSE and noise_sigma_BSE have rho
+  0.99 across the 31 images, that also carries void fraction largely independently: partial rho -0.62 / 0.61);
+  PC2 `imaging:hstripe_score_BSE` (rho 0.65, BH p 0.016); PC3 unresolved (silicon count density F05 rho 0.81,
+  BH p 0.002, but BSE curtaining rho 0.52 blocks a material tag); PC4, PC5, PC7, PC8, PC9, PC11, PC12, PC13
+  unresolved (strongest |rho| 0.14-0.52, none significant after BH). No PC received a `material` tag; PC6
+  (not a driver) is `imaging:nm_per_px_if_tag_true`. Tags are descriptive correlations over 31 training images;
+  Phase B could not separate the embedding's batch signal from acquisition (BH p 0.75 / 0.96 after
+  residualisation). `review_status` in the JSON is `unreviewed` until an independent reviewer checks the tags;
+  a wrapper should show that word next to the sentence.
 
 ### 5.3 Measurements (`inputs.<id>`, all 11 always reported, lengths in px)
 
@@ -122,16 +142,35 @@ means those masks outlined different objects (whole particles, ~110 px) than our
 
 The output includes, next to the JSON, the segmentation the measurements were computed from. A scientist can then
 check by eye what the model counted as void, graphite and silicon before trusting any number.
-(Mask saving and rendering are being built in parallel to this handoff; the content below is what they show.)
+Available in exploratory runs since commit `f51fb9b`. Run
+`python -m qc heldout --exploratory --input-dir data/heldout --out results/v1_1/heldout_exploratory.json`.
+The frozen official JSON and the prediction recipe are unchanged; this adds evidence only.
 
 - **Label mask**: the stitched per-image mask that F01-F11 were computed from. One 8-bit label per pixel:
   0 = dark (void/pore), 1 = mid (graphite), 2 = bright (silicon). It is the same size as the analysed BSE area
   (the input BSE with an 8 px border removed), so it overlays pixel for pixel.
   `phase_identity: stated by Polaron, not image-verified`.
-- **Overlay image**: the analysed BSE with the three classes colour-coded at partial opacity, plus a legend and
-  the image id. It is a PNG, which suits reports.
+- **Overlay image**: the analysed BSE, downscaled by 4 with area averaging, blended at alpha 0.45 with the
+  nearest-neighbour label preview: void blue (31,119,180), graphite unshaded, silicon orange (255,127,14).
+  The legend is in JSON, not painted into the PNG. Both outputs are exploratory, not ground truth.
 - **Link to the JSON**: the mask is the exact array passed to `features.extract_features`, so every F value in
   `inputs.<id>` can be recomputed from it.
+
+Wrapper contract: `images[i].evidence.segmentation_mask` contains:
+
+- `kind: segmentation_mask`, `exploratory: true`;
+- `mask_path`, `overlay_path`: `masks/<id>_mask.png` and `masks/<id>_overlay.png`, relative to the output JSON;
+- `mask_sha256`: SHA-256 of the encoded label PNG bytes; `mask_shape`: `[height, width]` in pixels;
+- `mask_offset_px: [8, 8]`: mask pixel `(y, x)` is TIFF pixel `(y + 8, x + 8)`;
+- `class_values: {"0": "void", "1": "graphite", "2": "silicon"}`;
+- `overlay_downscale: 4`, `overlay_alpha: 0.45`, `legend`: class colours and unshaded graphite;
+- `phase_identity: stated by Polaron, not image-verified`;
+- `note: one fixed threshold segmentation, not ground truth; 7/11 measurements move under +-10 % threshold shifts`.
+
+Preview dimensions are `max(1, width // 4)` by `max(1, height // 4)`; use `mask_shape` for full-resolution
+alignment. The overlay PNG also carries exploratory/phase-identity text metadata. Labels remain uint8 0/1/2
+at full cropped resolution. Existing different PNGs are never silently overwritten: use a fresh output directory
+for another image with the same id. The JSON overwrite guard also remains in place, including the canonical file.
 
 How each measurement reads off the mask (what the viewer can highlight):
 
@@ -184,6 +223,9 @@ What the masks do and don't explain:
 
 - 73 of 93 top-driver slots in validation were embedding PCs (not physical). In Phase B the embedding batch signal
   vanished after regressing out acquisition covariates, so it may reflect imaging rather than material.
+  The exploratory PC profiles (`results/v1/pc_tags.json`) agree: the two most used driver PCs correlate most with
+  BSE noise/sharpness (PC1, near tie with void fraction F01) and horizontal-stripe score (PC2); no PC earned a
+  material tag.
 - 31 training images only; new instruments or settings are outside what it has seen.
 - Silicon features F02-F07, F11 are not independently validated; 7 of 11 features are threshold-sensitive.
 - No chemistry claims; lengths in px (pixel size unconfirmed).
@@ -221,3 +263,5 @@ Suggested for materials scientists:
 - Decisions and review: `docs/Log/2026-10-04_phase_c.md`, `docs/Log/2026-10-04_phase_c_review.md`,
   `docs/PHASE_B.md`, `results/stats/feature_status.csv`.
 - Official held-out output: `results/v1/heldout.json`.
+- Exploratory PC profiles (unreviewed): `src/qc/pc_profiles.py`, `results/v1/pc_profiles.csv`, `results/v1/pc_tags.json`,
+  `docs/Log/2026-10-04_pc_profiles_exploratory.md`.

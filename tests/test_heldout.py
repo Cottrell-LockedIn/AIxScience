@@ -1,10 +1,12 @@
+import json
 import sys
 
 import numpy as np
 import pandas as pd
 import pytest
+from PIL import Image
 
-from qc import heldout
+from qc import config, features, heldout, tiles
 
 
 def _mock_git(monkeypatch, frozen=False):
@@ -122,13 +124,137 @@ def test_exploratory_output_is_timestamped_under_exploratory_dir(tmp_path):
     assert output.name.startswith("heldout_")
     assert output.suffix == ".json"
 
-    with pytest.raises(SystemExit, match="exploratory output path is generated automatically"):
+
+def test_exploratory_accepts_custom_output(tmp_path, monkeypatch):
+    monkeypatch.setattr(heldout._config, "ROOT", tmp_path)
+    canonical = tmp_path / "results" / "v1" / "heldout.json"
+    canonical.parent.mkdir(parents=True)
+    canonical.write_text("{}")
+    _mock_git(monkeypatch)
+    with pytest.raises(SystemExit, match="no images with a BSE TIFF"):
         heldout.run(
             {"_hash": "config-hash", "data": {"heldout_dir": str(tmp_path)}},
             input_dir=tmp_path,
             out_path=tmp_path / "heldout.json",
             exploratory=True,
         )
+
+
+@pytest.mark.parametrize("alias", [False, True])
+def test_exploratory_refuses_canonical_output(tmp_path, monkeypatch, alias):
+    monkeypatch.setattr(heldout._config, "ROOT", tmp_path)
+    canonical = tmp_path / "results" / "v1" / "heldout.json"
+    canonical.parent.mkdir(parents=True)
+    canonical.write_text("{}")
+    output = tmp_path / "alias.json" if alias else canonical
+    if alias:
+        output.symlink_to(canonical)
+    _mock_git(monkeypatch)
+    with pytest.raises(SystemExit, match="cannot be the canonical"):
+        heldout.run(_cfg(tmp_path), out_path=output, exploratory=True)
+    assert canonical.read_text() == "{}"
+
+
+def test_segmentation_overlay_palette_offset_and_png_roundtrip(tmp_path):
+    cfg = config.load()
+    image = np.full((24, 28), 100, dtype=np.uint8)
+    cropped = tiles.crop_border(image, 8)
+    mask = np.repeat(np.array([[0, 1, 2]], dtype=np.uint8), 4, axis=1).repeat(8, axis=0)
+    evidence = heldout._save_segmentation(tmp_path / "out.json", "synthetic", cropped, mask, cfg)
+    with Image.open(tmp_path / evidence["mask_path"]) as png:
+        np.testing.assert_array_equal(np.asarray(png), mask)
+        assert png.mode == "L"
+    with Image.open(tmp_path / evidence["overlay_path"]) as png:
+        overlay = np.asarray(png)
+        assert png.info["exploratory"] == "true"
+        assert png.info["phase_identity"] == heldout.classify.PHASE_IDENTITY
+    expected = np.array([[[69, 109, 136], [100, 100, 100], [170, 112, 61]]], dtype=np.uint8)
+    np.testing.assert_array_equal(overlay, expected.repeat(2, axis=0))
+    assert evidence["mask_offset_px"] == [8, 8]
+    assert evidence["mask_shape"] == [8, 12]
+    assert evidence["mask_sha256"] == heldout._sha256(tmp_path / evidence["mask_path"])
+    assert evidence["overlay_downscale"] == 4
+    assert evidence["class_values"] == {"0": "void", "1": "graphite", "2": "silicon"}
+    assert evidence["exploratory"] is True
+    assert "not ground truth" in evidence["note"]
+    assert heldout._save_segmentation(tmp_path / "out.json", "synthetic", cropped, mask, cfg) == evidence
+    with pytest.raises(FileExistsError, match="refusing to overwrite"):
+        heldout._save_segmentation(tmp_path / "other.json", "synthetic", cropped, np.ones_like(mask), cfg)
+
+
+def test_overlay_uses_area_average_and_nearest_labels():
+    image = np.array([[0, 100, 0, 100], [100, 200, 100, 200]], dtype=np.uint8)
+    mask = np.array([[1, 0, 2, 0], [0, 0, 0, 0]], dtype=np.uint8)
+    result = heldout._segmentation_overlay(image, mask, 2)
+    np.testing.assert_array_equal(result, [[[100, 100, 100], [170, 112, 61]]])
+
+
+def test_overlay_rejects_unanalysed_pixels():
+    with pytest.raises(ValueError, match="class labels"):
+        heldout._segmentation_overlay(np.zeros((2, 2), dtype=np.uint8), np.full((2, 2), 255, dtype=np.uint8), 1)
+
+
+EXPLORATORY_OUTPUT = config.ROOT / "results" / "v1_1" / "heldout_exploratory.json"
+HELDOUT_IDS = ["3e122cbj", "fn0mhxef", "xrv9xvzb"]
+
+
+@pytest.fixture(scope="module")
+def exploratory_output():
+    return json.loads(EXPLORATORY_OUTPUT.read_text())
+
+
+@pytest.mark.parametrize("sample_id", HELDOUT_IDS)
+def test_saved_mask_feature_parity(exploratory_output, sample_id):
+    cfg = config.load()
+    feature_cfg, _ = features._feature_config()
+    doc = next(doc for doc in exploratory_output["images"] if doc["subject"]["id"] == sample_id)
+    evidence = doc["evidence"]["segmentation_mask"]
+    mask_path = EXPLORATORY_OUTPUT.parent / evidence["mask_path"]
+    with Image.open(mask_path) as png:
+        mask = np.asarray(png)
+    assert mask.dtype == np.uint8
+    assert set(np.unique(mask)) <= {0, 1, 2}
+    assert list(mask.shape) == evidence["mask_shape"]
+    assert evidence["mask_sha256"] == heldout._sha256(mask_path)
+    recomputed = features.extract_features(mask, **heldout._feature_parameters(cfg, feature_cfg))
+    expected = exploratory_output["inputs"][sample_id]
+    differences = [abs(recomputed[col] - expected[col]) for col in heldout.classify.F_COLS]
+    assert max(differences) <= 1e-9
+    with Image.open(EXPLORATORY_OUTPUT.parent / evidence["overlay_path"]) as overlay:
+        assert overlay.size == (mask.shape[1] // 4, mask.shape[0] // 4)
+        assert overlay.mode == "RGB"
+    heldout.classify.validate(doc)
+
+
+@pytest.mark.parametrize("sample_id", HELDOUT_IDS)
+def test_saved_mask_matches_cropped_tiff_shape(exploratory_output, sample_id):
+    bse_path = config.ROOT / "data" / "heldout" / f"img_{sample_id}_BSE.tif"
+    if not bse_path.is_file():
+        pytest.skip("raw held-out TIFFs are not committed")
+    cfg = config.load()
+    image = tiles.read_gray(bse_path, cfg["data"]["read_channel"])
+    doc = next(doc for doc in exploratory_output["images"] if doc["subject"]["id"] == sample_id)
+    evidence = doc["evidence"]["segmentation_mask"]
+    assert evidence["mask_shape"] == [image.shape[0] - 16, image.shape[1] - 16]
+    assert evidence["mask_offset_px"] == [8, 8]
+    key = heldout._file_key(bse_path, config.ROOT)
+    assert heldout._sha256(bse_path) == doc["subject"]["file_hashes"][key]
+
+
+@pytest.mark.parametrize("sample_id", HELDOUT_IDS)
+def test_exploratory_verdict_and_inputs_match_official(exploratory_output, sample_id):
+    official = json.loads((config.ROOT / "results" / "v1" / "heldout.json").read_text())
+    normalized = json.loads(json.dumps(exploratory_output).replace(
+        "results/v1_1/heldout_exploratory.json", "results/v1/heldout.json"
+    ))
+    doc = next(doc for doc in normalized["images"] if doc["subject"]["id"] == sample_id)
+    original = next(doc for doc in official["images"] if doc["subject"]["id"] == sample_id)
+    for key in ("verdict", "acquisition", "routing", "uncertainty"):
+        assert json.dumps(doc[key], sort_keys=True) == json.dumps(original[key], sort_keys=True)
+    assert json.dumps(normalized["inputs"][sample_id], sort_keys=True) == json.dumps(official["inputs"][sample_id], sort_keys=True)
+    for key in original["evidence"]:
+        assert json.dumps(doc["evidence"][key], sort_keys=True) == json.dumps(original["evidence"][key], sort_keys=True)
+    assert doc["pipeline"]["exploratory"] is True
 
 
 def test_local_cpu_fallback_logs_modal_run_when_app_cannot_import(monkeypatch):

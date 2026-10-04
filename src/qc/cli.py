@@ -59,6 +59,12 @@ def heldout(
     )
 
 
+@app.command(name="pc-profiles")
+def pc_profiles(config: str = typer.Option("configs/v1.yaml", "--config", "-c")) -> None:
+    """Exploratory embedding PC correlation profiles and tags (output-only, model unchanged)."""
+    _run("pc_profiles", config)
+
+
 @app.command()
 def run(config: str = typer.Option("configs/v1.yaml", "--config", "-c")) -> None:
     """Run data preparation, KPI, feature, registration and charging stages."""
