@@ -84,7 +84,7 @@ def _ignore_untracked_bundle_path(path: Path) -> bool:
 # The scientific source and its committed artifacts are included in the image;
 # raw TIFFs, local runs, credentials, and virtual environments are not.
 image = (
-    modal.Image.debian_slim(python_version="3.11")
+    modal.Image.debian_slim(python_version="3.12")
     .apt_install("git")
     # These are the exact numerical/image pins of the existing Modal encoder,
     # plus the wrapper's pinned local API dependencies.
