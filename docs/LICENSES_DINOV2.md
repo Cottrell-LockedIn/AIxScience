@@ -1,8 +1,12 @@
-# DINOv2 source and checkpoint licensing
+# DINOv2 code and model-weight licensing
 
 Pinned source revision: [`7764ea0f912e53c92e82eb78a2a1631e92725fc8`](https://github.com/facebookresearch/dinov2/tree/7764ea0f912e53c92e82eb78a2a1631e92725fc8)
 
-The repository `LICENSE` file at that revision applies to the code. Its text is reproduced verbatim:
+The pinned [`README.md` license section](https://github.com/facebookresearch/dinov2/blob/7764ea0f912e53c92e82eb78a2a1631e92725fc8/README.md#license) states:
+
+> DINOv2 code and model weights are released under the Apache License 2.0. See [LICENSE](LICENSE) for additional details.
+
+This covers the `dinov2_vits14` model and pre-trained weights used here. The repository's `LICENSE` file at that revision is reproduced verbatim below:
 
 ```text
 
@@ -210,8 +214,4 @@ The repository `LICENSE` file at that revision applies to the code. Its text is 
    limitations under the License.
 ```
 
-The pinned [`README.md`](https://github.com/facebookresearch/dinov2/blob/7764ea0f912e53c92e82eb78a2a1631e92725fc8/README.md) states, in its XRay-DINO section:
-
-> Model weights are released under the FAIR Noncommercial Research License. See LICENSE_XRAY_DINO_MODEL for additional details.
-
-That README statement is scoped to XRay-DINO, not the `dinov2_vits14_pretrain.pth` checkpoint used here. The pinned README does not separately identify the license for that DINOv2 checkpoint; the repository code license above should not be treated as a checkpoint-license determination.
+XRay-DINO and Cell-DINO are separate models with separately stated licenses. Neither model nor its weights are used by this project.
