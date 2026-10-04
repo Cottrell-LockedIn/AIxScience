@@ -748,8 +748,11 @@ def run(cfg: dict[str, Any]) -> None:
     if reference_batch != "Batch_3":
         raise ValueError(f"unexpected reference batch {reference_batch!r}")
     n_permutations = int(stats_cfg["permutations"])
-    n_splits = int(stats_cfg["null"]["splits"])
-    null_sizes = [int(size) for size in stats_cfg["null"]["sizes"]]
+    null_config = stats_cfg.get("null", stats_cfg.get(None))
+    if not isinstance(null_config, dict):
+        raise ValueError("stats_v1.yaml must define the null-band configuration")
+    n_splits = int(null_config["splits"])
+    null_sizes = [int(size) for size in null_config["sizes"]]
     n_bootstrap = int(stats_cfg["bootstrap"]["replicates"])
     base_seed = int(stats_cfg["seed"])
     scale_factor = float(stats_cfg["scale"]["consistency_factor"])
