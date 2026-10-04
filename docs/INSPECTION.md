@@ -33,3 +33,14 @@ After increasing the log-polar registration upsample factor to 100, `mgxahqnk` I
 still fails the same-FOV check: estimated scale 0.997323 (absolute deviation 0.002677
 from 1.0), with rotation −0.03°. The reported registration resolution is 0.01° and
 0.000122 in scale for this image.
+
+Comparing the 31 images from 7c43868 to d90cdea, `glow_frac_of_c2` changed in 29/31
+(maximum absolute change 0.169405); `xgj4xftb` rose from 0 to 0.169405 as scale moved
+from 1.000000 to 1.000366, while `F02_glow_excluded` changed from 0.136803 to 0.113628.
+For `xgj4xftb`, the 95th-percentile threshold on aligned Inlens moved from 255.0 to
+254.189728; all 1,524,868 class-2 pixels remained valid, and applying the old cutoff
+to the new aligned intensities still yielded zero glow, while the new cutoff yielded
+258,320 glow pixels (`src/qc/charging.py:30-40`). This change comes from the percentile
+cutoff after order-1 interpolation, which moved intensities around the threshold; the
+valid class-2 count did not change, so an edge band does not explain this example, and
+`align_image` has no `scale == 1` shortcut (`src/qc/register.py:215-247`).

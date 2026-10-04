@@ -1,0 +1,49 @@
+file,n_rows_committed,n_rows_regenerated,max_abs_diff,identical,note
+results/MODAL_RUNS.csv,16,23,0,false,7 verification rows appended; all 16 pre-existing records match the committed values.
+results/artefacts_per_image.parquet,93,93,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/artefacts_per_tile.parquet,4329,4329,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/audit/REALITY_CHECK.md,1,1,0,true,Bytes identical.
+results/audit/artefacts_by_batch.png,1,1,,true,PNG bytes identical.
+results/audit/files.csv,93,93,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/audit/images.csv,31,31,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/audit/index_sample.csv,20,20,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/audit/overlays/Batch_1_4ih2ggld_4ih2ggld_BSE_01024_00000.png,1,1,,true,PNG bytes identical.
+results/audit/overlays/Batch_1_5n1q8atc_5n1q8atc_BSE_01024_00000.png,1,1,,true,PNG bytes identical.
+results/audit/overlays/Batch_2_3806gxp0_3806gxp0_BSE_00512_03072.png,1,1,,true,PNG bytes identical.
+results/audit/overlays/Batch_2_avn74qx1_avn74qx1_BSE_00512_03072.png,1,1,,true,PNG bytes identical.
+results/audit/overlays/Batch_3_0grcilhi_0grcilhi_BSE_00512_03072.png,1,1,,true,PNG bytes identical.
+results/audit/overlays/Batch_3_71vgq3fw_71vgq3fw_BSE_00512_03072.png,1,1,,true,PNG bytes identical.
+results/audit/reality_check_artefacts.png,1,1,,true,PNG bytes identical.
+results/audit/reality_check_fractions.png,1,1,,true,PNG bytes identical.
+results/charging/charging_by_image.csv,31,31,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/emb_index.parquet,4329,4329,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/emb_per_image.parquet,93,93,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/emb_per_tile.npy,4329,4329,0,true,Embedding array identical.
+results/experiments/.gitkeep,0,0,0,true,Bytes identical.
+results/features_per_image.parquet,31,31,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/features_sensitivity.parquet,93,93,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/inspection/b1_tile_avn74qx1_BSE_00512_05960.png,1,1,,false,PNG bytes differ; decoded pixel arrays are identical (metadata-only difference).
+results/inspection/b1_tile_b3esycq1_BSE_01116_01536.png,1,1,,false,PNG bytes differ; decoded pixel arrays are identical (metadata-only difference).
+results/inspection/b1_tile_i9jiqjwl_BSE_00000_00000.png,1,1,,false,PNG bytes differ; decoded pixel arrays are identical (metadata-only difference).
+results/inspection/b1_tile_iv6g2oq0_BSE_00000_01024.png,1,1,,false,PNG bytes differ; decoded pixel arrays are identical (metadata-only difference).
+results/inspection/b1_tile_pl8uabbv_BSE_00000_04608.png,1,1,,false,PNG bytes differ; decoded pixel arrays are identical (metadata-only difference).
+results/kpi_per_image.parquet,31,31,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/kpi_per_tile.parquet,1443,1443,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/kpi_sensitivity.parquet,4422,4422,1.7763568394002505e-15,false,Only floating-point roundoff.
+results/registration/registration_by_image.csv,62,62,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/stats/acquisition_drift.csv,3,3,,true,No value differences after ignoring git_sha/timestamp_utc.
+results/stats/consistency.csv,3,3,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/stats/covariate_contrasts.csv,24,24,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/stats/distance_matrix.csv,324,324,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/stats/embedding_gates.csv,2,2,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/stats/feature_contrasts.csv,69,69,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/stats/feature_status.csv,23,23,,true,No value differences after ignoring git_sha/timestamp_utc.
+results/stats/gates.csv,46,46,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/stats/null_bands.csv,71,71,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/stats/reference_loo.csv,391,391,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/thresholds_per_tile.parquet,1443,1443,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/verdicts/Batch_1.json,1,1,0,true,Equal apart from git_sha/timestamp_utc.
+results/verdicts/Batch_2.json,1,1,0,true,Equal apart from git_sha/timestamp_utc.
+results/verdicts/Batch_3.json,1,1,0,true,Equal apart from git_sha/timestamp_utc.
+data/masks/*.png (Phase A reference),1443,1443,0,true,"All 1,443 regenerated masks were byte-identical to the persisted Phase A reference; masks are not tracked in the branch."
+results/inspection/*.png (decoded pixel comparison),5,5,0,true,All five decoded inspection PNG pixel arrays were identical; only PNG metadata/encoding differed.

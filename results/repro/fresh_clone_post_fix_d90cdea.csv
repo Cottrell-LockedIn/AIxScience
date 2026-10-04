@@ -1,0 +1,17 @@
+file,n_rows_committed,n_rows_regenerated,max_abs_diff,identical,note
+results/registration/registration_by_image.csv,62,62,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/charging/charging_by_image.csv,31,31,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/stats/acquisition_drift.csv,3,3,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/stats/consistency.csv,3,3,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/stats/covariate_contrasts.csv,24,24,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/stats/distance_matrix.csv,324,324,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/stats/embedding_gates.csv,2,2,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/stats/exploratory_confound_probe.csv,20,20,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/stats/feature_contrasts.csv,69,69,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/stats/feature_status.csv,23,23,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/stats/gates.csv,46,46,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/stats/null_bands.csv,142,142,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/stats/reference_loo.csv,391,391,0,true,No value differences after ignoring git_sha/timestamp_utc.
+results/verdicts/Batch_1.json,1,1,0,true,Equal apart from git_sha/timestamp_utc.
+results/verdicts/Batch_2.json,1,1,0,true,Equal apart from git_sha/timestamp_utc.
+results/verdicts/Batch_3.json,1,1,0,true,Equal apart from git_sha/timestamp_utc.
