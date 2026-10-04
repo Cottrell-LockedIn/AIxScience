@@ -68,7 +68,7 @@ def test_registration_scale_threshold_passes_0015_and_fails_0025(monkeypatch):
     assert passing["scale_step"] > 0
 
 
-def test_registration_real_scale_transform_outcomes_and_scale_error_bound():
+def _sharp_binary_texture():
     rng = np.random.default_rng(6413)
     reference = np.zeros((1024, 1024), dtype=np.float32)
     for _ in range(750):
@@ -80,29 +80,49 @@ def test_registration_real_scale_transform_outcomes_and_scale_error_bound():
             max(0, y - height // 2):min(1024, y + (height + 1) // 2),
             max(0, x - width // 2):min(1024, x + (width + 1) // 2),
         ] = float(rng.integers(0, 2))
+    return reference
 
-    limits = {
-        "max_shift_px": 1.0,
-        "max_rotation_deg": 0.1,
-        "max_scale_dev": 0.002,
+
+def _centre_scaled_image(reference, scale):
+    transform = register._similarity_transform(reference.shape, 0.0, scale)
+    return warp(
+        reference,
+        inverse_map=transform.inverse,
+        output_shape=reference.shape,
+        order=0,
+        mode="constant",
+        cval=0,
+        preserve_range=True,
+    ).astype(np.float32)
+
+
+def test_registration_identity_transform_is_same_fov():
+    reference = _sharp_binary_texture()
+    result = estimate_registration(
+        reference, _centre_scaled_image(reference, 1.0)
+    )
+
+    assert result["scale"] == 1.0
+    assert result["same_fov"]
+
+
+def test_registration_centre_scaled_006_and_994_fail_same_fov():
+    reference = _sharp_binary_texture()
+    results = {
+        scale: estimate_registration(
+            reference, _centre_scaled_image(reference, scale)
+        )
+        for scale in (1.006, 0.994)
     }
-    same_fov = []
-    for scale, expected in ((1.0015, True), (1.0025, False)):
-        transform = SimilarityTransform(scale=scale)
-        moving = warp(
-            reference,
-            inverse_map=transform.inverse,
-            output_shape=reference.shape,
-            order=0,
-            mode="constant",
-            cval=0,
-            preserve_range=True,
-        ).astype(np.float32)
-        result = estimate_registration(reference, moving, limits)
-        same_fov.append(result["same_fov"])
-        assert result["same_fov"] is expected
-        # Measured scale-estimate error on this texture is ~1.3e-3 to 1.8e-3,
-        # close to max_scale_dev; the 1.0025 case fails via its shift, not scale.
-        assert abs(result["scale"] - 1.0 / scale) < limits["max_scale_dev"]
 
-    assert same_fov == [True, False]
+    assert not results[1.006]["same_fov"]
+    assert not results[0.994]["same_fov"]
+
+
+def test_registration_small_centre_scaled_deviations_shrink_towards_one():
+    reference = _sharp_binary_texture()
+    for applied_scale in (1.0015, 1.0025, 1.004):
+        result = estimate_registration(
+            reference, _centre_scaled_image(reference, applied_scale)
+        )
+        assert abs(result["scale"] - 1.0) <= abs(applied_scale - 1.0)
