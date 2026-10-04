@@ -290,18 +290,17 @@ What we can do without changing the model (profiles are computed on the final-mo
 - M9b Tile exemplars (~1 h, data exists: `results/emb_per_tile.npy`, 4329 tiles). For each PC, the 8 tiles with
   the highest and lowest projection, shown as a gallery with their masks, so a scientist can see what "high PC1"
   looks like.
-- M9c Patch heat maps (~2 h, needs one exploratory Modal re-embedding that keeps patch tokens; weights unchanged).
-  Because the pooled vector is the mean of patch tokens, the PC score decomposes exactly into per-patch
-  contributions; render them as a heat map over the image and report the share of high-contribution patches that
-  fall on void, graphite and silicon in the mask.
+- M9c Patch heat maps: DEFERRED (owner decision 2026-10-04; ~2 h and a Modal re-embedding that keeps patch
+  tokens). Because the pooled vector is the mean of patch tokens, the PC score decomposes exactly into per-patch
+  contributions, so this can be added later as an output-only item without touching the model.
 - M9d Naming rule. A PC gets a plain-language tag only if |rho| >= 0.7 (BH p < 0.05) with a measurement or KPI
   *and* |rho| < 0.5 with every acquisition covariate; e.g. "PC3: tracks void fraction (rho 0.78)". Otherwise it is
   tagged "image-texture component" with its strongest correlate, e.g. "PC1: correlated with BSE noise (rho 0.71);
   not separable from imaging conditions". Tags are descriptive, never causal.
 
-Output: `evidence.pc_profiles[k] = {tag, top_correlates: [...], exemplar_tiles: [...], patch_map_path,
-phase_share_high_patches: {void, graphite, silicon}, acquisition_correlates: [...]}`, referenced from each
-embedding driver in `evidence.drivers`.
+Output: `evidence.pc_profiles[k] = {tag, top_correlates: [...], exemplar_tiles: [...],
+acquisition_correlates: [...]}` (patch map fields added if M9c is ever done), referenced from each embedding
+driver in `evidence.drivers`.
 
 Expectation, from Phase B (`docs/PHASE_B.md`): the raw embedding difference between Batch_1/Batch_2 and Batch_3
 disappears after residualising on the 8 acquisition covariates (BH p 0.75 and 0.96), and for Batch_1 noise or
@@ -310,15 +309,29 @@ outcome may be "PC1 is mostly noise/sharpness". That is still useful: the wrappe
 
 Acceptance: profiles reproduce from the stored arrays; the naming rule is applied by code, not by hand; a
 fresh-context reviewer checks the tags before they are shown to users (`AGENTS.md` independent review).
-Effort: ~4 h for M9a-M9d plus review; M9a and M9b alone ~2 h.
+Effort: ~2 h for M9a, M9b and M9d (no new compute) plus review.
 
 ## 4. Releases and sequence
 
 | Release | Items | What changes | Validation | Time |
 |---|---|---|---|---|
-| v1.1 | M1, M2, M3, M4, M5a, M8, M9 | New output files and JSON fields only | Parity tests in section 3; verdict bytes unchanged on 31 LOIO + 3 held-out (exploratory); reviewer checks PC tags | ~10 h + review (M1-M4, M8 ~6 h; M9 ~4 h) |
+| v1.1 | M1, M2, M3, M4, M5a, M8, M9a/b/d | New output files and JSON fields only | Parity tests in section 3; verdict bytes unchanged on 31 LOIO + 3 held-out (exploratory); reviewer checks PC tags | ~8 h + ~1 h review (breakdown below) |
 | v1.2 | M5b | New `second_opinion` field driven by pre-registered expert rules | One LOIO scoring run; independent review | scientist time + ~3 h |
 | v2 | M6 (if ever) | Classifier inputs | Pre-registered LOIO vs 18/31; new unseen images needed for a real held-out test | ~1.5 h |
+
+v1.1 effort breakdown (engineering time to a reviewed result):
+
+| Item | Hours |
+|---|---|
+| M1 masks and overlays | 1.0 |
+| M8 model card | 0.5 |
+| M5a guideline cards | 0.5 |
+| M2 per-feature evidence layers and crack-like list | 3.0 |
+| M3 F09 chords and direction map | 1.0 |
+| M4 aspect-ratio panel | 1.0 |
+| M9a/b/d PC correlations, tile exemplars, naming rule | 2.0 |
+| Independent review of the release | ~1.0 |
+| **Total** | **~9 h** |
 
 Order: M1, M8 first (unblocks the mask viewer and the accuracy panel, ~1.5 h), then M2-M4 (evidence layers), then
 M9 (PC profiles); M5a cards with M8; M5b rule authoring in parallel with the scientist, v1.2 after review.
@@ -336,10 +349,10 @@ M9 (PC profiles); M5a cards with M8; M5b rule authoring in parallel with the sci
 
 ## 6. Decisions needed from the owner and consultant
 
-1. Approve v1.1 scope (M1-M4) as output-only.
-2. Approve the M5a guideline cards (wording to be checked by the materials scientist); decide later who authors
-   the M5b rules and which of R1-R5 go in the first pre-registration.
-3. Whether the aspect-ratio panel should use 5.0 as the crack-like threshold (current Phase B value) or a value
-   the consultant prefers; it must be fixed before v1.1 is scored.
-4. Whether M9c (patch heat maps, one exploratory Modal re-embedding) is wanted in v1.1 or deferred; M9a-M9b need no
-   new compute.
+Decided (owner, 2026-10-04): M2 scope approved; M5a guideline cards approved (wording still to be checked by the
+materials scientist); crack-like threshold fixed at 5.0; M9c deferred.
+
+Open:
+1. Approve the full v1.1 scope (M1, M3, M4, M8, M9a/b/d in addition to M2 and M5a) and the ~9 h estimate.
+2. Who authors the M5b rules, and which of R1-R5 go in the first pre-registration (later).
+3. Who reviews the release (fresh-context reviewer, per `AGENTS.md`).

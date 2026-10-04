@@ -23,7 +23,7 @@ Primary user: a materials scientist who knows the material and the microscope bu
 | Segmentation mask and colour overlay per image | computed, not saved | saved (M1) | same |
 | Per-feature "where to look" layers (pixels, outlines, top regions) for F01-F11; crack-like void list | no | yes (M2) | same |
 | Model card: LOIO accuracy, confusion matrix, per-tier and per-batch track record, held-out score when available | in repo files only | in every run output (M8) | same |
-| Embedding PC profiles: correlates, exemplar tiles, patch heat maps, plain-language tag | no | yes (M9) | same |
+| Embedding PC profiles: correlates, exemplar tiles, plain-language tag (patch heat maps deferred) | no | yes (M9a/b/d) | same |
 | F09 evidence: horizontal/vertical chords, direction map | no | yes (M3) | same |
 | Aspect-ratio panel, labelled "not used by the model" | no | yes (M4) | same |
 | Guideline card for low/medium confidence, filled from existing fields | fields exist; card text proposed | yes (M5a) | same |
@@ -155,8 +155,8 @@ Each feature lists: what the user does, what the model provides (and from which 
 ### W18. Embedding driver profile ("what is PC1?")
 - Clicking an embedding driver opens its profile: plain-language tag (e.g. "tracks void fraction" or
   "image-texture component, correlated with BSE noise"), its strongest measurement and imaging correlates with
-  rho, a gallery of the highest- and lowest-scoring tiles with their masks, and (if M9c is done) a heat map of
-  where in this image the PC score comes from with the share falling on void / graphite / silicon.
+  rho, and a gallery of the highest- and lowest-scoring tiles with their masks. A per-image heat map of where
+  the PC score comes from (M9c) is deferred.
 - Provides (v1.1 M9): `evidence.pc_profiles`.
 - UI says: "Descriptive, not causal. Phase B could not separate the embedding's batch signal from imaging
   conditions." Tags are only shown after independent review.
@@ -164,7 +164,7 @@ Each feature lists: what the user does, what the model provides (and from which 
 ## 3. Suggested priority
 
 1. W1-W4, W10, W11, W12a, W13, W15, W17 (from repo files): possible on v1 today.
-2. W5-W9, W17 in run output, W18: need v1.1 (about 10 h model-side work plus review; W5 and W17 first, ~1.5 h).
+2. W5-W9, W17 in run output, W18: need v1.1 (about 8 h model-side work plus ~1 h review; W5 and W17 first, ~1.5 h).
 3. W12b: needs v1.2 (rules authored by the materials scientist, scored by LOIO, reviewed).
 4. W14, W16: wrapper-only; W16 aggregation rule is future model-side work.
 
