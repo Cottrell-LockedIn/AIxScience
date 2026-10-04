@@ -55,6 +55,13 @@ def mad(values: Any) -> float:
     return float(np.median(np.abs(array - center)))
 
 
+def _as_float(value: Any) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float("nan")
+
+
 def robust_scale(reference: Any, all_values: Any | None = None) -> float:
     """Return 1.4826*MAD(reference), with the preregistered all-image fallback."""
     scale = 1.4826 * mad(reference)
