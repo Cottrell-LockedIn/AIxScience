@@ -21,7 +21,9 @@ Primary user: a materials scientist who knows the material and the microscope bu
 | Routing (materials expert / microscopy team / none) and next action | yes | same | same |
 | Audit trail (hashes, git tag, config hash, weights checksum) | yes | + mask hashes | same |
 | Segmentation mask and colour overlay per image | computed, not saved | saved (M1) | same |
-| Object list with pixel coordinates: crack-like voids, silicon particles | no | yes (M2) | same |
+| Per-feature "where to look" layers (pixels, outlines, top regions) for F01-F11; crack-like void list | no | yes (M2) | same |
+| Model card: LOIO accuracy, confusion matrix, per-tier and per-batch track record, held-out score when available | in repo files only | in every run output (M8) | same |
+| Embedding PC profiles: correlates, exemplar tiles, patch heat maps, plain-language tag | no | yes (M9) | same |
 | F09 evidence: horizontal/vertical chords, direction map | no | yes (M3) | same |
 | Aspect-ratio panel, labelled "not used by the model" | no | yes (M4) | same |
 | Second opinion from pre-registered expert rules on low/medium tiers | no | no | yes (M5) |
@@ -73,12 +75,15 @@ Each feature lists: what the user does, what the model provides (and from which 
   covariates beside the list because vertical streaks can be FIB artefacts; objects shorter than ~100 px are marked
   "shape unreliable".
 
-### W7. Measured-particle highlighting
-- Hovering a measurement highlights what it used: F01 void pixels, F02 silicon pixels, F03/F04 silicon particles
-  by size (largest 10 % for F04), F05 counting frame, F06 centroids with nearest-neighbour links, F07 particle
-  outlines vs convex hull, F08 local-thickness colouring, F10 512 px window heat map, F11 silicon-void boundaries.
-- Provides (v1.1 M1, M2): mask plus object list.
-- UI says: silicon objects are bright specks (~8 px median), different from whole particles a labeller would outline.
+### W7. Feature-selected "where to look" view
+- User clicks any measurement F01-F11 (or a driver in the result card); the viewer draws exactly what it used and
+  lists the top 10 regions that moved it most; clicking a region zooms to its bounding box with its outline.
+  Examples: F08 colours void pixels by pore thickness and lists the largest pores; F10 shows the 512 px window
+  heat map and lists the most extreme windows; F04 outlines the largest 10 % of silicon particles; F06 draws
+  centroids with nearest-neighbour links. Same interaction for F09 (W8) and the crack-like list (W6).
+- Provides (v1.1 M2, M3): raster and vector evidence layers plus `where_to_look.csv` per image.
+- UI says: silicon objects are bright specks (~8 px median), different from whole particles a labeller would
+  outline; embedding drivers have no mask layer and link to the PC profile (W18) instead.
 
 ### W8. F09 direction evidence
 - Horizontal and vertical void chords drawn in two colours over the void regions at the current zoom; two-bar
@@ -134,17 +139,36 @@ Each feature lists: what the user does, what the model provides (and from which 
   accept/reject; the UI should show per-image results and a count by predicted batch, and label any aggregate as
   "not validated".
 
+### W17. Model accuracy panel (model card)
+- Always visible from the results list and every report: 18/31 leave-one-image-out accuracy with the 95 %
+  interval (0.41-0.74), the 17/31 "always Batch_3" baseline, the confusion matrix, accuracy by tier
+  (high 14/18, medium 1/5, low 3/8) and by bet (Batch_3 bets 14/16, Batch_1 2/6, Batch_2 2/9), and the held-out
+  score once the true batches are known (exploratory, n = 3).
+- Provides (v1 data today in `results/v1/`; v1.1 M8 puts it in every run output as `run.model_card`).
+- UI says: "Estimated on the 31 training images, each held out in turn; not an unseen-lot score. Batch_1 vs
+  Batch_2 is at chance."
+
+### W18. Embedding driver profile ("what is PC1?")
+- Clicking an embedding driver opens its profile: plain-language tag (e.g. "tracks void fraction" or
+  "image-texture component, correlated with BSE noise"), its strongest measurement and imaging correlates with
+  rho, a gallery of the highest- and lowest-scoring tiles with their masks, and (if M9c is done) a heat map of
+  where in this image the PC score comes from with the share falling on void / graphite / silicon.
+- Provides (v1.1 M9): `evidence.pc_profiles`.
+- UI says: "Descriptive, not causal. Phase B could not separate the embedding's batch signal from imaging
+  conditions." Tags are only shown after independent review.
+
 ## 3. Suggested priority
 
-1. W1-W4, W10, W11, W13, W15: possible on v1 today.
-2. W5-W9: need v1.1 (about 4.5 h model-side work plus review).
+1. W1-W4, W10, W11, W13, W15, W17 (from repo files): possible on v1 today.
+2. W5-W9, W17 in run output, W18: need v1.1 (about 10 h model-side work plus review; W5 and W17 first, ~1.5 h).
 3. W12: needs v1.2 (rules authored by the materials scientist, scored by LOIO, reviewed).
 4. W14, W16: wrapper-only; W16 aggregation rule is future model-side work.
 
 ## 4. Things the software must never do
 
 - Hide or replace the model's bet with a rule, an override or an aggregate.
-- Show probabilities without the tier and track record.
+- Show probabilities without the tier and track record, or a result without the model card (W17).
+- Present an embedding PC tag as a physical cause.
 - Report lengths in nm or um before the pixel size is confirmed.
 - Name phases without the provenance line, or go beyond void / graphite / silicon.
 - Let users change model settings; settings are a locked recipe.

@@ -20,6 +20,9 @@ Three requests from the owner and the materials consultant:
    evidence behind the void-direction measurement F09.
 3. When the model is not confident, offer a possible alternative batch from rules a materials scientist has
    approved, separate from the model.
+4. Show the model's accuracy inside the software.
+5. Mentor feedback: embedding PC1 is not interpretable; try to link the embedding components to microstructure
+   properties.
 
 ## 2. Goals and non-goals
 
@@ -61,28 +64,56 @@ Acceptance
 Effort: ~1 h. Masks for the 31 training images already exist on disk (`data/masks`, ~62 MB); the held-out images
 need an exploratory re-run.
 
-### M2. Object locations: crack-like regions and measured particles (v1.1, output-only)
+### M2. "Where to look": per-feature evidence layers and object locations (v1.1, output-only)
 
-What: list the objects behind the measurements with pixel coordinates so the wrapper can draw them.
+What: for every measurement F01-F11, save the exact pixels or object outlines it used, plus the regions that
+moved the number most, so the wrapper can draw them when the user selects that feature (as for F09 in M3).
 
-Spec, per image, `results/<run>/objects/<id>_objects.csv` (and GeoJSON-style outlines in a sidecar):
-- Crack-like regions: connected components of class 0 (4-connectivity, as in `kpi.kpis`) with
-  major/minor axis >= 5.0 (`configs/v1.yaml: kpi_extra.crack_aspect_min`) and area >= `min_object_px` (20).
-  Columns: `object_id, class, area_px, bbox_x0, bbox_y0, bbox_x1, bbox_y1, centroid_x, centroid_y,
-  major_px, minor_px, aspect, orientation_deg, touches_border, outline_path`.
-- Silicon particles used by F03/F04/F05/F06/F07: all class-2 components with the same columns, plus
-  `eq_diam_px, solidity, nn_distance_px`. The wrapper highlights the 10 % largest for F04 and the centroids for F06.
+Spec, per image, under `results/<run>/evidence/<id>/`:
+- Raster layers (PNG, same size as the mask, 0/255 or scalar): `F01_void.png`, `F02_silicon.png`,
+  `F08_local_thickness.png` (scalar, px), `F10_window_void_fraction.png` (512 px grid, scalar),
+  `F11_boundary_adjacent_void.png`.
+- Vector layers (GeoJSON-style outlines in mask pixel coordinates, offset 8 px from the TIFF edge):
+  `F03_F04_F07_particles.json` (every class-2 component with `eq_diam_px, solidity, bbox, centroid, outline`),
+  `F05_counting_frame.json`, `F06_centroids_nn.json` (centroids and nearest-neighbour links),
+  `cracklike_regions.json` (see below).
+- `where_to_look.csv`: for each feature the top 10 regions ranked by contribution, with `feature, rank, bbox,
+  centroid, value, why`:
+
+| Feature | Highlight | Top regions ranked by |
+|---|---|---|
+| F01 void fraction | all void pixels | 512 px windows with the highest void fraction |
+| F02 silicon fraction | all silicon pixels | windows with the highest silicon fraction |
+| F03 silicon median size | particles within +-10 % of the median | particles nearest the median |
+| F04 silicon p90 size | particles above the 90th percentile | largest particles |
+| F05 count density | counting frame + every centroid | windows with most particles |
+| F06 clustering (Clark-Evans) | centroids + nearest-neighbour links | shortest nearest-neighbour links |
+| F07 solidity | particle outline vs convex hull | lowest-solidity particles |
+| F08 pore thickness | local-thickness colouring of void pixels | largest inscribed discs |
+| F09 void direction | horizontal and vertical chords (M3) | windows with the most extreme h/v ratio |
+| F10 patchiness | window heat map | windows at the 25th and 75th percentiles and beyond |
+| F11 silicon-void contact | silicon boundary pixels touching void | particles with the highest contact fraction |
+
+- Crack-like regions (`cracklike_regions.json` + rows in `where_to_look.csv`): connected components of class 0
+  (4-connectivity, as in `kpi.kpis`) with major/minor axis >= 5.0 (`configs/v1.yaml: kpi_extra.crack_aspect_min`)
+  and area >= `min_object_px` (20); columns `object_id, area_px, bbox, centroid, major_px, minor_px, aspect,
+  orientation_deg, touches_border, outline`, ranked by area.
 - Graphite: *no per-object rows*. Class 1 percolates in 31/31 training images (Phase B gate G5), so components are
   fragments, not particles. Report only the percolating-component area fraction.
+- Embedding PCs have no mask-based layer; their "where to look" comes from M9.
 
 Caveats carried in the file header: 2-D section of 3-D objects (a plate cut edge-on looks like a rod); objects
 under ~100 px long have unreliable shape descriptors (Takashimizu & Iiyoshi 2016; Sun et al. 2019); elongated
 vertical voids coincide with FIB curtaining, so the wrapper must show the curtaining covariate next to them.
 
-Acceptance: sum of crack-like `area_px` / total class-0 area equals `c0_cracklike_frac` from `kpi.kpis` on the
-same mask (max abs diff 1e-9). Row count of class-2 objects equals the F05 numerator.
+Acceptance
+- Each feature recomputed from its own saved layer equals the JSON value (F01, F02, F11 from the raster; F03-F07
+  from the particle file; F08 from the thickness raster; F10 from the window raster). Max abs diff 1e-9.
+- Sum of crack-like `area_px` / total class-0 area equals `c0_cracklike_frac` from `kpi.kpis` on the same mask.
+- Every `where_to_look.csv` bbox lies inside the mask and, for object rows, matches an outline in the vector file.
 
-Effort: ~1.5 h (regionprops already used in `kpi.py`; add bbox/centroid/orientation/outline export).
+Effort: ~3 h (regionprops already used in `kpi.py`; local thickness and windows already computed in
+`features.py`; new work is export, ranking and the parity tests).
 
 ### M3. F09 evidence: chords and direction map (v1.1, output-only)
 
@@ -144,6 +175,18 @@ Candidate rules to put in front of the scientist (they choose, add or reject; no
 - R3 measurement ranges: "if k or more of the independently checked void measurements (F01, F08, F09, F10) fall
   inside one batch's training 5-95 % range and outside the others', suggest that batch."
 - R4 acquisition first: "if acquisition drift is suspected, the second opinion is 'reimage before deciding'."
+- R5 data-derived distinct traits: for each batch, find the measurements whose training range is most distinct
+  from the other two (largest standardised median gap), and suggest the batch whose distinct ranges the image
+  falls into. The trait selection must be done inside the LOIO loop (on the 30 training images of each fold), or
+  the score is optimistic.
+
+Expectation for R5, from Phase B (`results/stats/feature_contrasts.csv`): no measurement is distinct for any batch
+pair after multiple-comparison correction. Largest uncorrected gaps: void region size (`c0_region_eqdiam_median_px`)
+Batch_1 vs Batch_3, medians 9.9 vs 10.5 px, p = 0.003 (BH 0.21); silicon clustering F06 Batch_1 vs Batch_2,
+medians 0.73 vs 0.68, p = 0.042 (BH 0.96). The traits that do separate batches are the BSE embedding distance
+(Batch_1 and Batch_2 vs Batch_3, BH p 0.004 and 0.012) and the derived `outside_bounds` flag, and the model already
+uses them. R5 is therefore expected to be weak for Batch_1 vs Batch_2 and partly redundant elsewhere. It costs
+~2 h including LOIO scoring, so the honest course is to score it and report what it does.
 
 Spec
 - Rules live in `configs/rules_v1_2.yaml` with author, date, rationale and a `pre_registered_sha`.
@@ -172,16 +215,81 @@ measured.
 - Higher-magnification BSE of silicon so particle shape becomes measurable (>= 100 px objects).
 - One labelling pipeline across batches if annotation-derived measurements are ever to be used (test 2 FAIL).
 
+### M8. Model accuracy in the software (v1.1, output-only; data already exists)
+
+What: the wrapper should show how well the model did, with the right caveats. No model work is needed; the
+numbers are already in `results/v1/loio_summary.json`, `results/v1/loio_predictions.csv` and
+`results/v1/confusion_matrix.csv`.
+
+Spec: copy a fixed `model_card` block into every run output (`run.model_card`) so the wrapper never has to read
+repository files:
+- `loio_accuracy: 18/31` with Wilson 95 % interval 0.41-0.74; majority-class baseline 17/31; permutation
+  p = 0.035 (1000 shuffles, median shuffled accuracy 12/31).
+- `balanced_accuracy: 0.465`; recall Batch_1 2/7, Batch_2 2/7, Batch_3 14/17; precision Batch_1 2/6, Batch_2 2/9,
+  Batch_3 14/16.
+- Confusion matrix (rows true, columns predicted): Batch_1 [2, 4, 1]; Batch_2 [4, 2, 1]; Batch_3 [0, 3, 14].
+- Accuracy by tier: high 14/18, medium 1/5, low 3/8; by bet and tier (e.g. `Batch_3|high` 13/14, `Batch_1|high` 0/1).
+- `evaluation: leave-one-image-out on the 31 training images`; `heldout_scored: false` until the true batches of
+  the 3 held-out images are supplied, then `heldout_accuracy: k/3 (exploratory, n = 3)`.
+- Phase B status of each measurement and the independent label check (F01, F08, F09, F10 checked in Batch_1 and
+  Batch_3; silicon features unchecked).
+
+Caveats the block must carry: LOIO is an estimate on the same 31 images the model was tuned on (choices were
+frozen before evaluation, but it is not an unseen-lot score); n = 31 means +-1 image moves accuracy by 3 points;
+Batch_1 vs Batch_2 is at chance.
+
+Acceptance: the block is generated from the result files, not typed by hand, and a test compares it with them.
+Effort: ~0.5 h.
+
+### M9. Characterise the embedding PCs (mentor feedback; v1.1, output-only)
+
+Mentor: "embedding PC1 isn't really interpretable ... would be cool to try link them to material/microstructure
+properties."
+
+How the embeddings arise: each 1024 px BSE tile is resized to 518 px and passed through frozen DINOv2 ViT-S/14
+(`embed.embed_batch`); the 37 x 37 patch tokens are mean-pooled to one 384-d vector per tile, tiles are averaged
+per image, and PCA (29 components, fitted on the training images) gives the PC scores the classifier uses. So a
+PC is a weighted average of texture descriptors over the whole image; it has no built-in meaning.
+
+What we can do without changing the model (profiles are computed on the final-model PCA fitted on all 31 images):
+- M9a Correlation profile (~1 h, data exists: `results/emb_per_image.parquet`, `features_per_image.parquet`,
+  `kpi_per_image.parquet`, `artefacts_per_image.parquet`). For each PC, Spearman rho with the 11 measurements, the
+  KPIs and the 8 acquisition covariates across the 31 images, with permutation p-values and BH correction.
+- M9b Tile exemplars (~1 h, data exists: `results/emb_per_tile.npy`, 4329 tiles). For each PC, the 8 tiles with
+  the highest and lowest projection, shown as a gallery with their masks, so a scientist can see what "high PC1"
+  looks like.
+- M9c Patch heat maps (~2 h, needs one exploratory Modal re-embedding that keeps patch tokens; weights unchanged).
+  Because the pooled vector is the mean of patch tokens, the PC score decomposes exactly into per-patch
+  contributions; render them as a heat map over the image and report the share of high-contribution patches that
+  fall on void, graphite and silicon in the mask.
+- M9d Naming rule. A PC gets a plain-language tag only if |rho| >= 0.7 (BH p < 0.05) with a measurement or KPI
+  *and* |rho| < 0.5 with every acquisition covariate; e.g. "PC3: tracks void fraction (rho 0.78)". Otherwise it is
+  tagged "image-texture component" with its strongest correlate, e.g. "PC1: correlated with BSE noise (rho 0.71);
+  not separable from imaging conditions". Tags are descriptive, never causal.
+
+Output: `evidence.pc_profiles[k] = {tag, top_correlates: [...], exemplar_tiles: [...], patch_map_path,
+phase_share_high_patches: {void, graphite, silicon}, acquisition_correlates: [...]}`, referenced from each
+embedding driver in `evidence.drivers`.
+
+Expectation, from Phase B (`docs/PHASE_B.md`): the raw embedding difference between Batch_1/Batch_2 and Batch_3
+disappears after residualising on the 8 acquisition covariates (BH p 0.75 and 0.96), and for Batch_1 noise or
+sharpness alone removes it. So at least one leading PC is likely to be an imaging component, and the honest
+outcome may be "PC1 is mostly noise/sharpness". That is still useful: the wrapper can say so next to the driver.
+
+Acceptance: profiles reproduce from the stored arrays; the naming rule is applied by code, not by hand; a
+fresh-context reviewer checks the tags before they are shown to users (`AGENTS.md` independent review).
+Effort: ~4 h for M9a-M9d plus review; M9a and M9b alone ~2 h.
+
 ## 4. Releases and sequence
 
 | Release | Items | What changes | Validation | Time |
 |---|---|---|---|---|
-| v1.1 | M1, M2, M3, M4 | New output files and JSON fields only | Parity tests in section 3; verdict bytes unchanged on 31 LOIO + 3 held-out (exploratory) | ~4.5 h + review |
+| v1.1 | M1, M2, M3, M4, M8, M9 | New output files and JSON fields only | Parity tests in section 3; verdict bytes unchanged on 31 LOIO + 3 held-out (exploratory); reviewer checks PC tags | ~10 h + review (M1-M4, M8 ~6 h; M9 ~4 h) |
 | v1.2 | M5 | New `second_opinion` field driven by pre-registered expert rules | One LOIO scoring run; independent review | scientist time + ~3 h |
 | v2 | M6 (if ever) | Classifier inputs | Pre-registered LOIO vs 18/31; new unseen images needed for a real held-out test | ~1.5 h |
 
-Order: v1.1 first (unblocks the wrapper's mask viewer and evidence views), M5 rule authoring in parallel with the
-scientist, v1.2 after review.
+Order: M1, M8 first (unblocks the mask viewer and the accuracy panel, ~1.5 h), then M2-M4 (evidence layers), then
+M9 (PC profiles); M5 rule authoring in parallel with the scientist, v1.2 after review.
 
 ## 5. Risks
 
@@ -200,3 +308,7 @@ scientist, v1.2 after review.
 2. Who authors the M5 rules, and which of R1-R4 go in the first pre-registration.
 3. Whether the aspect-ratio panel should use 5.0 as the crack-like threshold (current Phase B value) or a value
    the consultant prefers; it must be fixed before v1.1 is scored.
+4. Whether to include R5 (data-derived distinct traits) in the first rule pre-registration despite the weak
+   expectation, so that its LOIO score is on record.
+5. Whether M9c (patch heat maps, one exploratory Modal re-embedding) is wanted in v1.1 or deferred; M9a-M9b need no
+   new compute.
