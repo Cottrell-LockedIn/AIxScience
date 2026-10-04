@@ -169,3 +169,31 @@
     transition: none;
   }
 }
+
+.material-scene__modes {
+  border-top: 1px solid var(--scene-line);
+  display: flex;
+  gap: 0;
+  padding: 0 1.25rem;
+}
+
+.material-scene__modes button {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  color: var(--scene-muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin-bottom: -1px;
+  min-height: 2.25rem;
+  padding: 0 0.9rem;
+}
+
+.material-scene__modes button.is-active {
+  border-bottom-color: var(--scene-violet);
+  color: #202024;
+}

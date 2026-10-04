@@ -20,7 +20,7 @@ export type ResultChannel = {
   name: string; filename: string; previewUrl?: string; rawUrl?: string; width?: number; height?: number; sha256?: string; available?: boolean
 }
 type MaskLayer = { id: string; label: string; imageUrl: string; verified: true }
-type MaskArtifact = { maskUrl?: string; overlayUrl?: string; originalCroppedPreviewUrl?: string; layers?: MaskLayer[]; offset?: [number, number]; sha256?: string; width?: number; height?: number; note?: string }
+type MaskArtifact = { maskUrl?: string; compareUrl?: string; overlayUrl?: string; originalCroppedPreviewUrl?: string; layers?: MaskLayer[]; offset?: [number, number]; sha256?: string; width?: number; height?: number; note?: string }
 export type ResultField = {
   id: string; channels: ResultChannel[]; features: FeatureMap; predictedBatch?: string
   probabilities?: ProbabilityMap; runnerUp?: string; margin?: number; confidenceTier?: string
@@ -143,7 +143,7 @@ export default function Results({ data, criteria = [], review, onNew }: Props) {
       </div>
       <aside className="results__visual" aria-label="Evidence visual">
         <div className="visual-topline"><span>{materialViews.includes(view) ? 'Material perspective · separated analysis layers' : view === 'investigate' ? 'Stakeholder trace' : 'Evidence lens'}</span><button onClick={() => setExpanded(!expanded)} aria-pressed={expanded}><Expand size={16} />{expanded ? 'Restore view' : 'Expand visual'}</button></div>
-        {materialViews.includes(view) ? (field.mask?.originalCroppedPreviewUrl || preview) ? <Suspense fallback={<div className="visual-unavailable"><p>Preparing material view…</p></div>}><MaterialScene imageUrl={field.mask?.originalCroppedPreviewUrl || preview!} fieldId={field.id} layers={field.mask?.layers || []} /></Suspense> : <UnavailableImage channel={imageChannel} /> : view === 'investigate' ? <StakeholderTrace risk={selectedRisk} field={field} criteria={criteria} /> : <EvidenceLens imageUrl={preview} channel={imageChannel} criterion={measured.find((item) => item.criterion.id === selectedCriterion)?.criterion} field={field} />}
+        {materialViews.includes(view) ? (field.mask?.originalCroppedPreviewUrl || preview) ? <Suspense fallback={<div className="visual-unavailable"><p>Preparing material view…</p></div>}><MaterialScene imageUrl={field.mask?.originalCroppedPreviewUrl || preview!} fieldId={field.id} layers={field.mask?.layers || []} compareUrl={field.mask?.compareUrl} batchLabel={field.predictedBatch} /></Suspense> : <UnavailableImage channel={imageChannel} /> : view === 'investigate' ? <StakeholderTrace risk={selectedRisk} field={field} criteria={criteria} /> : <EvidenceLens imageUrl={preview} channel={imageChannel} criterion={measured.find((item) => item.criterion.id === selectedCriterion)?.criterion} field={field} />}
       </aside>
     </section>
 

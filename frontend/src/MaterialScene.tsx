@@ -12,6 +12,7 @@ import {
 import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
 import { Group, PlaneGeometry, SRGBColorSpace, TextureLoader } from "three";
 import "./MaterialScene.css";
+import BatchCompare from "./BatchCompare";
 
 export type MaterialLayer = {
   /** A versioned, spatially aligned mask image. Do not pass inferred layers here. */
@@ -27,7 +28,13 @@ export type MaterialSceneProps = {
   fieldId: string;
   /** Exact aligned masks from the completed engine run, when available. */
   layers?: MaterialLayer[];
+  /** `/api/compare/...` base for the batch comparison tab; absent when no verified mask exists. */
+  compareUrl?: string;
+  /** The model's batch bet, shown as a caption in the comparison tab. */
+  batchLabel?: string;
 };
+
+type Mode = "perspective" | "compare";
 
 type View = "front" | "left" | "right";
 
@@ -223,7 +230,8 @@ function FlatFallback({ imageUrl, fieldId }: Pick<MaterialSceneProps, "imageUrl"
  * A presentation-only perspective of one original micrograph.
  * It never invents material layers or physical depth from a 2D field.
  */
-export default function MaterialScene({ imageUrl, fieldId, layers = EMPTY_LAYERS }: MaterialSceneProps) {
+export default function MaterialScene({ imageUrl, fieldId, layers = EMPTY_LAYERS, compareUrl, batchLabel }: MaterialSceneProps) {
+  const [mode, setMode] = useState<Mode>("perspective");
   const [view, setView] = useState<View>("front");
   const [rotation, setRotation] = useState<[number, number, number]>(VIEWS.front);
   const [separated, setSeparated] = useState(false);
@@ -270,9 +278,12 @@ export default function MaterialScene({ imageUrl, fieldId, layers = EMPTY_LAYERS
           <p className="material-scene__label">Material perspective</p>
           <h3>{fieldId}</h3>
         </div>
-        <span className="material-scene__status">{separated ? "Original + phase layers" : "Aligned image layers"}</span>
+        <span className="material-scene__status">{mode === "compare" ? "This image vs batch representatives" : separated ? "Original + phase layers" : "Aligned image layers"}</span>
       </div>
 
+      {mode === "compare" ? (
+        <BatchCompare fieldId={fieldId} compareUrl={compareUrl} batchLabel={batchLabel} />
+      ) : (
       <div
         className={`material-scene__viewport ${dragging ? "is-dragging" : ""}`}
         onPointerDown={beginDrag}
@@ -291,7 +302,18 @@ export default function MaterialScene({ imageUrl, fieldId, layers = EMPTY_LAYERS
           />
         </SceneBoundary>
       </div>
+      )}
 
+      <div className="material-scene__modes" role="tablist" aria-label="Material perspective tabs">
+        <button type="button" role="tab" aria-selected={mode === "perspective"} className={mode === "perspective" ? "is-active" : ""} onClick={() => setMode("perspective")}>
+          Perspective
+        </button>
+        <button type="button" role="tab" aria-selected={mode === "compare"} className={mode === "compare" ? "is-active" : ""} onClick={() => setMode("compare")}>
+          Compare with batches
+        </button>
+      </div>
+
+      {mode === "perspective" && (
       <div className="material-scene__controls" aria-label="Perspective controls">
         <button type="button" className={view === "left" ? "is-active" : ""} onClick={() => setPresetView("left")}>
           Tilt left
@@ -308,7 +330,9 @@ export default function MaterialScene({ imageUrl, fieldId, layers = EMPTY_LAYERS
           </button>
         )}
       </div>
+      )}
 
+      {mode === "perspective" && (
       <div className="material-scene__notes">
         <p>A 2D image shown in perspective. Depth is illustrative.</p>
         {exactLayers.length === 0 ? (
@@ -319,6 +343,7 @@ export default function MaterialScene({ imageUrl, fieldId, layers = EMPTY_LAYERS
           </p>
         )}
       </div>
+      )}
     </section>
   );
 }

@@ -1,0 +1,290 @@
+{
+  "purpose": "display-only representative training image per batch for side-by-side comparison",
+  "selection_rule": "nearest to own batch centre in the frozen classifier input space (standardised F01-F11 + 29 BSE DINOv2 PCs, fit on all 31 training images)",
+  "segmentation": "frozen v1 recipe (per-tile multi-Otsu, min_object_px, stitch) applied as in qc heldout; exploratory display evidence, not ground truth",
+  "phase_identity": "stated by Polaron, not image-verified",
+  "config_hash": "45629944e398",
+  "features_config_hash": "a03b4b7c5a70",
+  "git_sha": "8d7bff3",
+  "references": [
+    {
+      "batch": "Batch_1",
+      "id": "fzrt2k6r",
+      "distance_to_batch_centre": 4.29439602991868,
+      "source": {
+        "path": "data/raw/Batch_1/img_fzrt2k6r_BSE.tif",
+        "sha256": "9fa0f4c9a5cb019fde2f081618788453afb96f86532d4b0ca0a83783edf1ec3a"
+      },
+      "mask_path": "reference/fzrt2k6r_mask.png",
+      "mask_sha256": "e96297d138a1068aaf07e225d7d8f7413c87c6dd084c1af36daaac676d41505c",
+      "mask_shape": [
+        2140,
+        6984
+      ],
+      "mask_offset_px": [
+        8,
+        8
+      ],
+      "class_values": {
+        "0": "void",
+        "1": "graphite",
+        "2": "silicon"
+      },
+      "feature_check": {
+        "F01_c0_area_fraction": {
+          "recomputed": 0.09444109901403475,
+          "training_table": 0.09444109901403475
+        },
+        "F02_c2_area_fraction": {
+          "recomputed": 0.08909978482191605,
+          "training_table": 0.08909978482191605
+        },
+        "F03_c2_eqdiam_median_px": {
+          "recomputed": 7.898654169668588,
+          "training_table": 7.898654169668588
+        },
+        "F04_c2_eqdiam_p90_px": {
+          "recomputed": 23.939194963364102,
+          "training_table": 23.939194963364102
+        },
+        "F05_c2_count_density_per_Mpx": {
+          "recomputed": 116.2871610409909,
+          "training_table": 116.2871610409909
+        },
+        "F06_c2_clark_evans_R": {
+          "recomputed": 0.7042769619778184,
+          "training_table": 0.7042769619778184
+        },
+        "F07_c2_solidity_area_weighted_median": {
+          "recomputed": 0.8393819619116062,
+          "training_table": 0.8393819619116062
+        },
+        "F08_c0_local_thickness_median_px": {
+          "recomputed": 26.0,
+          "training_table": 26.0
+        },
+        "F09_c0_chord_anisotropy_h_over_v": {
+          "recomputed": 1.180616739147922,
+          "training_table": 1.180616739147922
+        },
+        "F10_c0_fraction_iqr_512px": {
+          "recomputed": 0.055451393127441406,
+          "training_table": 0.055451393127441406
+        },
+        "F11_c2_perimeter_fraction_adjacent_c0": {
+          "recomputed": 0.0003529168914014796,
+          "training_table": 0.0003529168914014796
+        }
+      },
+      "feature_check_max_relative_difference": 0.0,
+      "image_level_kpis": {
+        "frac_c0": 0.09444109901403475,
+        "frac_c1": 0.8164591161640492,
+        "frac_c2": 0.08909978482191605,
+        "c2_count_density_per_Mpx": 122.57657021121709,
+        "c2_eqdiam_median_px": 7.898654169668588,
+        "c2_eqdiam_p90_px": 25.25402207014336,
+        "c0_region_eqdiam_median_px": 9.772050238058398,
+        "c0_region_area_mean_px": 826.4016393442623,
+        "c1_flake_eqdiam_median_px": 6.180387232371033,
+        "c1_flake_aspect_median": 1.993538551681894,
+        "c1_largest_component_frac": 0.9926600080867999,
+        "c0_cracklike_frac": 0.1676698590288021,
+        "c2_tpc_length_px": 51.14965953706207
+      },
+      "training_table_kpis_tile_mean": {
+        "frac_c0": 0.10117734395540677,
+        "frac_c1": 0.8094424834618201,
+        "frac_c2": 0.08938017258277306,
+        "c0_cracklike_frac": 0.1573018711772707,
+        "c1_largest_component_frac": 0.9591724405618123
+      }
+    },
+    {
+      "batch": "Batch_2",
+      "id": "rxax5ozo",
+      "distance_to_batch_centre": 3.216228682688529,
+      "source": {
+        "path": "data/raw/Batch_2/img_rxax5ozo_BSE.tif",
+        "sha256": "e1cffb1b6a62f7aa6a10a48cc52a8ef18833929a858c5c6692e5c5bd7558f2c9"
+      },
+      "mask_path": "reference/rxax5ozo_mask.png",
+      "mask_sha256": "db69e6dc53c999afaedc2e0c5c0af58f9c5a8f7f7dc508fa7c3d107d39722301",
+      "mask_shape": [
+        2052,
+        6984
+      ],
+      "mask_offset_px": [
+        8,
+        8
+      ],
+      "class_values": {
+        "0": "void",
+        "1": "graphite",
+        "2": "silicon"
+      },
+      "feature_check": {
+        "F01_c0_area_fraction": {
+          "recomputed": 0.08972178680760703,
+          "training_table": 0.08972178680760703
+        },
+        "F02_c2_area_fraction": {
+          "recomputed": 0.09710380898472476,
+          "training_table": 0.09710380898472476
+        },
+        "F03_c2_eqdiam_median_px": {
+          "recomputed": 8.368283871884005,
+          "training_table": 8.368283871884005
+        },
+        "F04_c2_eqdiam_p90_px": {
+          "recomputed": 26.45310093032345,
+          "training_table": 26.45310093032345
+        },
+        "F05_c2_count_density_per_Mpx": {
+          "recomputed": 115.20345027006871,
+          "training_table": 115.20345027006871
+        },
+        "F06_c2_clark_evans_R": {
+          "recomputed": 0.6907567483210665,
+          "training_table": 0.6907567483210665
+        },
+        "F07_c2_solidity_area_weighted_median": {
+          "recomputed": 0.8163907556138338,
+          "training_table": 0.8163907556138338
+        },
+        "F08_c0_local_thickness_median_px": {
+          "recomputed": 24.0,
+          "training_table": 24.0
+        },
+        "F09_c0_chord_anisotropy_h_over_v": {
+          "recomputed": 1.1761500864573575,
+          "training_table": 1.1761500864573575
+        },
+        "F10_c0_fraction_iqr_512px": {
+          "recomputed": 0.046103477478027344,
+          "training_table": 0.046103477478027344
+        },
+        "F11_c2_perimeter_fraction_adjacent_c0": {
+          "recomputed": 0.0012930731316716352,
+          "training_table": 0.0012930731316716352
+        }
+      },
+      "feature_check_max_relative_difference": 0.0,
+      "image_level_kpis": {
+        "frac_c0": 0.08972178680760703,
+        "frac_c1": 0.8131744042076682,
+        "frac_c2": 0.09710380898472476,
+        "c2_count_density_per_Mpx": 121.5532467416473,
+        "c2_eqdiam_median_px": 8.444016491289505,
+        "c2_eqdiam_p90_px": 30.403485153477522,
+        "c0_region_eqdiam_median_px": 10.524820207108489,
+        "c0_region_area_mean_px": 883.1167582417582,
+        "c1_flake_eqdiam_median_px": 5.108573994933366,
+        "c1_flake_aspect_median": 2.2864217579511052,
+        "c1_largest_component_frac": 0.9882410271930752,
+        "c0_cracklike_frac": 0.19928092467207645,
+        "c2_tpc_length_px": 48.690381619582915
+      },
+      "training_table_kpis_tile_mean": {
+        "frac_c0": 0.08881214948800895,
+        "frac_c1": 0.818972110748291,
+        "frac_c2": 0.09221573976370004,
+        "c0_cracklike_frac": 0.16161454871675993,
+        "c1_largest_component_frac": 0.9466321882033741
+      }
+    },
+    {
+      "batch": "Batch_3",
+      "id": "cfe5vt7s",
+      "distance_to_batch_centre": 3.808087137857189,
+      "source": {
+        "path": "data/raw/Batch_3/img_cfe5vt7s_BSE.tif",
+        "sha256": "14f1a08a2d3eaf2b5687b0055b630e7a49eea96c093c260302938aa3e1640193"
+      },
+      "mask_path": "reference/cfe5vt7s_mask.png",
+      "mask_sha256": "19d77914222c4a6dceeac925cf9654d0978676f608e4e37ddc8675200bbc1d51",
+      "mask_shape": [
+        2064,
+        6984
+      ],
+      "mask_offset_px": [
+        8,
+        8
+      ],
+      "class_values": {
+        "0": "void",
+        "1": "graphite",
+        "2": "silicon"
+      },
+      "feature_check": {
+        "F01_c0_area_fraction": {
+          "recomputed": 0.11334725774083841,
+          "training_table": 0.11334725774083841
+        },
+        "F02_c2_area_fraction": {
+          "recomputed": 0.07827803528774518,
+          "training_table": 0.07827803528774518
+        },
+        "F03_c2_eqdiam_median_px": {
+          "recomputed": 8.136857890256438,
+          "training_table": 8.136857890256438
+        },
+        "F04_c2_eqdiam_p90_px": {
+          "recomputed": 32.09259412751611,
+          "training_table": 32.09259412751611
+        },
+        "F05_c2_count_density_per_Mpx": {
+          "recomputed": 70.34350941687312,
+          "training_table": 70.34350941687312
+        },
+        "F06_c2_clark_evans_R": {
+          "recomputed": 0.6820034610895626,
+          "training_table": 0.6820034610895626
+        },
+        "F07_c2_solidity_area_weighted_median": {
+          "recomputed": 0.8944404863138057,
+          "training_table": 0.8944404863138057
+        },
+        "F08_c0_local_thickness_median_px": {
+          "recomputed": 26.0,
+          "training_table": 26.0
+        },
+        "F09_c0_chord_anisotropy_h_over_v": {
+          "recomputed": 1.1606741885589378,
+          "training_table": 1.1606741885589378
+        },
+        "F10_c0_fraction_iqr_512px": {
+          "recomputed": 0.05608081817626953,
+          "training_table": 0.05608081817626953
+        },
+        "F11_c2_perimeter_fraction_adjacent_c0": {
+          "recomputed": 0.00026216442953020134,
+          "training_table": 0.00026216442953020134
+        }
+      },
+      "feature_check_max_relative_difference": 0.0,
+      "image_level_kpis": {
+        "frac_c0": 0.11334725774083841,
+        "frac_c1": 0.8083747069714164,
+        "frac_c2": 0.07827803528774518,
+        "c2_count_density_per_Mpx": 71.6615830647238,
+        "c2_eqdiam_median_px": 8.291859587312052,
+        "c2_eqdiam_p90_px": 35.81010990032067,
+        "c0_region_eqdiam_median_px": 9.772050238058398,
+        "c0_region_area_mean_px": 845.7028985507246,
+        "c1_flake_eqdiam_median_px": 6.4820448144285745,
+        "c1_flake_aspect_median": 1.9792534921874285,
+        "c1_largest_component_frac": 0.99482308909985,
+        "c0_cracklike_frac": 0.07670735872129104,
+        "c2_tpc_length_px": 64.5174729296408
+      },
+      "training_table_kpis_tile_mean": {
+        "frac_c0": 0.10989154302156888,
+        "frac_c1": 0.8119309131915753,
+        "frac_c2": 0.07817754378685585,
+        "c0_cracklike_frac": 0.07341939612340467,
+        "c1_largest_component_frac": 0.9914562881353727
+      }
+    }
+  ]
+}
