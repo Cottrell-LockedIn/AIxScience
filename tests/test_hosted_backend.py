@@ -42,6 +42,8 @@ def test_hosted_bundle_excludes_untracked_runtime_files_and_bootstraps_verified_
     assert "ignore=_ignore_untracked_bundle_path" in source
     assert 'weights_volume = modal.Volume.from_name(WEIGHTS_VOLUME_NAME, create_if_missing=True)' in source
     assert "embed.ensure_weights(weights_cfg, weights_path)" in source
+    assert 'qc_config.git_sha = lambda: os.environ.get("COTTRELL_BUNDLE_GIT_SHA", "unknown")' in source
+    assert 'cost_source="https://modal.com/pricing; L4=$0.000222/GPU-s; embedding wall time only"' in source
 
 
 def test_hosted_docs_do_not_claim_a_deployment():

@@ -159,6 +159,7 @@ def _configure_state_paths() -> tuple[Any, Any]:
     os.chdir(BUNDLE_ROOT)
 
     from app import api, jobs
+    from qc import config as qc_config
 
     paths = _state_paths()
     paths["root"].mkdir(parents=True, exist_ok=True)
@@ -173,6 +174,9 @@ def _configure_state_paths() -> tuple[Any, Any]:
     # Saved numerical records remain available, while image endpoints honestly
     # return 404 until their original TIFFs are uploaded in an exploratory run.
     api.POLARON_DATASET = paths["root"] / "no-saved-raw-tiffs"
+    # The deployment image intentionally excludes .git. Preserve the commit
+    # identity baked at deploy time for the engine's own provenance fields.
+    qc_config.git_sha = lambda: os.environ.get("COTTRELL_BUNDLE_GIT_SHA", "unknown")
     return api, jobs
 
 
@@ -312,6 +316,21 @@ def _hosted_gpu_embeddings(
     wall_s = time.perf_counter() - started
     # This is an estimate, matching the project's existing L4 accounting basis.
     estimated_cost = wall_s * 0.000222
+    # The replacement intentionally bypasses heldout._embedding_vectors, which
+    # normally writes this line. Preserve an embedding-only hosted run record;
+    # do not charge the surrounding segmentation/job wall time as GPU time.
+    from qc import heldout
+
+    _append_hosted_modal_run(
+        cfg,
+        heldout.V1_MODAL_RUN_COLUMNS,
+        wall_s=wall_s,
+        n_inputs=len(payloads),
+        hardware="L4",
+        cost=estimated_cost,
+        cost_source="https://modal.com/pricing; L4=$0.000222/GPU-s; embedding wall time only",
+        exploratory=True,
+    )
     return vectors, {
         "embedding_backend": "modal_l4_hosted",
         "embedding_error": None,

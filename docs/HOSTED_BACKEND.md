@@ -69,6 +69,11 @@ The spawned Modal call ID is stored in a separate control file rather than the
 worker-owned run state, so a fast-starting worker cannot have progress replaced
 by the web request that launched it.
 
+Each exploratory result uses the Git SHA baked into the deployment image. Its
+hosted accounting row records only DINOv2 embedding wall time and its matching
+L4 estimate; segmentation and file-processing wall time are not presented as
+GPU cost.
+
 ## Before publishing
 
 1. Confirm Modal authentication: `modal profile list`.
