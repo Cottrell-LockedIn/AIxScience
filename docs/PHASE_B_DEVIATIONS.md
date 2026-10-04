@@ -43,3 +43,25 @@ Residualised permutation p-values are displayed with a BH adjustment performed s
 within the same corresponding test family. Raw p-values and their pre-registered BH
 adjustments remain unchanged and are the values used by G1 and verdict rules. G2 continues
 to use the pre-registered unadjusted residualised p-value.
+
+## Verdict acquisition-range flags
+
+For each batch covariate, the requested `flag` is true only when that batch's image-level
+median is strictly below the Batch_3 5th percentile or strictly above its 95th percentile.
+This descriptive range flag is separate from `acquisition_drift_suspected`, which continues
+to use the pre-registered BH-adjusted covariate tests. Batch_3's own median is compared with
+the same Batch_3 training percentiles.
+
+## Verdict driver tie order
+
+Drivers are sorted by descending absolute effect size, then ascending feature name to make
+ties deterministic. If no feature contrast has BH p < 0.05, the requested top-five fallback
+uses the same ordering and the reason sentence explicitly states that none is significant.
+
+## Reference-batch verdict evidence
+
+Acquisition drift is defined only for a pair against Batch_3, so the Batch_3 verdict records
+`acquisition_drift_suspected: false` as the reference and cites the Batch_1-vs-Batch_3 drift
+row for provenance. Its embedding evidence reports the Batch_3 diagonal self-distance rows
+(energy and MMD² are descriptive zeros with the diagonal p-values); they do not affect the
+Batch_3 label, which uses only the registered reference leave-one-out rule.
