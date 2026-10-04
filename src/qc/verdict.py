@@ -406,12 +406,18 @@ def _reason_for_decision(decision: dict[str, Any]) -> str:
         e = embedding_rows.get("energy")
         m = embedding_rows.get("mmd2")
         if e is not None and m is not None:
-            sentence += (
-                f"; BSE embedding energy={_finite_float(e['value'], 'energy'):.3g} "
+            embedding_detail = (
+                f"energy={_finite_float(e['value'], 'energy'):.3g} "
                 f"(band={e['band_position']}, BH p={_format_p(e['p_bh'])}) and "
                 f"MMD²={_finite_float(m['value'], 'mmd2'):.3g} "
                 f"(band={m['band_position']}, BH p={_format_p(m['p_bh'])})"
             )
+            if any(_as_float(row["p_bh"]) < ALPHA for row in embedding_rows.values()):
+                sentence += (
+                    f"; different from Batch_3 in BSE embedding tests ({embedding_detail})"
+                )
+            else:
+                sentence += f"; BSE embedding statistics are {embedding_detail}"
     if decision["acquisition_drift"]:
         drifting = decision["drift_covariate_rows"]
         drift_text = ", ".join(
