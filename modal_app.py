@@ -226,10 +226,10 @@ def _append_modal_run(
     }
     row = pd.DataFrame([record], columns=MODAL_RUN_COLUMNS)
     if path.exists():
-        existing = pd.read_csv(path)
+        existing = pd.read_csv(path, dtype=str, keep_default_na=False)
         if list(existing.columns) == LEGACY_MODAL_RUN_COLUMNS:
-            existing["local_remote_max_abs_diff"] = float("nan")
-            existing["repeat_max_abs_diff"] = float("nan")
+            existing["local_remote_max_abs_diff"] = ""
+            existing["repeat_max_abs_diff"] = ""
             existing = existing[MODAL_RUN_COLUMNS]
             existing.to_csv(path, index=False)
         elif list(existing.columns) != MODAL_RUN_COLUMNS:
