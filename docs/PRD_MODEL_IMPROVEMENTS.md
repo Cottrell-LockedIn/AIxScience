@@ -27,6 +27,9 @@ Three requests from the owner and the materials consultant:
 ## 2. Goals and non-goals
 
 Goals
+- Model performance must not decrease. Every v1.1 item is output-only (the `verdict` block stays byte-identical);
+  the v1.2 second opinion never changes the bet or tier; any v2 must match or beat 18/31 in LOIO and keep the
+  tier logic (the out-of-baseline cap earned a point on the held-out set, see M8).
 - Every number the wrapper shows can be traced to pixels on the image.
 - Aspect ratio is exposed as evidence a scientist can judge, without changing the v1 prediction.
 - Low-confidence bets come with a second opinion that is labelled, validated and never silently replaces the bet.
@@ -65,6 +68,8 @@ Effort: ~1 h. Masks for the 31 training images already exist on disk (`data/mask
 need an exploratory re-run.
 
 ### M2. "Where to look": per-feature evidence layers and object locations (v1.1, output-only)
+
+Status: scope approved by the owner (2026-10-04); not yet implemented.
 
 What: for every measurement F01-F11, save the exact pixels or object outlines it used, plus the regions that
 moved the number most, so the wrapper can draw them when the user selects that feature (as for F09 in M3).
@@ -161,6 +166,28 @@ What: when the v1 tier is `low` or `medium`, add `second_opinion` next to the ve
 materials scientist, pre-registered, then scored once by LOIO on the 31 training images. The v1 bet is never
 changed or hidden.
 
+#### M5a. Guideline card first (no rules, no scoring; ~30 min of writing, wrapper renders it)
+
+Everything needed is already in the v1 output: tier and tier reason, runner-up and margin, out-of-baseline label,
+acquisition flags, and the LOIO track record for this kind of bet and tier. A fixed guideline card is selected
+by situation and filled from those fields. It is guidance for the scientist, not a prediction, so it needs no
+validation; it must not name a batch the model did not already name.
+
+| Situation (from the output) | Card text (filled from the JSON) |
+|---|---|
+| low tier, `outside_bounds`, bet Batch_1 or Batch_2 | "Probably not Batch_3 (outside its range). Batch_1 vs Batch_2 is near chance for this model (bets on {bet} right {k}/{n} in testing; misses were usually {runner_up}). Read '{bet}' as 'Batch_1 or Batch_2'. Check imaging flags first ({flags}). To decide: image more sections of this sample, or compare the 11 measurements with the Batch_1 and Batch_2 ranges." |
+| low tier, `outside_bounds`, bet Batch_3 | "Unusual image: bet Batch_3 but outside the Batch_3 range. Check imaging flags ({flags}); if they are clear, send to materials review as a possible new variation." |
+| low tier, p_max < 0.5 | "No batch is favoured (best {p_max}). Treat as undecided; image more sections. Runner-up {runner_up}." |
+| medium tier | "Moderate evidence for {bet} (p {p_max}, margin {margin}); medium-tier bets were right 1/5 in testing. Confirm with a second image before acting." |
+| any tier, acquisition drift suspected | prepend: "Imaging differs from the training images ({flags}); re-image or confirm settings before interpreting the bet." |
+| high tier, bet Batch_1 or Batch_2 | append: "High tier, but Batch_1/Batch_2 bets at this tier were right 1/4 in testing; treat the batch identity as provisional." |
+
+Template text lives in `configs/guidelines_v1.yaml`; a test renders all six cards from the LOIO output.
+Example rendered for held-out `3e122cbj` (true batch Batch_2): first row with bet Batch_1, 2/6, runner-up
+Batch_2, flags noise/sharpness/height.
+
+#### M5b. Pre-registered expert rules (later, ~2 h + scientist time)
+
 Why rules might help (observed in the frozen LOIO output `results/v1/loio_predictions.csv`; these are post-hoc
 observations on training data, not validated rules):
 - 13 images were low or medium tier. The v1 bet was right for 4 of them; the runner-up batch was right for 8.
@@ -229,8 +256,13 @@ repository files:
   Batch_3 14/16.
 - Confusion matrix (rows true, columns predicted): Batch_1 [2, 4, 1]; Batch_2 [4, 2, 1]; Batch_3 [0, 3, 14].
 - Accuracy by tier: high 14/18, medium 1/5, low 3/8; by bet and tier (e.g. `Batch_3|high` 13/14, `Batch_1|high` 0/1).
-- `evaluation: leave-one-image-out on the 31 training images`; `heldout_scored: false` until the true batches of
-  the 3 held-out images are supplied, then `heldout_accuracy: k/3 (exploratory, n = 3)`.
+- `evaluation: leave-one-image-out on the 31 training images`.
+- Held-out set (true batches supplied by the owner on 2026-10-04 after the single official run; scoring is
+  exploratory, n = 3): `3e122cbj` true Batch_2, predicted Batch_1 (p 0.98) at tier low; `fn0mhxef` true Batch_1,
+  predicted Batch_1 at tier high; `xrv9xvzb` true Batch_3, predicted Batch_3 at tier high. Accuracy 2/3. Under
+  the competition confidence score (0 = confident wrong, 1 = low-confidence wrong, 2 = confident correct):
+  1 + 2 + 2 = 5/6. The miss is the Batch_1/Batch_2 confusion seen in LOIO; the out-of-baseline cap turned a
+  would-be 0 (p 0.98 for the wrong batch) into a 1. These three images cannot validate any later model version.
 - Phase B status of each measurement and the independent label check (F01, F08, F09, F10 checked in Batch_1 and
   Batch_3; silicon features unchecked).
 
@@ -284,12 +316,12 @@ Effort: ~4 h for M9a-M9d plus review; M9a and M9b alone ~2 h.
 
 | Release | Items | What changes | Validation | Time |
 |---|---|---|---|---|
-| v1.1 | M1, M2, M3, M4, M8, M9 | New output files and JSON fields only | Parity tests in section 3; verdict bytes unchanged on 31 LOIO + 3 held-out (exploratory); reviewer checks PC tags | ~10 h + review (M1-M4, M8 ~6 h; M9 ~4 h) |
-| v1.2 | M5 | New `second_opinion` field driven by pre-registered expert rules | One LOIO scoring run; independent review | scientist time + ~3 h |
+| v1.1 | M1, M2, M3, M4, M5a, M8, M9 | New output files and JSON fields only | Parity tests in section 3; verdict bytes unchanged on 31 LOIO + 3 held-out (exploratory); reviewer checks PC tags | ~10 h + review (M1-M4, M8 ~6 h; M9 ~4 h) |
+| v1.2 | M5b | New `second_opinion` field driven by pre-registered expert rules | One LOIO scoring run; independent review | scientist time + ~3 h |
 | v2 | M6 (if ever) | Classifier inputs | Pre-registered LOIO vs 18/31; new unseen images needed for a real held-out test | ~1.5 h |
 
 Order: M1, M8 first (unblocks the mask viewer and the accuracy panel, ~1.5 h), then M2-M4 (evidence layers), then
-M9 (PC profiles); M5 rule authoring in parallel with the scientist, v1.2 after review.
+M9 (PC profiles); M5a cards with M8; M5b rule authoring in parallel with the scientist, v1.2 after review.
 
 ## 5. Risks
 
@@ -305,10 +337,9 @@ M9 (PC profiles); M5 rule authoring in parallel with the scientist, v1.2 after r
 ## 6. Decisions needed from the owner and consultant
 
 1. Approve v1.1 scope (M1-M4) as output-only.
-2. Who authors the M5 rules, and which of R1-R4 go in the first pre-registration.
+2. Approve the M5a guideline cards (wording to be checked by the materials scientist); decide later who authors
+   the M5b rules and which of R1-R5 go in the first pre-registration.
 3. Whether the aspect-ratio panel should use 5.0 as the crack-like threshold (current Phase B value) or a value
    the consultant prefers; it must be fixed before v1.1 is scored.
-4. Whether to include R5 (data-derived distinct traits) in the first rule pre-registration despite the weak
-   expectation, so that its LOIO score is on record.
-5. Whether M9c (patch heat maps, one exploratory Modal re-embedding) is wanted in v1.1 or deferred; M9a-M9b need no
+4. Whether M9c (patch heat maps, one exploratory Modal re-embedding) is wanted in v1.1 or deferred; M9a-M9b need no
    new compute.

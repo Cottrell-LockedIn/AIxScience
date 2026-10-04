@@ -26,7 +26,8 @@ Primary user: a materials scientist who knows the material and the microscope bu
 | Embedding PC profiles: correlates, exemplar tiles, patch heat maps, plain-language tag | no | yes (M9) | same |
 | F09 evidence: horizontal/vertical chords, direction map | no | yes (M3) | same |
 | Aspect-ratio panel, labelled "not used by the model" | no | yes (M4) | same |
-| Second opinion from pre-registered expert rules on low/medium tiers | no | no | yes (M5) |
+| Guideline card for low/medium confidence, filled from existing fields | fields exist; card text proposed | yes (M5a) | same |
+| Second opinion from pre-registered expert rules on low/medium tiers | no | no | yes (M5b) |
 
 Performance context the UI must keep showing (LOIO, 31 images): 18/31 correct; Batch_3 bets right 14/16;
 Batch_1 or Batch_2 bets right 4/15; high tier right 14/18, medium 1/5, low 3/8. v1.1 does not change these. v1.2
@@ -110,12 +111,14 @@ Each feature lists: what the user does, what the model provides (and from which 
 - Provides (v1): `acquisition`.
 - UI says: if drift is suspected, "check acquisition settings before interpreting the bet".
 
-### W12. Second-opinion panel (v1.2 only)
-- On low or medium tier: suggested alternative batch (or "none" / "reimage"), which rules fired, the evidence they
-  used, and the rule track record from LOIO.
-- Provides (v1.2 M5): `second_opinion`.
-- UI says: "Expert rule, not model output. The model's bet above is unchanged." Hidden entirely until the rules
-  pass independent review.
+### W12. Low-confidence guidance
+- W12a Guideline card (v1 fields; text from M5a): on low or medium tier, a short card chosen by situation
+  (outside baseline, no batch favoured, medium evidence, imaging drift) and filled with the bet, runner-up,
+  track record and flags, ending with what to do next (check imaging, image more sections, compare measurements
+  with the Batch_1/2 ranges). Guidance only; it never names a batch the model did not name.
+- W12b Second-opinion panel (v1.2 only, M5b): suggested alternative batch (or "none" / "reimage"), which rules
+  fired, their evidence, and the rule track record from LOIO. Hidden until the rules pass independent review.
+- UI says: "Guidance / expert rule, not model output. The model's bet above is unchanged."
 
 ### W13. Plain-English summary
 - Fixed sentence templates filled from the JSON (no free-text generation), covering bet, tier, why, drivers,
@@ -143,7 +146,8 @@ Each feature lists: what the user does, what the model provides (and from which 
 - Always visible from the results list and every report: 18/31 leave-one-image-out accuracy with the 95 %
   interval (0.41-0.74), the 17/31 "always Batch_3" baseline, the confusion matrix, accuracy by tier
   (high 14/18, medium 1/5, low 3/8) and by bet (Batch_3 bets 14/16, Batch_1 2/6, Batch_2 2/9), and the held-out
-  score once the true batches are known (exploratory, n = 3).
+  score: 2/3 correct, 5/6 under the confidence scoring (exploratory, n = 3; the one miss was a low-tier
+  Batch_1 bet on a true Batch_2 image).
 - Provides (v1 data today in `results/v1/`; v1.1 M8 puts it in every run output as `run.model_card`).
 - UI says: "Estimated on the 31 training images, each held out in turn; not an unseen-lot score. Batch_1 vs
   Batch_2 is at chance."
@@ -159,9 +163,9 @@ Each feature lists: what the user does, what the model provides (and from which 
 
 ## 3. Suggested priority
 
-1. W1-W4, W10, W11, W13, W15, W17 (from repo files): possible on v1 today.
+1. W1-W4, W10, W11, W12a, W13, W15, W17 (from repo files): possible on v1 today.
 2. W5-W9, W17 in run output, W18: need v1.1 (about 10 h model-side work plus review; W5 and W17 first, ~1.5 h).
-3. W12: needs v1.2 (rules authored by the materials scientist, scored by LOIO, reviewed).
+3. W12b: needs v1.2 (rules authored by the materials scientist, scored by LOIO, reviewed).
 4. W14, W16: wrapper-only; W16 aggregation rule is future model-side work.
 
 ## 4. Things the software must never do
