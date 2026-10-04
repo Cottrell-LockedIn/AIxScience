@@ -1,9 +1,9 @@
 """Modal fan-out for KPI and feature sensitivity plus frozen DINOv2 embeddings."""
-from __future__ import annotations
 
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 from datetime import datetime, timezone
 from pathlib import Path
+import json
 import time
 
 import modal
@@ -13,7 +13,7 @@ from qc import config as _config
 app = modal.App("aixscience-qc")
 data_volume = modal.Volume.from_name("aixscience-data", create_if_missing=True)
 weights_volume = modal.Volume.from_name("aixscience-weights", create_if_missing=True)
-common_image = (
+base_image = (
     modal.Image.debian_slim(python_version="3.11")
     .pip_install(
         "numpy==2.4.6",
@@ -26,13 +26,13 @@ common_image = (
         "PyYAML==6.0.3",
     )
     .env({"OMP_NUM_THREADS": "1", "OPENBLAS_NUM_THREADS": "1", "MKL_NUM_THREADS": "1"})
-    .add_local_python_source("qc")
 )
-gpu_image = common_image.pip_install(
+common_image = base_image.add_local_python_source("qc")
+gpu_image = base_image.pip_install(
     "torch==2.14.1+cu130",
     "torchvision==0.29.1+cu130",
     extra_index_url="https://download.pytorch.org/whl/cu130",
-)
+).add_local_python_source("qc")
 
 MODAL_RUN_COLUMNS = [
     "timestamp_utc", "function", "n_inputs", "wall_s", "hardware", "git_sha",
@@ -128,6 +128,70 @@ def feature_image_sensitivity(payload: dict) -> dict:
     return features._feature_image_sensitivity_work(payload)
 
 
+@app.cls(
+    image=gpu_image,
+    gpu="L4",
+    cpu=4,
+    memory=8192,
+    volumes={"/mnt/data": data_volume, "/mnt/weights": weights_volume},
+    timeout=60 * 60,
+    max_containers=20,
+)
+class DINOv2ImageEncoder:
+    weights_cfg_json: str = modal.parameter()
+
+    @modal.enter()
+    def load_model(self):
+        import json
+        import pandas as pd
+        import torch
+        from qc import embed
+
+        self.weights_cfg = json.loads(self.weights_cfg_json)
+        weights_volume.reload()
+        weights_path = Path("/mnt/weights") / embed.WEIGHT_FILENAME
+        if not weights_path.is_file():
+            raise FileNotFoundError(
+                f"missing checksum-verified DINOv2 weights in aixscience-weights: {weights_path}"
+            )
+        expected = str(self.weights_cfg["weights_sha256"]).lower()
+        actual = embed._sha256(weights_path)
+        if actual != expected:
+            raise ValueError(
+                f"DINOv2 weights SHA-256 mismatch: expected {expected}, got {actual}"
+            )
+        torch.set_num_threads(1)
+        self.model = embed.load_frozen_model(self.weights_cfg, weights_path, "cuda")
+        self.index = pd.read_parquet("/mnt/data/tiles/index.parquet").sort_values(
+            "tile_id", kind="stable"
+        )
+        self.tiles_dir = Path("/mnt/data/tiles")
+
+    @modal.method()
+    def embed_image(self, payload: dict) -> dict:
+        from qc import embed
+
+        rows = self.index.loc[
+            (self.index["sample_id"].astype(str) == str(payload["sample_id"]))
+            & (self.index["channel"].astype(str) == str(payload["channel"]))
+        ]
+        if rows.empty:
+            raise ValueError(f"no tiles found for image-channel input {payload}")
+        result = embed.embed_image_rows(
+            self.model,
+            rows,
+            self.tiles_dir,
+            int(self.weights_cfg["input_px"]),
+            "cuda",
+            batch_size=16,
+        )
+        return {
+            "sample_id": str(payload["sample_id"]),
+            "channel": str(payload["channel"]),
+            **result,
+        }
+
+
 def _append_modal_run(
     cfg: dict,
     function: str,
@@ -162,7 +226,7 @@ def _append_modal_run(
         row.to_csv(path, index=False)
 
 
-def _assert_sensitivity_unchanged(new: pd.DataFrame, path: Path) -> float:
+def _assert_sensitivity_unchanged(new, path: Path) -> float:
     import numpy as np
     import pandas as pd
     from qc import kpi
@@ -665,6 +729,123 @@ def _run_features_local_benchmark() -> None:
     )
 
 
+def _dino_cost(container_seconds: float) -> float:
+    return container_seconds * (
+        0.000222 + 4 * 0.0000131 + 8 * 0.00000222
+    )
+
+
+def _run_dino_embeddings() -> None:
+    import numpy as np
+    import torch
+    from qc import embed
+
+    cfg = _config.load()
+    weights_cfg = cfg["embeddings"]
+    index = embed.load_tile_index(cfg)
+    groups = embed.image_groups(index)
+    if len(index) != 4329 or len(groups) != 93:
+        raise AssertionError(f"expected 4329 tiles across 93 image-channels, got {len(index)} and {len(groups)}")
+
+    local_weights = embed.local_weights_path(weights_cfg)
+    with weights_volume.batch_upload(force=True) as batch:
+        batch.put_file(str(local_weights), f"/{embed.WEIGHT_FILENAME}")
+
+    benchmark_group = groups[0]
+    benchmark_rows = index.loc[
+        (index["sample_id"].astype(str) == benchmark_group["sample_id"])
+        & (index["channel"].astype(str) == benchmark_group["channel"])
+    ]
+    torch.set_num_threads(8)
+    local_model = embed.load_frozen_model(weights_cfg, local_weights, "cpu")
+    local_started = time.perf_counter()
+    local_result = embed.embed_image_rows(
+        local_model,
+        benchmark_rows,
+        _config.resolve(cfg["data"]["tiles_dir"]),
+        int(weights_cfg["input_px"]),
+        "cpu",
+        batch_size=8,
+    )
+    local_wall = time.perf_counter() - local_started
+    _append_modal_run(
+        cfg,
+        "dino_embed_one_image_local",
+        1,
+        local_wall,
+        "local-cpu (8 cores)",
+        0.0,
+        "local CPU benchmark (8 cores); no Modal charge",
+    )
+
+    encoder = DINOv2ImageEncoder(
+        weights_cfg_json=json.dumps(weights_cfg, sort_keys=True)
+    )
+    remote_started = time.perf_counter()
+    remote_one = list(encoder.embed_image.map([benchmark_group]))
+    remote_wall = time.perf_counter() - remote_started
+    remote_one_result = remote_one[0]
+    local_ids = [row["tile_id"] for row in local_result["rows"]]
+    remote_ids = [row["tile_id"] for row in remote_one_result["rows"]]
+    if local_ids != remote_ids:
+        raise AssertionError("local and Modal one-image tile order differs")
+    local_remote_diff = float(
+        np.max(np.abs(local_result["embeddings"] - remote_one_result["embeddings"]))
+    )
+    _append_modal_run(
+        cfg,
+        "dino_embed_one_image",
+        1,
+        remote_wall,
+        "L4",
+        _dino_cost(float(remote_one_result["wall_s"])),
+    )
+
+    repeat_started = time.perf_counter()
+    repeats = list(encoder.embed_image.map([benchmark_group, benchmark_group]))
+    repeat_wall = time.perf_counter() - repeat_started
+    repeat_diff = float(np.max(np.abs(repeats[0]["embeddings"] - repeats[1]["embeddings"])))
+    _append_modal_run(
+        cfg,
+        "dino_embed_repeat",
+        2,
+        repeat_wall,
+        "L4",
+        _dino_cost(sum(float(result["wall_s"]) for result in repeats)),
+    )
+
+    full_started = time.perf_counter()
+    results = list(encoder.embed_image.map(groups))
+    full_wall = time.perf_counter() - full_started
+    _append_modal_run(
+        cfg,
+        "dino_embed_full",
+        len(groups),
+        full_wall,
+        "L4",
+        _dino_cost(sum(float(result["wall_s"]) for result in results)),
+    )
+
+    vectors_by_tile = {}
+    for result in results:
+        for row, vector in zip(result["rows"], result["embeddings"], strict=True):
+            vectors_by_tile[str(row["tile_id"])] = vector
+    tile_order = index["tile_id"].astype(str).tolist()
+    if set(vectors_by_tile) != set(tile_order):
+        raise AssertionError(
+            f"embedding coverage mismatch: {len(vectors_by_tile)} embeddings for {len(tile_order)} tiles"
+        )
+    embeddings = np.stack([vectors_by_tile[tile_id] for tile_id in tile_order]).astype(
+        np.float32, copy=False
+    )
+    embed.write_outputs(cfg, index, embeddings)
+    print(
+        f"dino_embedding: local one-image wall={local_wall:.2f}s; Modal one-image wall={remote_wall:.2f}s; "
+        f"local/Modal max_abs_diff={local_remote_diff:.3g}; repeat max_abs_diff={repeat_diff:.3g}; "
+        f"full Modal wall={full_wall:.2f}s; {len(embeddings)} tile embeddings"
+    )
+
+
 @app.local_entrypoint()
 def main(task: str = "kpi"):
     if task == "kpi":
@@ -678,5 +859,8 @@ def main(task: str = "kpi"):
         return
     if task == "features-local":
         _run_features_local_benchmark()
+        return
+    if task == "embed":
+        _run_dino_embeddings()
         return
     raise ValueError(f"unsupported task {task!r}")
