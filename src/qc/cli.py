@@ -65,6 +65,12 @@ def pc_profiles(config: str = typer.Option("configs/v1.yaml", "--config", "-c"))
     _run("pc_profiles", config)
 
 
+@app.command(name="accuracy-tab")
+def accuracy_tab(config: str = typer.Option("configs/v1.yaml", "--config", "-c")) -> None:
+    """Model-accuracy tab for the wrapper: tables, figures, explanation from the committed LOIO results (output-only)."""
+    _run("accuracy_tab", config)
+
+
 @app.command()
 def run(config: str = typer.Option("configs/v1.yaml", "--config", "-c")) -> None:
     """Run data preparation, KPI, feature, registration and charging stages."""

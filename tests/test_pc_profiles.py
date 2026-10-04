@@ -104,3 +104,13 @@ def test_every_driver_pc_in_heldout_and_loio_has_a_tag():
         entry = doc["pcs"][n]
         assert entry["tag"].startswith(("material:", "imaging:")) or entry["tag"] == pc_profiles.UNRESOLVED_TAG
         assert entry["sentence"].startswith(f"PC{n.split()[-1]}:")
+
+def test_imaging_sentence_names_a_near_tied_kpi():
+    top_m = {"name": "F11_c2_perimeter_fraction_adjacent_c0", "rho": -0.49, "p_bh": 0.07}
+    top_c = {"name": "hstripe_score_BSE", "rho": 0.65, "p_bh": 0.02}
+    top_k = {"name": "c1_largest_component_frac", "rho": 0.61, "p_bh": 0.02}
+    s = pc_profiles.sentence(2, "imaging:hstripe_score_BSE", top_m, top_c, top_k)
+    assert "Phase B KPI graphite largest-component fraction (KPI) correlates as strongly (rho 0.61" in s
+    assert "imaging and material signals not separable" in s
+    far = pc_profiles.sentence(2, "imaging:hstripe_score_BSE", top_m, top_c, {"name": "frac_c0", "rho": 0.2, "p_bh": 0.5})
+    assert "KPI" not in far and "not separable from imaging conditions" in far

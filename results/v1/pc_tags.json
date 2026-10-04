@@ -1,6 +1,6 @@
 {
   "config_hash": "45629944e398",
-  "git_sha": "06602eb",
+  "git_sha": "0517998",
   "n_images": 31,
   "exploratory": true,
   "phase_identity": "stated by Polaron, not image-verified",
@@ -54,7 +54,7 @@
         "p_bh": 0.0079960019990005,
         "p_bh_global": 0.03864734299516908
       },
-      "sentence": "PC1: image-texture component most correlated with BSE sharpness (rho -0.63), near tie with void area fraction F01 (rho 0.62); not separable from imaging conditions (Phase B)."
+      "sentence": "PC1: image-texture component most correlated with BSE sharpness (rho -0.63), near tie with void area fraction F01 (rho 0.62); the Phase B KPI void area fraction (KPI) correlates as strongly (rho 0.72; a material-structure descriptor outside the tag rule); imaging and material signals not separable (Phase B)."
     },
     "embedding PC 2": {
       "tag": "imaging:hstripe_score_BSE",
@@ -78,7 +78,7 @@
         "p_bh": 0.0239880059970015,
         "p_bh_global": 0.08184143222506393
       },
-      "sentence": "PC2: image-texture component most correlated with BSE horizontal-stripe score (rho 0.65); not separable from imaging conditions (Phase B)."
+      "sentence": "PC2: image-texture component most correlated with BSE horizontal-stripe score (rho 0.65); the Phase B KPI graphite largest-component fraction (KPI) correlates as strongly (rho 0.61; a material-structure descriptor outside the tag rule); imaging and material signals not separable (Phase B)."
     },
     "embedding PC 3": {
       "tag": "unresolved image-texture component",

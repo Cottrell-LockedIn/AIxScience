@@ -91,9 +91,12 @@ Example: `results/v1/heldout.json`.
   covariate and that |rho| exceeds every measurement |rho|; otherwise `unresolved image-texture component`.
   Result for the PCs that appear as drivers in LOIO (`loio_predictions.csv`) or in the official held-out run:
   PC1 `imaging:sharpness_BSE` (rho -0.63, BH p 0.008; the sentence names the near tie with void fraction F01, rho
-  0.62, BH p 0.008; read PC1 as a BSE noise/sharpness component, since sharpness_BSE and noise_sigma_BSE have rho
+  0.62, BH p 0.008, and the equivalent KPI frac_c0, rho 0.72; read PC1 as a BSE noise/sharpness component, since sharpness_BSE and noise_sigma_BSE have rho
   0.99 across the 31 images, that also carries void fraction largely independently: partial rho -0.62 / 0.61);
-  PC2 `imaging:hstripe_score_BSE` (rho 0.65, BH p 0.016); PC3 unresolved (silicon count density F05 rho 0.81,
+  PC2 `imaging:hstripe_score_BSE` (rho 0.65, BH p 0.016; the sentence names the near tie with the Phase B KPI
+  graphite largest-component fraction `c1_largest_component_frac`, rho 0.61, BH p 0.024, which the stripe score
+  does not explain (rho 0.13 between them), so PC2 carries an imaging and a material-structure signal that
+  n = 31 cannot separate); PC3 unresolved (silicon count density F05 rho 0.81,
   BH p 0.002, but BSE curtaining rho 0.52 blocks a material tag); PC4, PC5, PC7, PC8, PC9, PC11, PC12, PC13
   unresolved (strongest |rho| 0.14-0.52, none significant after BH). No PC received a `material` tag; PC6
   (not a driver) is `imaging:nm_per_px_if_tag_true`. Tags are descriptive correlations over 31 training images;
@@ -224,7 +227,8 @@ What the masks do and don't explain:
 - 73 of 93 top-driver slots in validation were embedding PCs (not physical). In Phase B the embedding batch signal
   vanished after regressing out acquisition covariates, so it may reflect imaging rather than material.
   The exploratory PC profiles (`results/v1/pc_tags.json`) agree: the two most used driver PCs correlate most with
-  BSE noise/sharpness (PC1, near tie with void fraction F01) and horizontal-stripe score (PC2); no PC earned a
+  BSE noise/sharpness (PC1, near tie with void fraction F01) and horizontal-stripe score (PC2, near tie with
+  graphite-matrix connectedness); no PC earned a
   material tag.
 - 31 training images only; new instruments or settings are outside what it has seen.
 - Silicon features F02-F07, F11 are not independently validated; 7 of 11 features are threshold-sensitive.

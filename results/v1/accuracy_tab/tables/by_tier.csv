@@ -1,0 +1,4 @@
+tier,images,correct,accuracy,mean_reported_probability,wilson95_low,wilson95_high
+high,18,14/18,0.778,0.913,0.548,0.91
+medium,5,1/5,0.2,0.582,0.036,0.624
+low,8,3/8,0.375,0.671,0.137,0.694

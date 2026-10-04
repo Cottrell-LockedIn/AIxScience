@@ -1,0 +1,325 @@
+{
+  "by_tier": {
+    "high": {
+      "k": 14,
+      "mean_confidence": 0.9125128756176599,
+      "n": 18,
+      "str": "14/18",
+      "value": 0.7777777777777778,
+      "wilson95": [
+        0.5478541568378739,
+        0.9099907189139831
+      ]
+    },
+    "low": {
+      "k": 3,
+      "mean_confidence": 0.6705118223724178,
+      "n": 8,
+      "str": "3/8",
+      "value": 0.375,
+      "wilson95": [
+        0.13684428582359742,
+        0.6942576053973727
+      ]
+    },
+    "medium": {
+      "k": 1,
+      "mean_confidence": 0.581702376931758,
+      "n": 5,
+      "str": "1/5",
+      "value": 0.2,
+      "wilson95": [
+        0.03622410863243014,
+        0.6244653702374747
+      ]
+    }
+  },
+  "confusion_matrix": {
+    "rows_true_cols_pred": [
+      "Batch_1",
+      "Batch_2",
+      "Batch_3"
+    ],
+    "values": [
+      [
+        2,
+        4,
+        1
+      ],
+      [
+        4,
+        2,
+        1
+      ],
+      [
+        0,
+        3,
+        14
+      ]
+    ]
+  },
+  "figures": {
+    "accuracy_vs_baselines": "figures/accuracy_vs_baselines.png",
+    "by_tier": "figures/accuracy_by_tier.png",
+    "confusion_matrix": "figures/confusion_matrix.png",
+    "per_batch": "figures/per_batch_precision_recall.png",
+    "roc": "figures/roc_one_vs_rest.png"
+  },
+  "frozen_choices": "docs/Log/2026-10-04_phase_c.md",
+  "heldout": {
+    "accuracy": {
+      "k": 2,
+      "n": 3,
+      "str": "2/3",
+      "value": 0.6666666666666666,
+      "wilson95": [
+        0.2076596008020477,
+        0.9385080552796037
+      ]
+    },
+    "judging_score": {
+      "k": 5,
+      "n": 6,
+      "str": "5/6"
+    },
+    "rows": [
+      {
+        "confidence": 0.9831195293588141,
+        "correct": false,
+        "judging_score": 1,
+        "ood_label": "outside_bounds",
+        "pred_batch": "Batch_1",
+        "sample_id": "3e122cbj",
+        "tier": "low",
+        "true_batch": "Batch_2"
+      },
+      {
+        "confidence": 0.8588848537041979,
+        "correct": true,
+        "judging_score": 2,
+        "ood_label": "investigate",
+        "pred_batch": "Batch_1",
+        "sample_id": "fn0mhxef",
+        "tier": "high",
+        "true_batch": "Batch_1"
+      },
+      {
+        "confidence": 0.9154330399172622,
+        "correct": true,
+        "judging_score": 2,
+        "ood_label": "within_bounds",
+        "pred_batch": "Batch_3",
+        "sample_id": "xrv9xvzb",
+        "tier": "high",
+        "true_batch": "Batch_3"
+      }
+    ],
+    "rule": "2 = correct at tier high; 1 = correct at tier medium/low, or incorrect at tier medium/low; 0 = incorrect at tier high (owner's reading of the judging criterion 'confidence score')",
+    "status": "official once-only run; truth supplied after the run; exploratory as evidence (n = 3)"
+  },
+  "model": "StandardScaler(F01-F11) + PCA(n_components=29, svd_solver='full') of the raw mean-pooled BSE DINOv2 embedding, both fitted on the training images only; LogisticRegression(C=1.0, class_weight='balanced', solver='lbfgs', max_iter=10000, random_state=0), L2, multinomial.",
+  "overall": {
+    "accuracy": {
+      "k": 18,
+      "n": 31,
+      "str": "18/31",
+      "value": 0.5806451612903226,
+      "wilson95": [
+        0.4076626249536972,
+        0.7358445693268778
+      ]
+    },
+    "balanced_accuracy": 0.46498599439775906,
+    "brier_multiclass": 0.4840886111348801,
+    "cohen_kappa": 0.30993150684931503,
+    "log_loss": 0.7556627087827338,
+    "macro_auroc_one_vs_rest": 0.8222455648926236,
+    "macro_f1": 0.4687257187257187,
+    "majority_baseline": {
+      "k": 17,
+      "n": 31,
+      "str": "17/31",
+      "value": 0.5483870967741935,
+      "wilson95": [
+        0.37772167637354503,
+        0.7083826401947998
+      ]
+    },
+    "mcc": 0.31155445493160805,
+    "n_images": 31,
+    "n_permutations": 1000,
+    "permutation_acc_median": 0.3870967741935484,
+    "permutation_acc_p95": 0.5483870967741935,
+    "permutation_p": 0.03496503496503497,
+    "random_baseline": 0.3333333333333333,
+    "tier_calibration_gap": 0.21605929757277453
+  },
+  "per_batch": {
+    "Batch_1": {
+      "auroc_one_vs_rest": 0.8392857142857142,
+      "f1": 0.3076923076923077,
+      "precision": {
+        "k": 2,
+        "n": 6,
+        "str": "2/6",
+        "value": 0.3333333333333333,
+        "wilson95": [
+          0.09677141110578041,
+          0.700006684861608
+        ]
+      },
+      "predicted": 6,
+      "recall": {
+        "k": 2,
+        "n": 7,
+        "str": "2/7",
+        "value": 0.2857142857142857,
+        "wilson95": [
+          0.08221892400405678,
+          0.6410655481673808
+        ]
+      },
+      "support": 7
+    },
+    "Batch_2": {
+      "auroc_one_vs_rest": 0.6904761904761905,
+      "f1": 0.25,
+      "precision": {
+        "k": 2,
+        "n": 9,
+        "str": "2/9",
+        "value": 0.2222222222222222,
+        "wilson95": [
+          0.06322510711784671,
+          0.5474110308930111
+        ]
+      },
+      "predicted": 9,
+      "recall": {
+        "k": 2,
+        "n": 7,
+        "str": "2/7",
+        "value": 0.2857142857142857,
+        "wilson95": [
+          0.08221892400405678,
+          0.6410655481673808
+        ]
+      },
+      "support": 7
+    },
+    "Batch_3": {
+      "auroc_one_vs_rest": 0.9369747899159664,
+      "f1": 0.8484848484848485,
+      "precision": {
+        "k": 14,
+        "n": 16,
+        "str": "14/16",
+        "value": 0.875,
+        "wilson95": [
+          0.639771727342413,
+          0.9650225122567595
+        ]
+      },
+      "predicted": 16,
+      "recall": {
+        "k": 14,
+        "n": 17,
+        "str": "14/17",
+        "value": 0.8235294117647058,
+        "wilson95": [
+          0.5897054143116588,
+          0.9380887336237901
+        ]
+      },
+      "support": 17
+    }
+  },
+  "phase_identity": "stated by Polaron, not image-verified",
+  "provenance": {
+    "config_hash": "45629944e398",
+    "exploratory": true,
+    "git_sha": "0517998",
+    "note": "output-only; the frozen model and its predictions are unchanged",
+    "sources": {
+      "results/v1/heldout.json": "6be17b5eef5419d3f29a9570aeeff13eb769610313278453205c046d5ba5c798",
+      "results/v1/loio_predictions.csv": "5a79bf6c216be1e656c2985aac68c0b473d9ae90b4eaf5d8f31caa8375f56a93",
+      "results/v1/loio_summary.json": "3a39c2b07e5f224543a75c51a2cdf955dc20d0ebc76d8267a3bef5f39399483d"
+    }
+  },
+  "reference_vs_rest": {
+    "accuracy": {
+      "k": 26,
+      "n": 31,
+      "str": "26/31",
+      "value": 0.8387096774193549,
+      "wilson95": [
+        0.6736564604120674,
+        0.9290737555663471
+      ]
+    },
+    "auroc": 0.9369747899159664,
+    "balanced_accuracy": 0.8403361344537814,
+    "f1": 0.8484848484848485,
+    "fn": 3,
+    "fp": 2,
+    "mcc": 0.6778302010921357,
+    "npv": {
+      "k": 12,
+      "n": 15,
+      "str": "12/15",
+      "value": 0.8,
+      "wilson95": [
+        0.5481455128483065,
+        0.9295245065301844
+      ]
+    },
+    "precision": {
+      "k": 14,
+      "n": 16,
+      "str": "14/16",
+      "value": 0.875,
+      "wilson95": [
+        0.639771727342413,
+        0.9650225122567595
+      ]
+    },
+    "recall_sensitivity": {
+      "k": 14,
+      "n": 17,
+      "str": "14/17",
+      "value": 0.8235294117647058,
+      "wilson95": [
+        0.5897054143116588,
+        0.9380887336237901
+      ]
+    },
+    "reference": "Batch_3",
+    "specificity": {
+      "k": 12,
+      "n": 14,
+      "str": "12/14",
+      "value": 0.8571428571428571,
+      "wilson95": [
+        0.6005862050302965,
+        0.9599060787285351
+      ]
+    },
+    "tn": 12,
+    "tp": 14
+  },
+  "references": [
+    "Mitchell et al. (2019) Model Cards for Model Reporting, FAT* 2019, arXiv:1810.03993",
+    "scikit-learn User Guide 3.4 'Metrics and scoring: quantifying the quality of predictions'",
+    "Wilson (1927) Probable inference, the law of succession, and statistical inference, JASA 22:209-212",
+    "Ojala & Garriga (2010) Permutation tests for studying classifier performance, JMLR 11:1833-1863",
+    "Brier (1950) Verification of forecasts expressed in terms of probability, Mon. Weather Rev. 78:1-3"
+  ],
+  "tables": {
+    "by_tier": "tables/by_tier.csv",
+    "confusion_matrix": "tables/confusion_matrix.csv",
+    "heldout": "tables/heldout.csv",
+    "overall": "tables/overall.csv",
+    "per_batch": "tables/per_batch.csv",
+    "reference_vs_rest": "tables/reference_vs_rest.csv"
+  }
+}

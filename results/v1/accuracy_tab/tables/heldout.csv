@@ -1,0 +1,4 @@
+sample_id,true_batch,pred_batch,confidence,tier,ood_label,correct,judging_score
+3e122cbj,Batch_2,Batch_1,0.9831195293588141,low,outside_bounds,False,1
+fn0mhxef,Batch_1,Batch_1,0.8588848537041979,high,investigate,True,2
+xrv9xvzb,Batch_3,Batch_3,0.9154330399172622,high,within_bounds,True,2
