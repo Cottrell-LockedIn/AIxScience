@@ -223,6 +223,11 @@ def _read_call_control(run_id: str) -> str | None:
     return value or None
 
 
+def _is_pending_call_error(exc: BaseException) -> bool:
+    """Modal 1.6 can surface a zero-timeout poll as either timeout class."""
+    return isinstance(exc, (modal.exception.TimeoutError, TimeoutError))
+
+
 def _append_hosted_modal_run(
     cfg: dict[str, Any],
     columns: list[str] | None,
@@ -491,9 +496,9 @@ def hosted_api():
             # A zero-timeout get is a non-blocking worker health poll.  The
             # worker itself normally records success/failure before returning.
             modal.FunctionCall.from_id(call_id).get(timeout=0)
-        except modal.exception.TimeoutError:
-            return state
         except Exception as exc:
+            if _is_pending_call_error(exc):
+                return state
             failed = base_update_run(
                 run_id,
                 state="failed",

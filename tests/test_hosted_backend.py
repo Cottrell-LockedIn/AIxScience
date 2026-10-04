@@ -1,6 +1,8 @@
 """Static contracts for the deploy adapter; no Modal account is required."""
 from pathlib import Path
 
+import modal_web
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -50,3 +52,10 @@ def test_hosted_docs_do_not_claim_a_deployment():
     text = (ROOT / "docs" / "HOSTED_BACKEND.md").read_text(encoding="utf-8")
     assert "No deployment was performed merely by adding this adapter." in text
     assert "X-Cottrell-Token" in text
+
+
+def test_hosted_nonblocking_poll_keeps_builtin_timeout_pending():
+    # The deployed Modal SDK surfaced the builtin class for get(timeout=0),
+    # while some SDK paths use modal.exception.TimeoutError.
+    assert modal_web._is_pending_call_error(TimeoutError())
+    assert modal_web._is_pending_call_error(modal_web.modal.exception.TimeoutError())
