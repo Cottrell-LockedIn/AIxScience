@@ -1,0 +1,447 @@
+{
+  "subject": {
+    "kind": "image",
+    "id": "r17byphk",
+    "batch": "Batch_2",
+    "n_images": 1,
+    "n_tiles": 52,
+    "note": "training image, out-of-fold (leave-one-image-out) prediction"
+  },
+  "verdict": {
+    "label": "within_bounds",
+    "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch.",
+    "reason": "Bet Batch_3 with p=0.850 (runner-up Batch_2 p=0.122, margin 0.728); tier high because p_max=0.850 >= 0.75 and LOIO permutation p=0.0350 < 0.05. Top drivers: embedding PC 1 (+1.78), F11_c2_perimeter_fraction_adjacent_c0 (+0.16), F01_c0_area_fraction (+0.14). Batch_3 embedding check: E1=0.1696 vs band95 0.2198 / band99 0.2446 -> within_bounds.",
+    "closed_set": {
+      "predicted_batch": "Batch_3",
+      "confidence": 0.8503115712177586,
+      "probabilities": {
+        "Batch_1": 0.02727873143841267,
+        "Batch_2": 0.12240969734382884,
+        "Batch_3": 0.8503115712177586
+      },
+      "runner_up": "Batch_2",
+      "margin": 0.7279018738739298,
+      "tier": "high",
+      "note": "assumes the image is from one of the known batches",
+      "justification": {
+        "rule": "pred_batch = argmax of the image's predicted probability (out-of-fold for training images); always one of Batch_1, Batch_2, Batch_3. confidence = that probability; margin = top minus runner-up. Tier: low if p_max < 0.5, or LOIO permutation p >= 0.05, or OOD label = outside_bounds; medium if 0.5 <= p_max < 0.75; high if p_max >= 0.75 and LOIO permutation p < 0.05. Model: StandardScaler(F01-F11) + PCA(n_components=29, svd_solver='full') of the raw mean-pooled BSE DINOv2 embedding, both fitted on the training images only; LogisticRegression(C=1.0, class_weight='balanced', solver='lbfgs', max_iter=10000, random_state=0), L2, multinomial.",
+        "numbers": {
+          "Batch_1": 0.02727873143841267,
+          "Batch_2": 0.12240969734382884,
+          "Batch_3": 0.8503115712177586,
+          "margin": 0.7279018738739298,
+          "tier_reason": "p_max=0.850 >= 0.75 and LOIO permutation p=0.0350 < 0.05",
+          "loio_accuracy": "18/31",
+          "loio_permutation_p": 0.03496503496503497,
+          "chance_majority": "17/31",
+          "ood_label": "within_bounds"
+        },
+        "evidence": [
+          {
+            "file": "results/v1/loio_predictions.csv",
+            "selector": "sample_id == 'r17byphk'"
+          },
+          {
+            "file": "results/v1/loio_summary.json",
+            "selector": "loio_accuracy, permutation_p"
+          },
+          {
+            "file": "results/v1/final_model.csv",
+            "selector": "all rows"
+          },
+          {
+            "file": "docs/Log/2026-10-04_phase_c.md",
+            "selector": "Frozen choices"
+          }
+        ]
+      }
+    },
+    "open_set": {
+      "nearest_batch": "Batch_3",
+      "distance_to_each_batch": {
+        "Batch_1": 0.24333049097764609,
+        "Batch_2": 0.19423938811357816,
+        "Batch_3": 0.16960521299793266
+      },
+      "null_band_95": 0.21979105149424963,
+      "null_band_99": 0.24460859976440058,
+      "matches_known_batch": true,
+      "justification": {
+        "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch.",
+        "numbers": {
+          "e1_to_batch3": 0.16960521299793266,
+          "band95": 0.21979105149424963,
+          "band99": 0.24460859976440058,
+          "n_reference": 17,
+          "null_max": 0.2508129868319383
+        },
+        "evidence": [
+          {
+            "file": "results/v1/loio_predictions.csv",
+            "selector": "sample_id == 'r17byphk'"
+          },
+          {
+            "file": "results/emb_per_image.parquet",
+            "selector": "channel == 'BSE'"
+          }
+        ]
+      }
+    },
+    "justification": {
+      "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch.",
+      "numbers": {
+        "e1_to_batch3": 0.16960521299793266,
+        "band95": 0.21979105149424963,
+        "band99": 0.24460859976440058
+      },
+      "evidence": [
+        {
+          "file": "results/v1/loio_predictions.csv",
+          "selector": "sample_id == 'r17byphk'"
+        }
+      ]
+    }
+  },
+  "pipeline": {
+    "git_sha": "af87cd9",
+    "git_tag": null,
+    "config_path": "configs/v1.yaml",
+    "config_hash": "45629944e398",
+    "timestamp_utc": "2026-10-04T02:22:11.114220+00:00",
+    "frozen": false,
+    "exploratory": false,
+    "model_revisions": {
+      "dinov2_hub_ref": "7764ea0f912e53c92e82eb78a2a1631e92725fc8",
+      "dinov2_weights_sha256": "b938bf1bc15cd2ec0feacfe3a1bb553fe8ea9ca46a7e1d8d00217f29aef60cd9",
+      "classifier": "StandardScaler(F01-F11) + PCA(n_components=29, svd_solver='full') of the raw mean-pooled BSE DINOv2 embedding, both fitted on the training images only; LogisticRegression(C=1.0, class_weight='balanced', solver='lbfgs', max_iter=10000, random_state=0), L2, multinomial."
+    }
+  },
+  "acquisition": {
+    "detectors_present": [
+      "BSE",
+      "ETD",
+      "Inlens"
+    ],
+    "pixel_size_nm": null,
+    "pixel_size_confirmed": false,
+    "covariates": {
+      "noise_sigma_BSE": {
+        "value": 43.53711923076923,
+        "training_p05": 30.193719230769233,
+        "training_p95": 47.81527557692307,
+        "flag": false,
+        "justification": {
+          "rule": "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images used for that prediction; reported only, not a model input.",
+          "numbers": {
+            "value": 43.53711923076923,
+            "training_p05": 30.193719230769233,
+            "training_p95": 47.81527557692307,
+            "n_training_images": 30,
+            "flag": false
+          },
+          "evidence": [
+            {
+              "file": "results/artefacts_per_image.parquet",
+              "selector": "sample_id == 'r17byphk'"
+            },
+            {
+              "file": "results/audit/images.csv",
+              "selector": "sample_id == 'r17byphk'"
+            }
+          ]
+        }
+      },
+      "sharpness_BSE": {
+        "value": 2106.1310749420754,
+        "training_p05": 1015.7528088031671,
+        "training_p95": 2531.0733034739123,
+        "flag": false,
+        "justification": {
+          "rule": "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images used for that prediction; reported only, not a model input.",
+          "numbers": {
+            "value": 2106.1310749420754,
+            "training_p05": 1015.7528088031671,
+            "training_p95": 2531.0733034739123,
+            "n_training_images": 30,
+            "flag": false
+          },
+          "evidence": [
+            {
+              "file": "results/artefacts_per_image.parquet",
+              "selector": "sample_id == 'r17byphk'"
+            },
+            {
+              "file": "results/audit/images.csv",
+              "selector": "sample_id == 'r17byphk'"
+            }
+          ]
+        }
+      },
+      "curtaining_score_BSE": {
+        "value": 0.020089136193325863,
+        "training_p05": 0.01973726135076629,
+        "training_p95": 0.026712411654207666,
+        "flag": false,
+        "justification": {
+          "rule": "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images used for that prediction; reported only, not a model input.",
+          "numbers": {
+            "value": 0.020089136193325863,
+            "training_p05": 0.01973726135076629,
+            "training_p95": 0.026712411654207666,
+            "n_training_images": 30,
+            "flag": false
+          },
+          "evidence": [
+            {
+              "file": "results/artefacts_per_image.parquet",
+              "selector": "sample_id == 'r17byphk'"
+            },
+            {
+              "file": "results/audit/images.csv",
+              "selector": "sample_id == 'r17byphk'"
+            }
+          ]
+        }
+      },
+      "hstripe_score_BSE": {
+        "value": 0.03665538801878448,
+        "training_p05": 0.031209874515074308,
+        "training_p95": 0.043272965551805646,
+        "flag": false,
+        "justification": {
+          "rule": "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images used for that prediction; reported only, not a model input.",
+          "numbers": {
+            "value": 0.03665538801878448,
+            "training_p05": 0.031209874515074308,
+            "training_p95": 0.043272965551805646,
+            "n_training_images": 30,
+            "flag": false
+          },
+          "evidence": [
+            {
+              "file": "results/artefacts_per_image.parquet",
+              "selector": "sample_id == 'r17byphk'"
+            },
+            {
+              "file": "results/audit/images.csv",
+              "selector": "sample_id == 'r17byphk'"
+            }
+          ]
+        }
+      },
+      "edge_charging_BSE": {
+        "value": -0.26741816667834695,
+        "training_p05": -0.7100400336944299,
+        "training_p95": 1.063412952065341,
+        "flag": false,
+        "justification": {
+          "rule": "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images used for that prediction; reported only, not a model input.",
+          "numbers": {
+            "value": -0.26741816667834695,
+            "training_p05": -0.7100400336944299,
+            "training_p95": 1.063412952065341,
+            "n_training_images": 30,
+            "flag": false
+          },
+          "evidence": [
+            {
+              "file": "results/artefacts_per_image.parquet",
+              "selector": "sample_id == 'r17byphk'"
+            },
+            {
+              "file": "results/audit/images.csv",
+              "selector": "sample_id == 'r17byphk'"
+            }
+          ]
+        }
+      },
+      "edge_charging_Inlens": {
+        "value": -2.31770151620202,
+        "training_p05": -5.601752680074643,
+        "training_p95": 2.0627522532853044,
+        "flag": false,
+        "justification": {
+          "rule": "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images used for that prediction; reported only, not a model input.",
+          "numbers": {
+            "value": -2.31770151620202,
+            "training_p05": -5.601752680074643,
+            "training_p95": 2.0627522532853044,
+            "n_training_images": 30,
+            "flag": false
+          },
+          "evidence": [
+            {
+              "file": "results/artefacts_per_image.parquet",
+              "selector": "sample_id == 'r17byphk'"
+            },
+            {
+              "file": "results/audit/images.csv",
+              "selector": "sample_id == 'r17byphk'"
+            }
+          ]
+        }
+      },
+      "height": {
+        "value": 2080.0,
+        "training_p05": 1687.6,
+        "training_p95": 2296.2,
+        "flag": false,
+        "justification": {
+          "rule": "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images used for that prediction; reported only, not a model input.",
+          "numbers": {
+            "value": 2080.0,
+            "training_p05": 1687.6,
+            "training_p95": 2296.2,
+            "n_training_images": 30,
+            "flag": false
+          },
+          "evidence": [
+            {
+              "file": "results/artefacts_per_image.parquet",
+              "selector": "sample_id == 'r17byphk'"
+            },
+            {
+              "file": "results/audit/images.csv",
+              "selector": "sample_id == 'r17byphk'"
+            }
+          ]
+        }
+      },
+      "nm_per_px_if_tag_true": {
+        "value": 25.000223624047536,
+        "training_p05": 24.99920160030165,
+        "training_p95": 25.000548043509863,
+        "flag": false,
+        "justification": {
+          "rule": "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images used for that prediction; reported only, not a model input.",
+          "numbers": {
+            "value": 25.000223624047536,
+            "training_p05": 24.99920160030165,
+            "training_p95": 25.000548043509863,
+            "n_training_images": 30,
+            "flag": false
+          },
+          "evidence": [
+            {
+              "file": "results/artefacts_per_image.parquet",
+              "selector": "sample_id == 'r17byphk'"
+            },
+            {
+              "file": "results/audit/images.csv",
+              "selector": "sample_id == 'r17byphk'"
+            }
+          ]
+        }
+      }
+    },
+    "acquisition_drift_suspected": false
+  },
+  "evidence": {
+    "drivers": [
+      {
+        "name": "embedding PC 1",
+        "units": "PC score (embedding units)",
+        "value": 2.5670998021366054,
+        "standardised_value": 2.5670998021366054,
+        "coefficient": 0.6937869442691494,
+        "effect_size": 1.7810203273582936,
+        "direction": "higher",
+        "tag": "embedding: acquisition and material not separable (Phase B residualisation)",
+        "justification": {
+          "rule": "contribution_k = coef[pred_batch, k] x x_k (x_k = standardised F value or embedding PC score); top 3 by signed contribution, i.e. the largest support for the bet.",
+          "numbers": {
+            "coefficient": 0.6937869442691494,
+            "standardised_value": 2.5670998021366054,
+            "contribution": 1.7810203273582936
+          },
+          "evidence": [
+            {
+              "file": "results/v1/loio_predictions.csv",
+              "selector": "sample_id == 'r17byphk'"
+            },
+            {
+              "file": "results/v1/final_model.csv",
+              "selector": "all rows"
+            }
+          ]
+        }
+      },
+      {
+        "name": "F11_c2_perimeter_fraction_adjacent_c0",
+        "units": "px-based image feature (standardised)",
+        "value": 0.002124391121309053,
+        "standardised_value": 1.2961115384094821,
+        "coefficient": 0.12669117391644977,
+        "effect_size": 0.16420589232775296,
+        "direction": "higher",
+        "tag": "material (segmentation-derived; Phase B status: investigate)",
+        "justification": {
+          "rule": "contribution_k = coef[pred_batch, k] x x_k (x_k = standardised F value or embedding PC score); top 3 by signed contribution, i.e. the largest support for the bet.",
+          "numbers": {
+            "coefficient": 0.12669117391644977,
+            "standardised_value": 1.2961115384094821,
+            "contribution": 0.16420589232775296
+          },
+          "evidence": [
+            {
+              "file": "results/v1/loio_predictions.csv",
+              "selector": "sample_id == 'r17byphk'"
+            },
+            {
+              "file": "results/v1/final_model.csv",
+              "selector": "all rows"
+            }
+          ]
+        }
+      },
+      {
+        "name": "F01_c0_area_fraction",
+        "units": "px-based image feature (standardised)",
+        "value": 0.1137122947689958,
+        "standardised_value": 0.8897594005758896,
+        "coefficient": 0.15519510700258018,
+        "effect_size": 0.1380863053789268,
+        "direction": "higher",
+        "tag": "material (segmentation-derived; Phase B status: drop)",
+        "justification": {
+          "rule": "contribution_k = coef[pred_batch, k] x x_k (x_k = standardised F value or embedding PC score); top 3 by signed contribution, i.e. the largest support for the bet.",
+          "numbers": {
+            "coefficient": 0.15519510700258018,
+            "standardised_value": 0.8897594005758896,
+            "contribution": 0.1380863053789268
+          },
+          "evidence": [
+            {
+              "file": "results/v1/loio_predictions.csv",
+              "selector": "sample_id == 'r17byphk'"
+            },
+            {
+              "file": "results/v1/final_model.csv",
+              "selector": "all rows"
+            }
+          ]
+        }
+      }
+    ],
+    "embedding": {
+      "backbone": "dinov2_vits14",
+      "energy_distance": 0.16960521299793266
+    }
+  },
+  "uncertainty": {
+    "sampling": "model trained on n=31 images; LOIO accuracy 18/31 (Wilson 95 % CI 0.41-0.74), permutation p=0.0350",
+    "segmentation": "F-feature drivers carry their Phase B status; 17/23 Phase B features were dropped for +/-10 % threshold sensitivity (results/stats/feature_status.csv)",
+    "decision_margin": "probability margin 0.728 to Batch_2; E1 is +0.0750 from band99"
+  },
+  "routing": {
+    "stakeholder": "none",
+    "reason": "inside the Batch_3 99 % band and no acquisition covariate flagged"
+  },
+  "next_action": "No action beyond recording the bet.",
+  "caveats": [
+    "phase_identity: stated by Polaron, not image-verified; Si vs SiOx is indistinguishable in BSE; binder and conductive additive are lumped.",
+    "Pixel size unconfirmed; all lengths in px.",
+    "Embedding batch differences vanished after acquisition residualisation in Phase B; embedding drivers may reflect acquisition rather than material.",
+    "Batch_1 / Batch_2 are variations relative to the Batch_3 baseline, not better or worse."
+  ]
+}

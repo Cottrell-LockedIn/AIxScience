@@ -1,0 +1,60 @@
+{
+  "n_images": 31,
+  "loio_correct": 18,
+  "loio_accuracy": 0.5806451612903226,
+  "loio_accuracy_str": "18/31",
+  "wilson95": [
+    0.4076626249536972,
+    0.7358445693268778
+  ],
+  "chance_majority": 0.5483870967741935,
+  "per_batch_recall": {
+    "Batch_1": "2/7",
+    "Batch_2": "2/7",
+    "Batch_3": "14/17"
+  },
+  "balanced_accuracy": 0.46498599439775906,
+  "permutation_p": 0.03496503496503497,
+  "n_permutations": 1000,
+  "permutation_seed": 0,
+  "permutation_acc_median": 0.3870967741935484,
+  "permutation_acc_p95": 0.5483870967741935,
+  "confusion_matrix": {
+    "rows_true_cols_pred": [
+      "Batch_1",
+      "Batch_2",
+      "Batch_3"
+    ],
+    "values": [
+      [
+        2,
+        4,
+        1
+      ],
+      [
+        4,
+        2,
+        1
+      ],
+      [
+        0,
+        3,
+        14
+      ]
+    ]
+  },
+  "tier_counts": {
+    "high": 18,
+    "low": 8,
+    "medium": 5
+  },
+  "ood_label_counts": {
+    "within_bounds": 23,
+    "outside_bounds": 8
+  },
+  "model": "StandardScaler(F01-F11) + PCA(n_components=29, svd_solver='full') of the raw mean-pooled BSE DINOv2 embedding, both fitted on the training images only; LogisticRegression(C=1.0, class_weight='balanced', solver='lbfgs', max_iter=10000, random_state=0), L2, multinomial.",
+  "n_pcs": 29,
+  "frozen_choices": "docs/Log/2026-10-04_phase_c.md",
+  "config_hash": "45629944e398",
+  "git_sha": "af87cd9"
+}
