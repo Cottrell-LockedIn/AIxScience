@@ -10,7 +10,7 @@
   "verdict": {
     "label": "outside_bounds",
     "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch. The null has only 16-17 values, so band99 interpolates between the two largest null values; rank_p = (1 + #{null >= E1}) / (1 + n_null) is reported, minimum about 1/18.",
-    "reason": "Bet Batch_1 with p=0.678 (runner-up Batch_2 p=0.300, margin 0.378); tier low because outside the Batch_3 embedding band (OOD caps the tier at low). In LOIO (this image excluded), bets on Batch_1 were right 1/5, and 1/3 at tier low. Top drivers: embedding PC 2 (+1.51), embedding PC 1 (+1.49), F06_c2_clark_evans_R (+1.00). Most top drivers are embedding components, whose batch signal could not be separated from acquisition in Phase B; the bet stands. Batch_3 embedding check: E1=0.4562 vs band95 0.2198 / band99 0.2446 -> outside_bounds (outside the Batch_3 distribution; the bet still stands). Acquisition covariates outside the training 5-95 % range: noise_sigma_BSE, sharpness_BSE, hstripe_score_BSE, height.",
+    "reason": "Bet Batch_1 with p=0.678 (runner-up Batch_2 p=0.300, margin 0.378); tier low because outside the Batch_3 embedding band (OOD caps the tier at low). In LOIO (this image excluded), bets on Batch_1 were right 1/5, and 1/4 at tier low. Top drivers: embedding PC 2 (+1.51), embedding PC 1 (+1.49), F06_c2_clark_evans_R (+1.00). Most top drivers are embedding components, whose batch signal could not be separated from acquisition in Phase B; the bet stands. Batch_3 embedding check: E1=0.4562 vs band95 0.2198 / band99 0.2446 -> outside_bounds (outside the Batch_3 distribution; the bet still stands). Acquisition covariates outside the training 5-95 % range: noise_sigma_BSE, sharpness_BSE, hstripe_score_BSE, height.",
     "closed_set": {
       "predicted_batch": "Batch_1",
       "confidence": 0.6781999144720319,
@@ -24,7 +24,7 @@
       "tier": "low",
       "note": "assumes the image is from one of the known batches",
       "justification": {
-        "rule": "pred_batch = argmax of the image's predicted probability (out-of-fold for training images); always one of Batch_1, Batch_2, Batch_3. confidence = that probability; margin = top minus runner-up. Tier: low if p_max < 0.5, or LOIO permutation p >= 0.05, or OOD label = outside_bounds; medium if 0.5 <= p_max < 0.75; high if p_max >= 0.75 and LOIO permutation p < 0.05. Model: StandardScaler(F01-F11) + PCA(n_components=29, svd_solver='full') of the raw mean-pooled BSE DINOv2 embedding, both fitted on the training images only; LogisticRegression(C=1.0, class_weight='balanced', solver='lbfgs', max_iter=10000, random_state=0), L2, multinomial.",
+        "rule": "pred_batch = argmax of the image's predicted probability (out-of-fold for training images); always one of Batch_1, Batch_2, Batch_3. confidence = that probability; margin = top minus runner-up. Tier: high if p_max >= 0.75 and LOIO permutation p < 0.05 and OOD label = within_bounds; otherwise low (p_max < 0.75, or LOIO permutation p >= 0.05, or OOD label = outside_bounds). Two tiers only: the v1 'medium' band (0.5 <= p_max < 0.75, 1/5 correct in LOIO) is reported as low since v1.1, a score-neutral presentation change; bets and probabilities are unchanged. Model: StandardScaler(F01-F11) + PCA(n_components=29, svd_solver='full') of the raw mean-pooled BSE DINOv2 embedding, both fitted on the training images only; LogisticRegression(C=1.0, class_weight='balanced', solver='lbfgs', max_iter=10000, random_state=0), L2, multinomial.",
         "numbers": {
           "Batch_1": 0.6781999144720319,
           "Batch_2": 0.3002228492600868,
@@ -39,7 +39,7 @@
             "pred_batch_correct": 1,
             "pred_batch_n": 5,
             "pred_batch_tier_correct": 1,
-            "pred_batch_tier_n": 3
+            "pred_batch_tier_n": 4
           }
         },
         "evidence": [
@@ -120,11 +120,11 @@
     }
   },
   "pipeline": {
-    "git_sha": "e593c3e",
+    "git_sha": "8ba9359",
     "git_tag": null,
     "config_path": "configs/v1.yaml",
     "config_hash": "45629944e398",
-    "timestamp_utc": "2026-10-04T02:52:30.912930+00:00",
+    "timestamp_utc": "2026-10-04T13:07:22.942771+00:00",
     "frozen": false,
     "exploratory": false,
     "model_revisions": {

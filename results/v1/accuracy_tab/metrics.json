@@ -12,25 +12,14 @@
       ]
     },
     "low": {
-      "k": 3,
-      "mean_confidence": 0.6705118223724178,
-      "n": 8,
-      "str": "3/8",
-      "value": 0.375,
+      "k": 4,
+      "mean_confidence": 0.6363543433567794,
+      "n": 13,
+      "str": "4/13",
+      "value": 0.3076923076923077,
       "wilson95": [
-        0.13684428582359742,
-        0.6942576053973727
-      ]
-    },
-    "medium": {
-      "k": 1,
-      "mean_confidence": 0.581702376931758,
-      "n": 5,
-      "str": "1/5",
-      "value": 0.2,
-      "wilson95": [
-        0.03622410863243014,
-        0.6244653702374747
+        0.12680703655710515,
+        0.5763065681945096
       ]
     }
   },
@@ -114,7 +103,7 @@
         "true_batch": "Batch_3"
       }
     ],
-    "rule": "2 = correct at tier high; 1 = correct at tier medium/low, or incorrect at tier medium/low; 0 = incorrect at tier high (owner's reading of the judging criterion 'confidence score')",
+    "rule": "2 = correct at tier high; 1 = correct at tier low, or incorrect at tier low; 0 = incorrect at tier high (owner's reading of the judging criterion 'confidence score')",
     "status": "official once-only run; truth supplied after the run; exploratory as evidence (n = 3)"
   },
   "model": "StandardScaler(F01-F11) + PCA(n_components=29, svd_solver='full') of the raw mean-pooled BSE DINOv2 embedding, both fitted on the training images only; LogisticRegression(C=1.0, class_weight='balanced', solver='lbfgs', max_iter=10000, random_state=0), L2, multinomial.",
@@ -152,7 +141,7 @@
     "permutation_acc_p95": 0.5483870967741935,
     "permutation_p": 0.03496503496503497,
     "random_baseline": 0.3333333333333333,
-    "tier_calibration_gap": 0.21605929757277453
+    "tier_calibration_gap": 0.21605929757277456
   },
   "per_batch": {
     "Batch_1": {
@@ -238,12 +227,12 @@
   "provenance": {
     "config_hash": "45629944e398",
     "exploratory": true,
-    "git_sha": "0517998",
+    "git_sha": "8ba9359",
     "note": "output-only; the frozen model and its predictions are unchanged",
     "sources": {
       "results/v1/heldout.json": "6be17b5eef5419d3f29a9570aeeff13eb769610313278453205c046d5ba5c798",
-      "results/v1/loio_predictions.csv": "5a79bf6c216be1e656c2985aac68c0b473d9ae90b4eaf5d8f31caa8375f56a93",
-      "results/v1/loio_summary.json": "3a39c2b07e5f224543a75c51a2cdf955dc20d0ebc76d8267a3bef5f39399483d"
+      "results/v1/loio_predictions.csv": "dc438817377436cede4edb97bfa9f61d9a3fc93e0e57e44c2ed9b4414cf2fadb",
+      "results/v1/loio_summary.json": "92503fa5d42daca390348c4bc535470759fa8477b2d3c67a46cd94a2ada145ac"
     }
   },
   "reference_vs_rest": {

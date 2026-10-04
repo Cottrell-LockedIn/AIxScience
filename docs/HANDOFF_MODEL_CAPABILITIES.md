@@ -69,8 +69,10 @@ Example: `results/v1/heldout.json`.
 ### 5.1 Batch bet (`verdict.closed_set`)
 - `predicted_batch` (always one of the three), `probabilities` for all three, `confidence` (= top probability),
   `runner_up`, `margin`.
-- `tier`: `high` if p_max >= 0.75 and model permutation p < 0.05; `medium` if 0.5 <= p_max < 0.75; `low` if
-  p_max < 0.5 or the image is `outside_bounds` (out-of-baseline caps the tier at low).
+- `tier`: two levels. `high` if p_max >= 0.75, model permutation p < 0.05 and the image is `within_bounds`;
+  otherwise `low` (p_max < 0.75, or `outside_bounds`, which caps the tier at low). v1.1 presentation change:
+  the v1 `medium` band (0.5 <= p_max < 0.75; 1/5 correct in LOIO) is reported as `low`; score-neutral under the
+  judging rule, bets and probabilities unchanged, no image in the official or test runs was medium.
 - `loio_reliability`: how often bets on the same predicted batch (and same tier) were right in validation,
   excluding this image, e.g. "Batch_1 bets right 2/6".
 
@@ -218,7 +220,7 @@ What the masks do and don't explain:
 
 - Accuracy 18/31 (Wilson 95 % CI 0.41-0.74). Always guessing Batch_3 = 17/31. Permutation p = 0.035.
 - Confusion (rows true, cols predicted B1/B2/B3): B1 2/4/1, B2 4/2/1, B3 0/3/14.
-- Bets right: Batch_3 14/16, Batch_2 2/9, Batch_1 2/6. By tier: high 14/18, medium 1/5, low 3/8;
+- Bets right: Batch_3 14/16, Batch_2 2/9, Batch_1 2/6. By tier: high 14/18, low 4/13 (of which the former medium band 1/5);
   high-tier Batch_1/2 bets 1/4.
 - Practical reading: "Batch_3 vs not Batch_3" is fairly reliable (26/31); Batch_1 vs Batch_2 is near chance.
 

@@ -19,7 +19,7 @@ across fit and test. The 3 official held-out images are reported separately.
   a label-permutation test gives p = 0.035 (1000 shuffles; shuffled labels score
   39% on average). The always-Batch-3 baseline scores 17/31.
 - **The confidence tier is honest.** High-tier bets were right 14/18 (78%); low-tier bets
-  3/8 (38%); medium 1/5. The model says "low" exactly where it is weak.
+  4/13 (31%). The model says "low" exactly where it is weak.
 - **Official held-out run: 2/3 correct, 5/6 under the judging confidence score**
   (the one miss, 3e122cbj, was flagged low confidence, so it scored 1 rather than 0).
 
@@ -47,10 +47,10 @@ across fit and test. The 3 official held-out images are reported separately.
 | Tier calibration gap | mean gap between reported probability and observed accuracy, by tier | 0.22 |
 
 ## Confidence tier rule (frozen)
-low if p_max < 0.5, or LOIO permutation p >= 0.05, or OOD label = outside_bounds; medium if 0.5 <= p_max < 0.75; high if p_max >= 0.75 and LOIO permutation p < 0.05.
+high if p_max >= 0.75 and LOIO permutation p < 0.05 and OOD label = within_bounds; otherwise low (p_max < 0.75, or LOIO permutation p >= 0.05, or OOD label = outside_bounds). Two tiers only: the v1 'medium' band (0.5 <= p_max < 0.75, 1/5 correct in LOIO) is reported as low since v1.1, a score-neutral presentation change; bets and probabilities are unchanged.
 
 ## Official held-out images
-Status: official once-only run; truth supplied after the run; exploratory as evidence (n = 3). Scoring rule: 2 = correct at tier high; 1 = correct at tier medium/low, or incorrect at tier medium/low; 0 = incorrect at tier high (owner's reading of the judging criterion 'confidence score').
+Status: official once-only run; truth supplied after the run; exploratory as evidence (n = 3). Scoring rule: 2 = correct at tier high; 1 = correct at tier low, or incorrect at tier low; 0 = incorrect at tier high (owner's reading of the judging criterion 'confidence score').
 
 | image | true | predicted | p | tier | Batch 3 flag | correct | score |
 |---|---|---|---|---|---|---|---|

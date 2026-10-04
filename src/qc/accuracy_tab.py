@@ -50,10 +50,10 @@ HELDOUT_JSON = Path("results") / "v1" / "heldout.json"
 # once-only run (docs/PRD_MODEL_IMPROVEMENTS.md, M8). Used for scoring only, never for fitting.
 HELDOUT_TRUTH = {"3e122cbj": "Batch_2", "fn0mhxef": "Batch_1", "xrv9xvzb": "Batch_3"}
 JUDGING_SCORE_RULE = (
-    "2 = correct at tier high; 1 = correct at tier medium/low, or incorrect at tier medium/low; "
+    "2 = correct at tier high; 1 = correct at tier low, or incorrect at tier low; "
     "0 = incorrect at tier high (owner's reading of the judging criterion 'confidence score')"
 )
-TIERS = ["high", "medium", "low"]
+TIERS = ["high", "low"]  # v1.1: two tiers; a legacy v1 'medium' label is read as low
 COLORS = {"Batch_1": "#d95f02", "Batch_2": "#7570b3", "Batch_3": "#1b9e77"}
 REFERENCES = [
     "Mitchell et al. (2019) Model Cards for Model Reporting, FAT* 2019, arXiv:1810.03993",
@@ -228,8 +228,8 @@ def _fig_per_batch(m: dict[str, Any], path: Path) -> None:
 
 def _fig_by_tier(m: dict[str, Any], path: Path) -> None:
     bt = m["by_tier"]
-    x = np.arange(3)
-    fig, ax = plt.subplots(figsize=(7.2, 4.0))
+    x = np.arange(len(TIERS))
+    fig, ax = plt.subplots(figsize=(6.0, 4.0))
     acc = [bt[t]["value"] for t in TIERS]
     conf = [bt[t]["mean_confidence"] for t in TIERS]
     ax.bar(x - 0.2, acc, 0.4, label="Observed accuracy", color="#1f77b4")
@@ -330,7 +330,7 @@ across fit and test. The 3 official held-out images are reported separately.
   a label-permutation test gives p = {o['permutation_p']:.3f} ({o['n_permutations']} shuffles; shuffled labels score
   {o['permutation_acc_median']:.0%} on average). The always-Batch-3 baseline scores {o['majority_baseline']['str']}.
 - **The confidence tier is honest.** High-tier bets were right {bt['high']['str']} ({bt['high']['value']:.0%}); low-tier bets
-  {bt['low']['str']} ({bt['low']['value']:.0%}); medium {bt['medium']['str']}. The model says "low" exactly where it is weak.
+  {bt['low']['str']} ({bt['low']['value']:.0%}). The model says "low" exactly where it is weak.
 - **Official held-out run: {h['accuracy']['str']} correct, {h['judging_score']['str']} under the judging confidence score**
   (the one miss, 3e122cbj, was flagged low confidence, so it scored 1 rather than 0).
 
@@ -417,6 +417,7 @@ The 3 official held-out images are reported separately. <code>phase_identity: {m
 def build(out: Path, root: Path | None = None, cfg: dict[str, Any] | None = None) -> dict[str, Any]:
     root = root or _config.ROOT
     loio = pd.read_csv(root / LOIO_CSV)
+    loio["tier"] = loio["tier"].replace({"medium": "low"})
     summary = json.loads((root / LOIO_SUMMARY).read_text())
     heldout = json.loads((root / HELDOUT_JSON).read_text())
     m = compute_metrics(loio, summary, heldout)

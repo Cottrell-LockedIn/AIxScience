@@ -382,7 +382,7 @@ repository files:
 - `balanced_accuracy: 0.465`; recall Batch_1 2/7, Batch_2 2/7, Batch_3 14/17; precision Batch_1 2/6, Batch_2 2/9,
   Batch_3 14/16.
 - Confusion matrix (rows true, columns predicted): Batch_1 [2, 4, 1]; Batch_2 [4, 2, 1]; Batch_3 [0, 3, 14].
-- Accuracy by tier: high 14/18, medium 1/5, low 3/8; by bet and tier (e.g. `Batch_3|high` 13/14, `Batch_1|high` 0/1).
+- Accuracy by tier: high 14/18, low 4/13 (v1 three-level: high 14/18, medium 1/5, low 3/8; medium folded into low in v1.1); by bet and tier (e.g. `Batch_3|high` 13/14, `Batch_1|high` 0/1).
 - `evaluation: leave-one-image-out on the 31 training images`.
 - Held-out set (true batches supplied by the owner on 2026-10-04 after the single official run; scoring is
   exploratory, n = 3): `3e122cbj` true Batch_2, predicted Batch_1 (p 0.98) at tier low; `fn0mhxef` true Batch_1,

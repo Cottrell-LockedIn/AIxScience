@@ -11,7 +11,6 @@ def test_judging_score_rule():
     assert accuracy_tab.judging_score(False, "high") == 0
     assert accuracy_tab.judging_score(False, "low") == 1
     assert accuracy_tab.judging_score(True, "low") == 1
-    assert accuracy_tab.judging_score(True, "medium") == 1
 
 
 def test_metrics_match_loio_summary_and_regenerate(tmp_path):
@@ -22,8 +21,8 @@ def test_metrics_match_loio_summary_and_regenerate(tmp_path):
     for b in classify.BATCHES:
         assert m["per_batch"][b]["recall"]["str"] == summary["per_batch_recall"][b]
         assert m["per_batch"][b]["precision"]["str"] == summary["precision_by_pred_batch"][b]
-    for t in ("high", "medium", "low"):
-        assert m["by_tier"][t]["str"] == summary["accuracy_by_tier"][t]
+    assert m["by_tier"]["high"]["str"] == summary["accuracy_by_tier"]["high"]
+    assert set(m["by_tier"]) == {"high", "low"}
     assert m["overall"]["permutation_p"] == summary["permutation_p"]
     assert m["reference_vs_rest"]["precision"]["str"] == "14/16"
     assert m["reference_vs_rest"]["recall_sensitivity"]["str"] == "14/17"

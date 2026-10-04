@@ -24,7 +24,7 @@
       "tier": "high",
       "note": "assumes the image is from one of the known batches",
       "justification": {
-        "rule": "pred_batch = argmax of the image's predicted probability (out-of-fold for training images); always one of Batch_1, Batch_2, Batch_3. confidence = that probability; margin = top minus runner-up. Tier: low if p_max < 0.5, or LOIO permutation p >= 0.05, or OOD label = outside_bounds; medium if 0.5 <= p_max < 0.75; high if p_max >= 0.75 and LOIO permutation p < 0.05. Model: StandardScaler(F01-F11) + PCA(n_components=29, svd_solver='full') of the raw mean-pooled BSE DINOv2 embedding, both fitted on the training images only; LogisticRegression(C=1.0, class_weight='balanced', solver='lbfgs', max_iter=10000, random_state=0), L2, multinomial.",
+        "rule": "pred_batch = argmax of the image's predicted probability (out-of-fold for training images); always one of Batch_1, Batch_2, Batch_3. confidence = that probability; margin = top minus runner-up. Tier: high if p_max >= 0.75 and LOIO permutation p < 0.05 and OOD label = within_bounds; otherwise low (p_max < 0.75, or LOIO permutation p >= 0.05, or OOD label = outside_bounds). Two tiers only: the v1 'medium' band (0.5 <= p_max < 0.75, 1/5 correct in LOIO) is reported as low since v1.1, a score-neutral presentation change; bets and probabilities are unchanged. Model: StandardScaler(F01-F11) + PCA(n_components=29, svd_solver='full') of the raw mean-pooled BSE DINOv2 embedding, both fitted on the training images only; LogisticRegression(C=1.0, class_weight='balanced', solver='lbfgs', max_iter=10000, random_state=0), L2, multinomial.",
         "numbers": {
           "Batch_1": 0.045926312254039925,
           "Batch_2": 0.8302718981346421,
@@ -120,11 +120,11 @@
     }
   },
   "pipeline": {
-    "git_sha": "e593c3e",
+    "git_sha": "8ba9359",
     "git_tag": null,
     "config_path": "configs/v1.yaml",
     "config_hash": "45629944e398",
-    "timestamp_utc": "2026-10-04T02:52:31.759298+00:00",
+    "timestamp_utc": "2026-10-04T13:07:23.621439+00:00",
     "frozen": false,
     "exploratory": false,
     "model_revisions": {
