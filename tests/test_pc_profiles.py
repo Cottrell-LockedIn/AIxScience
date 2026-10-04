@@ -39,6 +39,17 @@ def test_tag_rule_material_imaging_unresolved_on_synthetic_vectors():
                               {"noise_sigma_BSE": weak_cov}) == pc_profiles.UNRESOLVED_TAG
 
 
+def test_imaging_sentence_names_a_near_tied_measurement():
+    top_m = {"name": "F01_c0_area_fraction", "rho": 0.62, "p_bh": 0.008}
+    top_c = {"name": "sharpness_BSE", "rho": -0.63, "p_bh": 0.008}
+    s = pc_profiles.sentence(1, "imaging:sharpness_BSE", top_m, top_c)
+    assert "near tie with void area fraction F01 (rho 0.62)" in s
+    far = pc_profiles.sentence(2, "imaging:hstripe_score_BSE", {"name": "F11_c2_perimeter_fraction_adjacent_c0",
+                                                                "rho": -0.49, "p_bh": 0.07},
+                               {"name": "hstripe_score_BSE", "rho": 0.65, "p_bh": 0.02})
+    assert "near tie" not in far
+
+
 def test_bh_adjust_matches_hand_example():
     out = pc_profiles.bh_adjust(np.array([0.01, 0.04, 0.03, 0.5]))
     # sorted 0.01*4/1, 0.03*4/2, 0.04*4/3, 0.5 -> step-down minima 0.04, 0.0533, 0.0533, 0.5
@@ -60,7 +71,7 @@ def test_regeneration_is_deterministic_and_matches_committed_outputs(regenerated
     committed = pd.read_csv(ROOT / pc_profiles.PROFILES_CSV, dtype={"git_sha": str, "config_hash": str})
     assert list(committed[["pc", "variable", "kind"]].itertuples(index=False, name=None)) == \
         list(table_a[["pc", "variable", "kind"]].itertuples(index=False, name=None))
-    for col in ("rho", "p_perm", "p_bh"):
+    for col in ("rho", "p_perm", "p_bh", "p_bh_global"):
         assert np.max(np.abs(committed[col].to_numpy() - table_a[col].to_numpy())) < 1e-9
     assert (committed["n_images"] == 31).all() and committed["exploratory"].all()
     assert (committed["phase_identity"] == classify.PHASE_IDENTITY).all()

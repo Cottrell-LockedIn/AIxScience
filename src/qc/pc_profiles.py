@@ -1,4 +1,5 @@
-"""Exploratory embedding PC correlation profiles (M9-lite; PRD_MODEL_IMPROVEMENTS section 0.3).
+"""Exploratory embedding PC correlation profiles (M9-lite; plan: PRD_MODEL_IMPROVEMENTS section 0.3 on PR #13,
+branch devin/1791110490-model-improvement-prd).
 
 Descriptive only: for every PCA component of the frozen v1 model this stage reports Spearman correlations
 with the 11 measurements (F01-F11), the 8 pre-registered acquisition covariates and the Phase B KPIs over the
@@ -32,6 +33,7 @@ MATERIAL_MIN_ABS_RHO = 0.7
 MATERIAL_MAX_P_BH = 0.05
 MATERIAL_MAX_COVARIATE_ABS_RHO = 0.5
 IMAGING_MIN_ABS_RHO = 0.5
+NEAR_TIE_ABS_RHO = 0.05  # an imaging sentence must also name a measurement whose |rho| is this close to the covariate's
 N_PERMUTATIONS = 2000
 SEED = 0
 N_IMAGES = 31
@@ -50,7 +52,21 @@ TAG_RULE = (
     f"{IMAGING_MIN_ABS_RHO} with a covariate and that |rho| exceeds every measurement |rho|; otherwise "
     f"'{UNRESOLVED_TAG}'. rho = Spearman over the 31 training images; p_perm = two-sided permutation p from "
     f"{N_PERMUTATIONS} label-free shuffles of the variable (seed {SEED}), p = (1 + #{{|rho_perm| >= |rho|}}) / "
-    f"(1 + {N_PERMUTATIONS}); p_bh = Benjamini-Hochberg within each PC across all its variables."
+    f"(1 + {N_PERMUTATIONS}); p_bh = Benjamini-Hochberg within each PC across its variables (one family of 32 tests "
+    f"per PC); p_bh_global = Benjamini-Hochberg across all PC x variable cells (one family of 928 tests), reported "
+    f"for context and not used by the tag rule."
+)
+KPI_NOTE = (
+    "KPIs (results/kpi_per_image.parquet, Phase B tile-mean KPIs) are reported for context and excluded from the "
+    "tag rule on purpose: several duplicate F01-F11 at tile level (e.g. frac_c0 vs F01) and were not consultant-"
+    "approved, so letting them tag a PC would double-count the same measurement (PC1 frac_c0 rho 0.72 exceeds the "
+    "sharpness |rho| 0.63). Grey-level statistics (mean, contrast, histogram moments) are excluded on purpose: they "
+    "are acquisition settings by construction and would tag every PC as imaging."
+)
+GLOBAL_BH_PICTURE = (
+    "Under BH across all 928 cells (p_bh_global), PC1 sharpness_BSE and F01 sit at about 0.06 (PC1 noise_sigma_BSE "
+    "and the KPI frac_c0 at 0.039), while PC2 hstripe_score_BSE, PC3 F02/F05/F06/F07 and PC6 nm_per_px_if_tag_true "
+    "remain below 0.05. The permutation p floor is 1/2001, so the smallest global values tie at 0.039."
 )
 KPI_COLS = [
     "frac_c0", "frac_c1", "frac_c2", "c2_count_density_per_Mpx", "c2_eqdiam_median_px", "c2_eqdiam_p90_px",
@@ -136,7 +152,10 @@ def sentence(k: int, tag: str, top_m: dict[str, Any], top_c: dict[str, Any]) -> 
     if tag.startswith("material:"):
         return (f"PC{k}: tracks {name_m} {top_m['name'][:3]} (rho {top_m['rho']:.2f}); descriptive, not causal.")
     if tag.startswith("imaging:"):
-        return (f"PC{k}: image-texture component most correlated with {name_c} (rho {top_c['rho']:.2f}); "
+        tie = ""
+        if abs(top_c["rho"]) - abs(top_m["rho"]) <= NEAR_TIE_ABS_RHO:
+            tie = f", near tie with {name_m} {top_m['name'][:3]} (rho {top_m['rho']:.2f})"
+        return (f"PC{k}: image-texture component most correlated with {name_c} (rho {top_c['rho']:.2f}){tie}; "
                 f"not separable from imaging conditions (Phase B).")
     blocked = (abs(top_m["rho"]) >= MATERIAL_MIN_ABS_RHO and top_m["p_bh"] < MATERIAL_MAX_P_BH
                and abs(top_c["rho"]) >= MATERIAL_MAX_COVARIATE_ABS_RHO)
@@ -184,6 +203,7 @@ def compute(frame: pd.DataFrame, model: classify.Model) -> tuple[pd.DataFrame, d
     table["p_bh"] = np.nan
     for pc, idx in table.groupby("pc", sort=False).groups.items():
         table.loc[idx, "p_bh"] = bh_adjust(table.loc[idx, "p_perm"].to_numpy())
+    table["p_bh_global"] = bh_adjust(table["p_perm"].to_numpy())
     order = {pc_name(j + 1): j for j in range(n_pcs)}
     table = table.sort_values(["pc", "kind", "variable"], key=lambda s: s.map(order) if s.name == "pc" else s,
                               kind="stable").reset_index(drop=True)
@@ -198,7 +218,8 @@ def compute(frame: pd.DataFrame, model: classify.Model) -> tuple[pd.DataFrame, d
         def _top(kind: str) -> dict[str, Any]:
             s = sub[sub["kind"] == kind]
             r = s.iloc[int(np.argmax(np.abs(s["rho"].to_numpy())))]
-            return {"name": str(r["variable"]), "rho": float(r["rho"]), "p_bh": float(r["p_bh"])}
+            return {"name": str(r["variable"]), "rho": float(r["rho"]), "p_bh": float(r["p_bh"]),
+                    "p_bh_global": float(r["p_bh_global"])}
 
         def _dict(kind: str) -> dict[str, tuple[float, float]]:
             s = sub[sub["kind"] == kind]
@@ -244,12 +265,15 @@ def build(cfg: dict[str, Any]) -> tuple[pd.DataFrame, dict[str, Any]]:
             "material_max_p_bh": MATERIAL_MAX_P_BH,
             "material_max_covariate_abs_rho": MATERIAL_MAX_COVARIATE_ABS_RHO,
             "imaging_min_abs_rho": IMAGING_MIN_ABS_RHO,
+            "near_tie_abs_rho": NEAR_TIE_ABS_RHO,
             "n_permutations": N_PERMUTATIONS,
             "seed": SEED,
         },
         "caveat": CAVEAT,
-        "note": "Descriptive tags only; they do not change the model, the drivers or any verdict. The KPI block "
-                "is reported for context and is not used by the tag rule.",
+        "note": "Descriptive tags only; they do not change the model, the drivers or any verdict. p_bh is BH within "
+                "each PC (32 tests per PC); p_bh_global is BH across all 928 cells and is given for context. "
+                + KPI_NOTE,
+        "global_bh_picture": GLOBAL_BH_PICTURE,
         "tag_counts": {t: int(sum(p["tag"].split(":")[0] == t for p in pcs.values()))
                        for t in ("material", "imaging", UNRESOLVED_TAG)},
         "pcs": pcs,

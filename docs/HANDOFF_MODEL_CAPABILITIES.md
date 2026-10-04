@@ -84,11 +84,15 @@ Example: `results/v1/heldout.json`.
   `results/v1/pc_tags.json` is keyed by the driver name (`embedding PC k`) and gives per PC `tag`,
   `explained_variance_ratio`, `lr_coef_abs_max`, `top_measurement`, `top_covariate`, `top_kpi` and a fixed-template
   `sentence`; `results/v1/pc_profiles.csv` has the long-format Spearman rho / permutation p / BH p table (29 PCs x
-  32 variables, n = 31). Tag rule (code constants, cited in the JSON): `material:<F-id>` if |rho| >= 0.7 and BH
+  32 variables, n = 31). `p_bh` is BH within each PC (one family of 32 tests per PC); `p_bh_global` is BH across all
+  928 cells: there PC1 sharpness/F01 sit at about 0.06 while PC2 hstripe, PC3 F02/F05/F06/F07 and PC6 nm/px stay
+  below 0.05. Tag rule (code constants, cited in the JSON): `material:<F-id>` if |rho| >= 0.7 and BH
   p < 0.05 with a measurement and |rho| < 0.5 with every covariate; `imaging:<covariate>` if |rho| >= 0.5 with a
   covariate and that |rho| exceeds every measurement |rho|; otherwise `unresolved image-texture component`.
   Result for the PCs that appear as drivers in LOIO (`loio_predictions.csv`) or in the official held-out run:
-  PC1 `imaging:sharpness_BSE` (rho -0.63, BH p 0.008; void fraction F01 is a near tie at rho 0.62, BH p 0.008);
+  PC1 `imaging:sharpness_BSE` (rho -0.63, BH p 0.008; the sentence names the near tie with void fraction F01, rho
+  0.62, BH p 0.008; read PC1 as a BSE noise/sharpness component, since sharpness_BSE and noise_sigma_BSE have rho
+  0.99 across the 31 images, that also carries void fraction largely independently: partial rho -0.62 / 0.61);
   PC2 `imaging:hstripe_score_BSE` (rho 0.65, BH p 0.016); PC3 unresolved (silicon count density F05 rho 0.81,
   BH p 0.002, but BSE curtaining rho 0.52 blocks a material tag); PC4, PC5, PC7, PC8, PC9, PC11, PC12, PC13
   unresolved (strongest |rho| 0.14-0.52, none significant after BH). No PC received a `material` tag; PC6
@@ -201,7 +205,8 @@ What the masks do and don't explain:
 - 73 of 93 top-driver slots in validation were embedding PCs (not physical). In Phase B the embedding batch signal
   vanished after regressing out acquisition covariates, so it may reflect imaging rather than material.
   The exploratory PC profiles (`results/v1/pc_tags.json`) agree: the two most used driver PCs correlate most with
-  BSE sharpness (PC1) and horizontal-stripe score (PC2); no PC earned a material tag.
+  BSE noise/sharpness (PC1, near tie with void fraction F01) and horizontal-stripe score (PC2); no PC earned a
+  material tag.
 - 31 training images only; new instruments or settings are outside what it has seen.
 - Silicon features F02-F07, F11 are not independently validated; 7 of 11 features are threshold-sensitive.
 - No chemistry claims; lengths in px (pixel size unconfirmed).
