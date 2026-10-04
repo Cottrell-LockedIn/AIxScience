@@ -4,12 +4,13 @@ import { evidenceSources, ownerNames, riskCatalog, type RiskGuide } from './risk
 import type { Criterion, ResultField } from './Results'
 import { formatMetricValue, metricLabel, metricTechnicalName } from './metricLanguage'
 import MetricGlossary from './MetricGlossary'
+import { modelFeatures } from './criteria'
 import './KpiGuidance.css'
 import './KpiGuidance.extra.css'
 
 const calibrationHash = 'a7fa8987f58071205743249f0b089912c3cdab5289d48aa4dc21e5b73aa21b09'
 const units: Record<string, string> = { F01: '%', F02: '%', F03: 'px', F04: 'px', F05: '/Mpx', F06: 'ratio', F07: 'ratio', F08: 'px', F09: 'ratio', F10: 'pp', F11: '%' }
-const labels: Record<string, string> = { F01: 'Dark-area share', F02: 'Bright-area share', F03: 'Bright-object median size', F04: 'Bright-object p90 size', F05: 'Bright-object density', F06: 'Bright-object clustering', F07: 'Bright-object fullness', F08: 'Dark-region thickness', F09: 'Dark-region H/V ratio', F10: 'Dark-area variation', F11: 'Bright–dark contact' }
+const labels: Record<string, string> = Object.fromEntries(Object.values(modelFeatures).map((feature) => [feature.id, feature.name]))
 type Props = { field: ResultField; criteria: Criterion[]; selectedRiskId: string; onRiskSelect: (risk: RiskGuide) => void }
 
 function display(feature: string, raw: number | null | undefined, calibrated: boolean) {

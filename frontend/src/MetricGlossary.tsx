@@ -3,7 +3,7 @@ import './MetricGlossary.css'
 
 export default function MetricGlossary() {
   return <details className="metric-glossary">
-    <summary>Measurement guide <span>Plain labels with technical definitions</span></summary>
+    <summary>Measurement guide <span>Model feature names (configs/features_v1.yaml) with definitions</span></summary>
     <p className="metric-glossary__intro">These 11 image measurements describe a segmented 2D field. They are evidence for review, not material quality measurements or diagnoses.</p>
     <div className="metric-glossary__list">
       {Object.values(metricDefinitions).map(metric => <article key={metric.id}>
