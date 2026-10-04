@@ -28,7 +28,7 @@
   "verdict": {
     "label": "investigate",
     "rule": "each Batch_3 image is scored against the other 16 (robust z as in G4). Batch_3 is never outside_bounds; it is investigate if any Batch_3 image is a leave-one-out outlier on features from ≥ 2 families, otherwise within_bounds.",
-    "reason": "Batch_3 has 3 of 17 images with leave-one-out outliers across at least two families; drivers are c1_flake_eqdiam_median_px on mgxahqnk (robust z=11.9), c2_eqdiam_median_px on vc2whyaq (robust z=10.8), c1_flake_eqdiam_median_px on cfe5vt7s (robust z=8.38), F08_c0_local_thickness_median_px on 0grcilhi (robust z=8.36), F10_c0_fraction_iqr_512px on hzumfsms (robust z=8.28) at robust |z| > 3.5.",
+    "reason": "Batch_3 has 3 of 17 images with leave-one-out outliers across at least two families; drivers are c1_flake_eqdiam_median_px on mgxahqnk (robust z=11.9, status drop), c2_eqdiam_median_px on vc2whyaq (robust z=10.8, status drop), c1_flake_eqdiam_median_px on cfe5vt7s (robust z=8.38, status drop), F08_c0_local_thickness_median_px on 0grcilhi (robust z=8.36, status investigate), F10_c0_fraction_iqr_512px on hzumfsms (robust z=8.28, status investigate) at robust |z| > 3.5. every qualifying image involves at least one feature with status drop; excluding drop features, 0 images are outliers on ≥2 families.",
     "justification": {
       "rule": "each Batch_3 image is scored against the other 16 (robust z as in G4). Batch_3 is never outside_bounds; it is investigate if any Batch_3 image is a leave-one-out outlier on features from ≥ 2 families, otherwise within_bounds.",
       "numbers": {
@@ -100,10 +100,10 @@
     }
   },
   "pipeline": {
-    "git_sha": "de8b1e4",
+    "git_sha": "0f6b661",
     "config_path": "configs/v1.yaml",
     "config_hash": "45629944e398",
-    "timestamp_utc": "2026-10-04T00:31:33.287417Z",
+    "timestamp_utc": "2026-10-04T01:35:59.118021Z",
     "frozen": false,
     "exploratory": true,
     "model_revisions": {

@@ -18,7 +18,7 @@
   "verdict": {
     "label": "investigate",
     "rule": "everything else. Signals from features that failed any gate can only give investigate.",
-    "reason": "none is significant among feature contrasts; top |z| contrasts are F03_c2_eqdiam_median_px (z=-1.36, band=within, BH p=0.958), c2_eqdiam_median_px (z=0.802, band=within, BH p=0.958), c1_flake_aspect_median (z=-0.785, band=within, BH p=0.958), F06_c2_clark_evans_R (z=-0.74, band=within, BH p=0.958), F11_c2_perimeter_fraction_adjacent_c0 (z=0.723, band=within, BH p=0.958); no difference beyond the null band in feature contrasts was supported at BH p < 0.05; different from Batch_3 in BSE embedding tests (energy=0.0404 (band=outside, BH p=0.0124) and MMD²=0.122 (band=outside, BH p=0.0124)).",
+    "reason": "none is significant among feature contrasts; top |z| contrasts are F03_c2_eqdiam_median_px (z=-1.36, band=within, BH p=0.958), c2_eqdiam_median_px (z=0.802, band=within, BH p=0.958), c1_flake_aspect_median (z=-0.785, band=within, BH p=0.958), F06_c2_clark_evans_R (z=-0.74, band=within, BH p=0.958), F11_c2_perimeter_fraction_adjacent_c0 (z=0.723, band=within, BH p=0.958); no difference beyond the null band in feature contrasts was supported at BH p < 0.05; different from Batch_3 in BSE embedding tests (energy=0.0404 (band=outside, BH p=0.0124) (borderline: 1.0% of all Batch_3 splits exceed) and MMD²=0.117 (band=outside, BH p=0.0116)); the difference is not present after label-free residualisation on the 8 pre-registered acquisition covariates (energy=-0.0114, BH p=0.963, band=within); acquisition and material contributions cannot be separated with these data.",
     "justification": {
       "rule": "everything else. Signals from features that failed any gate can only give investigate.",
       "numbers": {
@@ -46,7 +46,11 @@
             "z": -1.3556272295944092,
             "p_bh": 0.957512315270936,
             "band99": 4.109002888872817,
-            "band_position": "within"
+            "band_position": "within",
+            "band95_exact": 2.377627736946536,
+            "band99_exact": 4.109002888872817,
+            "band_position_exact": "within",
+            "frac_splits_exceeding": 0.0977992595639654
           }
         },
         {
@@ -64,17 +68,53 @@
             "value": 0.0403824865745699,
             "p_bh": 0.0123688155922038,
             "band99": 0.0375033036097751,
-            "band_position": "outside"
+            "band_position": "outside",
+            "band95_exact": 0.0244290045532091,
+            "band99_exact": 0.0404779485193801,
+            "band_position_exact": "between",
+            "frac_splits_exceeding": 0.0103352529823118
+          }
+        },
+        {
+          "file": "results/stats/distance_matrix.csv",
+          "selector": "table == 'emb_BSE' and statistic == 'energy' and batch_a == 'Batch_2' and batch_b == 'Batch_3' and residualised == True",
+          "numbers": {
+            "value": -0.0113765383608449,
+            "p_bh": 0.9625187406296852,
+            "band99": 0.0406516474178978,
+            "band_position": "within",
+            "band95_exact": 0.0260269114485786,
+            "band99_exact": 0.0479463776093472,
+            "band_position_exact": "within",
+            "frac_splits_exceeding": 0.887392019744961
           }
         },
         {
           "file": "results/stats/distance_matrix.csv",
           "selector": "table == 'emb_BSE' and statistic == 'mmd2' and batch_a == 'Batch_2' and batch_b == 'Batch_3' and residualised == False",
           "numbers": {
-            "value": 0.1224536265873461,
-            "p_bh": 0.0123688155922038,
-            "band99": 0.1165901054955168,
-            "band_position": "outside"
+            "value": 0.1166275683501907,
+            "p_bh": 0.0115656457485542,
+            "band99": 0.1050028226513709,
+            "band_position": "outside",
+            "band95_exact": 0.0700079964382764,
+            "band99_exact": 0.1158072930774769,
+            "band_position_exact": "outside",
+            "frac_splits_exceeding": 0.009718222953517
+          }
+        },
+        {
+          "file": "results/stats/distance_matrix.csv",
+          "selector": "table == 'emb_BSE' and statistic == 'mmd2' and batch_a == 'Batch_2' and batch_b == 'Batch_3' and residualised == True",
+          "numbers": {
+            "value": -0.0419472711525077,
+            "p_bh": 0.9625187406296852,
+            "band99": 0.1505852240934133,
+            "band_position": "within",
+            "band95_exact": 0.0967785833589466,
+            "band99_exact": 0.1772201155263046,
+            "band_position_exact": "within",
+            "frac_splits_exceeding": 0.8836384204031262
           }
         },
         {
@@ -91,10 +131,10 @@
     }
   },
   "pipeline": {
-    "git_sha": "de8b1e4",
+    "git_sha": "0f6b661",
     "config_path": "configs/v1.yaml",
     "config_hash": "45629944e398",
-    "timestamp_utc": "2026-10-04T00:31:33.287417Z",
+    "timestamp_utc": "2026-10-04T01:35:59.118021Z",
     "frozen": false,
     "exploratory": true,
     "model_revisions": {
@@ -681,10 +721,10 @@
     "embedding": {
       "backbone": "dinov2_vits14",
       "energy_distance": 0.0403824865745699,
-      "mmd": 0.1224536265873461,
+      "mmd": 0.1166275683501907,
       "permutation_p": 0.0123688155922038,
       "energy_p_bh": 0.0123688155922038,
-      "mmd2_p_bh": 0.0123688155922038,
+      "mmd2_p_bh": 0.0115656457485542,
       "energy_band_position": "outside",
       "mmd2_band_position": "outside",
       "n_permutations": 2000,
@@ -693,8 +733,8 @@
         "numbers": {
           "energy_distance": 0.0403824865745699,
           "energy_p_bh": 0.0123688155922038,
-          "mmd2": 0.1224536265873461,
-          "mmd2_p_bh": 0.0123688155922038,
+          "mmd2": 0.1166275683501907,
+          "mmd2_p_bh": 0.0115656457485542,
           "n_permutations": 2000
         },
         "evidence": [
@@ -712,9 +752,9 @@
             "file": "results/stats/distance_matrix.csv",
             "selector": "table == 'emb_BSE' and statistic == 'mmd2' and batch_a == 'Batch_2' and batch_b == 'Batch_3' and residualised == False",
             "numbers": {
-              "value": 0.1224536265873461,
-              "p_bh": 0.0123688155922038,
-              "band99": 0.1165901054955168,
+              "value": 0.1166275683501907,
+              "p_bh": 0.0115656457485542,
+              "band99": 0.1050028226513709,
               "band_position": "outside"
             }
           },
@@ -735,7 +775,7 @@
   "uncertainty": {
     "sampling": "n=7 images; resampling unit is image, not tile.",
     "segmentation": "maximum feature threshold-sensitivity ratio=18.63.",
-    "decision_margin": "top-feature absolute z minus band99=-2.753; G4=F03_c2_eqdiam_median_px=True.",
+    "decision_margin": "top-feature absolute z minus band99=-2.753; G4=F03_c2_eqdiam_median_px=True. the difference is not present after label-free residualisation on the 8 pre-registered acquisition covariates (energy=-0.0114, BH p=0.963, band=within); acquisition and material contributions cannot be separated with these data.",
     "robustness": "top-feature bootstrap rank stability=0.537; G4 outcome=F03_c2_eqdiam_median_px=True."
   },
   "routing": {
