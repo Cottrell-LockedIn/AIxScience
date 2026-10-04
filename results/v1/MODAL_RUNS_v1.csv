@@ -4,3 +4,6 @@ timestamp_utc,function,n_inputs,wall_s,hardware,git_sha,config_hash,est_cost_usd
 2026-10-04T02:56:45.432758+00:00,dino_embed_heldout,3,20.564847118002945,L4,b7d5556,45629944e398,0.0008807637293875202,"https://modal.com/pricing; CPU=$0.0000131/physical-core-s, memory=$0.00000222/GiB-s, L4=$0.000222/GPU-s",,
 2026-10-04T09:04:12.691536+00:00,dino_embed_heldout,3,18.453427000999966,L4,afdbfc9,45629944e398,0.0014247039276659198,"https://modal.com/pricing; CPU=$0.0000131/physical-core-s, memory=$0.00000222/GiB-s, L4=$0.000222/GPU-s",,
 2026-10-04T11:20:51.238676+00:00,dino_embed_heldout_exploratory,3,18.474715178999986,L4,f51fb9b,45629944e398,0.0014198964927135997,"https://modal.com/pricing; CPU=$0.0000131/physical-core-s, memory=$0.00000222/GiB-s, L4=$0.000222/GPU-s",,
+2026-10-04T11:57:40.216554+00:00,dino_embed_heldout_exploratory,6,35.11992560700128,local-cpu fallback,778178d,45629944e398,0.0,local CPU fallback; no Modal charge,,
+2026-10-04T12:01:26.794644+00:00,dino_embed_heldout_exploratory,3,34.40235087900146,local-cpu fallback,778178d,45629944e398,0.0,local CPU fallback; no Modal charge,,
+2026-10-04T12:04:09.351090+00:00,dino_embed_heldout_exploratory,6,19.161221301001206,L4,778178d,45629944e398,0.0020095467108816006,"https://modal.com/pricing; CPU=$0.0000131/physical-core-s, memory=$0.00000222/GiB-s, L4=$0.000222/GPU-s",,

@@ -1,0 +1,7 @@
+image,bet,p_bet,p_B1,p_B2,p_B3,tier,runner_up,batch3_flag,top_drivers,acquisition_flags,n_tiles,mask,overlay,cpu_vs_modal_max_dprob,cpu_vs_modal_max_demb,same_bet_tier_ood
+0eryguqq,Batch_3,0.967,0.013,0.02,0.967,high,Batch_2,within_bounds,embedding PC 2 (+1.14); embedding PC 3 (+0.90); embedding PC 1 (+0.33),height,39,masks/0eryguqq_mask.png,masks/0eryguqq_overlay.png,8.1e-07,1.0e-05,True
+4hq27w4c,Batch_1,0.962,0.962,0.037,0.001,low,Batch_2,outside_bounds,embedding PC 1 (+3.90); F01_c0_area_fraction (+0.63); F09_c0_chord_anisotropy_h_over_v (+0.42),curtaining_score_BSE,52,masks/4hq27w4c_mask.png,masks/4hq27w4c_overlay.png,6.4e-07,1.0e-05,True
+fhwrjtet,Batch_3,0.984,0.004,0.012,0.984,high,Batch_2,within_bounds,embedding PC 2 (+1.11); embedding PC 5 (+0.95); embedding PC 3 (+0.58),height,39,masks/fhwrjtet_mask.png,masks/fhwrjtet_overlay.png,3.3e-07,9.7e-06,True
+fspqbkxl,Batch_2,0.959,0.02,0.959,0.021,low,Batch_3,outside_bounds,embedding PC 12 (+0.83); F06_c2_clark_evans_R (+0.52); embedding PC 1 (+0.38),,52,masks/fspqbkxl_mask.png,masks/fspqbkxl_overlay.png,4.1e-07,1.2e-05,True
+soo2ax3r,Batch_1,0.798,0.798,0.187,0.015,low,Batch_2,outside_bounds,embedding PC 2 (+1.03); embedding PC 1 (+1.02); F06_c2_clark_evans_R (+0.35),,52,masks/soo2ax3r_mask.png,masks/soo2ax3r_overlay.png,1.2e-06,9.9e-06,True
+y59rxmxl,Batch_2,0.686,0.311,0.686,0.004,low,Batch_1,outside_bounds,embedding PC 12 (+0.73); F04_c2_eqdiam_p90_px (+0.67); embedding PC 3 (+0.60),,39,masks/y59rxmxl_mask.png,masks/y59rxmxl_overlay.png,1.3e-06,9.4e-06,True
