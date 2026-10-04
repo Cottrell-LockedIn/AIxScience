@@ -22,7 +22,8 @@ class 0 dark = void/pore; Si vs SiOx indistinguishable in BSE; binder and conduc
 
 For each FIB-SEM image it **always bets on one of the three known batches** (Batch_1, Batch_2, Batch_3), gives
 probabilities and a confidence tier, names the 3 inputs that drove the bet, and separately flags whether the image
-looks outside the Batch_3 (supplier baseline) distribution and whether its imaging conditions are unusual.
+looks outside the Batch_3 (supplier baseline) distribution and whether its imaging conditions are unusual. It also
+returns the segmentation mask the measurements came from, so users can see what was measured.
 
 It is a closed-set classifier: an image from a new, unknown batch is still assigned to one of the three; the
 out-of-baseline flag is the only signal that it may not belong to any of them. Unit of analysis is the whole image;
@@ -57,9 +58,8 @@ tiles are internal and never independent samples.
 
 End-to-end wall time on the dev VM: about 3 min 20 s for 3 images (mostly local segmentation/features).
 
-The per-image segmentation mask (step 2) is the "here is what was measured" image. Saving it and rendering it as an
-overlay is being implemented in parallel to this handoff; the PRD can assume a 0/1/2 label image per input image,
-same size as the cropped BSE image.
+Step 2 produces one stitched segmentation mask per image. It is part of the output (Section 5.7) so users can see
+what was measured.
 
 ## 5. Outputs (per image, JSON; schema in `schema/verdict.schema.json`)
 
@@ -118,7 +118,47 @@ means those masks outlined different objects (whole particles, ~110 px) than our
 - `caveats`: phase identity provenance, px units, embedding/acquisition confound, "variations not better/worse".
 - `verdict.reason`: one technical paragraph summarising all of the above.
 
-### 5.7 Run-level
+### 5.7 Segmentation masks: "what we see" (per image)
+
+The output includes, next to the JSON, the segmentation the measurements were computed from. A scientist can then
+check by eye what the model counted as void, graphite and silicon before trusting any number.
+(Mask saving and rendering are being built in parallel to this handoff; the content below is what they show.)
+
+- **Label mask**: the stitched per-image mask that F01-F11 were computed from. One 8-bit label per pixel:
+  0 = dark (void/pore), 1 = mid (graphite), 2 = bright (silicon). It is the same size as the analysed BSE area
+  (the input BSE with an 8 px border removed), so it overlays pixel for pixel.
+  `phase_identity: stated by Polaron, not image-verified`.
+- **Overlay image**: the analysed BSE with the three classes colour-coded at partial opacity, plus a legend and
+  the image id. It is a PNG, which suits reports.
+- **Link to the JSON**: the mask is the exact array passed to `features.extract_features`, so every F value in
+  `inputs.<id>` can be recomputed from it.
+
+How each measurement reads off the mask (what the viewer can highlight):
+
+| Measurement | What it is on the mask |
+|---|---|
+| F01 | all class-0 pixels as a share of the image |
+| F02 | all class-2 pixels as a share of the image |
+| F03, F04, F07 | class-2 particles (>= 20 px, 8-connected) not touching the border; size and shape per particle |
+| F05 | class-2 particles counted inside an unbiased frame (left and bottom border-touching excluded) |
+| F06 | centroids of class-2 particles and their nearest-neighbour spacing |
+| F08 | class-0 pixels coloured by local thickness (largest inscribed disc) |
+| F09 | horizontal vs vertical chord lengths through class-0 regions |
+| F10 | class-0 fraction in each 512 px window (a patchiness heat map) |
+| F11 | class-2 particle edges that touch class 0 |
+
+What the masks do and don't explain:
+- They explain the 11 physical measurements and the physical drivers (F-features).
+- They do not explain embedding-PC drivers. Those come from DINOv2 on the raw BSE tiles, not from the mask, and were
+  73 of 93 top drivers in validation. A wrapper should say so next to any embedding driver, not imply the mask shows
+  why.
+- Mask uncertainty: Phase B found 7 of 11 F values move by more than Batch_3's own spread when the segmentation
+  thresholds shift by +/-10 % (`results/stats/feature_status.csv`). The mask is one frozen segmentation, not ground
+  truth.
+- Per-tile thresholds can segment a particle-free tile poorly (known Phase A limitation). Seeing the overlay is the
+  intended way to catch this.
+
+### 5.8 Run-level
 - `run`: git SHA and tag, config hash, timestamp, file hashes, embedding backend, Modal time and cost, frozen /
   exploratory flags, refit check, warnings. `summary_table`: one row per image (bet, confidence, tier, OOD, drivers).
 
@@ -161,7 +201,8 @@ reports), ZEISS arivis Pro and Comet Dragonfly (no-code pipelines, per-phase ove
 Suggested for materials scientists:
 1. TIFF upload with pre-run validation (channels present, naming, bit depth, size vs training range).
 2. Batch queue for many images; optional folder watch.
-3. Mask overlay viewer: BSE with toggleable void/graphite/silicon layers and opacity.
+3. Mask overlay viewer (Section 5.7): BSE with toggleable void/graphite/silicon layers, opacity, side-by-side
+   raw/overlay, zoom, and per-measurement highlights (e.g. F08 thickness map, F10 window heat map).
 4. Result card per image: bet, three probabilities, tier, and the validation hit rate for that kind of bet.
 5. Drivers in plain words, with physical drivers distinguished from embedding drivers.
 6. All 11 measurements plotted against the Batch_1/2/3 training ranges, with Phase B status and validation badge.
@@ -174,7 +215,7 @@ Suggested for materials scientists:
 ## 10. Source files
 
 - Code: `src/qc/heldout.py` (pipeline and output), `src/qc/classify.py` (model, tiers, drivers),
-  `src/qc/features.py` (F01-F11), `src/qc/segment.py` (masks), `src/qc/embed.py` (DINOv2).
+  `src/qc/features.py` (F01-F11), `src/qc/segment.py` (per-tile masks), `features.stitch_mask` (per-image mask), `src/qc/embed.py` (DINOv2).
 - Config: `configs/v1.yaml`, `configs/features_v1.yaml`. Schema: `schema/verdict.schema.json`.
 - Validation: `results/v1/loio_summary.json`, `results/v1/loio_predictions.csv`, `results/v1/loio_images/`.
 - Decisions and review: `docs/Log/2026-10-04_phase_c.md`, `docs/Log/2026-10-04_phase_c_review.md`,
