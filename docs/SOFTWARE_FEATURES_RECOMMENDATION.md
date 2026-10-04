@@ -1,0 +1,151 @@
+# Software features recommendation (wrapper on the v1 model)
+
+Status: recommendation for the PRD authors, non-binding. The model team does not decide the wrapper PRD.
+Companion documents: `docs/HANDOFF_MODEL_CAPABILITIES.md` (what v1 outputs today) and
+`docs/PRD_MODEL_IMPROVEMENTS.md` (proposed v1.1 and v1.2 outputs, referenced below as M1-M5).
+
+phase_identity: stated by Polaron, not image-verified (void / graphite / silicon). Lengths in pixels until the
+pixel size is confirmed.
+
+Primary user: a materials scientist who knows the material and the microscope but not the model.
+
+## 1. Context: what the model provides, by version
+
+| Capability | v1 (frozen, today) | v1.1 (output-only, proposed) | v1.2 (decision support, proposed) |
+|---|---|---|---|
+| Batch bet, 3 probabilities, confidence tier, LOIO track record | yes | same bytes | same bytes |
+| Top-3 drivers (measurement or embedding PC), with rule and numbers | yes | same | same |
+| All 11 measurements F01-F11 with Phase B status and independent-check status | yes | same | same |
+| Out-of-baseline flag (within / investigate / outside Batch_3 band) | yes | same | same |
+| Acquisition flags (noise, sharpness, curtaining, stripes, charging, size) | yes | same | same |
+| Routing (materials expert / microscopy team / none) and next action | yes | same | same |
+| Audit trail (hashes, git tag, config hash, weights checksum) | yes | + mask hashes | same |
+| Segmentation mask and colour overlay per image | computed, not saved | saved (M1) | same |
+| Object list with pixel coordinates: crack-like voids, silicon particles | no | yes (M2) | same |
+| F09 evidence: horizontal/vertical chords, direction map | no | yes (M3) | same |
+| Aspect-ratio panel, labelled "not used by the model" | no | yes (M4) | same |
+| Second opinion from pre-registered expert rules on low/medium tiers | no | no | yes (M5) |
+
+Performance context the UI must keep showing (LOIO, 31 images): 18/31 correct; Batch_3 bets right 14/16;
+Batch_1 or Batch_2 bets right 4/15; high tier right 14/18, medium 1/5, low 3/8. v1.1 does not change these. v1.2
+adds a separately scored track record for the rules.
+
+## 2. Features
+
+Each feature lists: what the user does, what the model provides (and from which version), what the UI must say.
+
+### W1. Upload and validation
+- User drops TIFF files for one or more images. Accepted: `.tif`/`.tiff` only, named `<id>_BSE`, optional
+  `<id>_Inlens`, `<id>_ETD`, `<id>_SE`; BSE required. Anything else is rejected before any run.
+- Provides (v1): the run reads the folder and runs `qc heldout --exploratory`.
+- UI says: which channels were found, that Inlens is missing (one acquisition check skipped) or ETD/SE is
+  missing (caveat added), and that results on previously scored images are exploratory.
+
+### W2. Run and locked recipe
+- User presses run; no parameters.
+- Provides (v1): git tag, config hash, DINOv2 weights checksum, Modal runtime and cost.
+- UI says: "Model v1 (tag v1-frozen, afdbfc9). Settings are locked; changing them would invalidate results."
+
+### W3. Results list
+- One row per image: bet, three probabilities, tier, out-of-baseline flag, acquisition flag, routing.
+- Provides (v1): `summary_table`.
+- UI says: tier before probability (a 0.98 probability can be `low` because of the out-of-baseline cap).
+
+### W4. Per-image result card
+- Bet, tier and tier reason, LOIO track record for this kind of bet, top-3 drivers each tagged "measurement" or
+  "image feature (embedding)".
+- Provides (v1): `verdict`, `evidence.drivers`.
+- UI says, next to embedding drivers: "learned image feature; may reflect imaging conditions, not only material".
+  Next to Batch_1/Batch_2 bets: "in testing, bets on this batch were right 2/6 (Batch_1) or 2/9 (Batch_2);
+  Batch_1 and Batch_2 are often confused".
+
+### W5. Mask overlay viewer ("here is what was measured")
+- Raw BSE and overlay side by side or toggled; void / graphite / silicon layers on and off; opacity; zoom and pan;
+  pixel-aligned (mask offset 8 px from the TIFF edge).
+- Provides (v1.1 M1): `mask.png`, `overlay.png`, hashes.
+- UI says: one fixed segmentation, not ground truth; 7 of 11 measurements shift under a +-10 % threshold change.
+
+### W6. Crack-like region locator
+- A list of elongated void regions (aspect >= 5); clicking one zooms the viewer to its bounding box and draws its
+  outline; export as CSV with pixel coordinates.
+- Provides (v1.1 M2): `objects.csv` rows with bbox, centroid, area, aspect, orientation.
+- UI says: "2-D section: a plate seen edge-on looks like a rod"; shows the curtaining and horizontal-stripe
+  covariates beside the list because vertical streaks can be FIB artefacts; objects shorter than ~100 px are marked
+  "shape unreliable".
+
+### W7. Measured-particle highlighting
+- Hovering a measurement highlights what it used: F01 void pixels, F02 silicon pixels, F03/F04 silicon particles
+  by size (largest 10 % for F04), F05 counting frame, F06 centroids with nearest-neighbour links, F07 particle
+  outlines vs convex hull, F08 local-thickness colouring, F10 512 px window heat map, F11 silicon-void boundaries.
+- Provides (v1.1 M1, M2): mask plus object list.
+- UI says: silicon objects are bright specks (~8 px median), different from whole particles a labeller would outline.
+
+### W8. F09 direction evidence
+- Horizontal and vertical void chords drawn in two colours over the void regions at the current zoom; two-bar
+  rose plot of mean chord length; 512 px window heat map of the h/v ratio.
+- Provides (v1.1 M3): chord files, direction map, means and counts.
+- UI says: F09 = mean horizontal / mean vertical; training medians 1.157 / 1.143 / 1.164 for Batch_1 / 2 / 3, no
+  batch difference; independently confirmed against the labeller's masks in Batch_1 and Batch_3.
+
+### W9. Aspect-ratio panel (reference only)
+- Share of void area in crack-like regions, void aspect median and p90, orientation histogram, number of objects
+  measured and skipped as too small; graphite shown as "percolating network, no particle shape"; silicon shown as
+  "not measurable at this magnification".
+- Provides (v1.1 M4): `descriptive.elongation` plus Phase B training ranges.
+- UI says, prominently: "Shown for reference; not used in the batch prediction." Values are compared with the
+  Batch_1/2/3 training ranges, not tested.
+
+### W10. Measurements vs training ranges
+- All 11 measurements on a strip chart against the Batch_1/2/3 5-95 % training ranges; Phase B status
+  (keep / investigate / drop) and independent-check status (F01, F08, F09, F10 checked; silicon features not).
+- Provides (v1): `inputs`, Phase B tables in `results/stats`.
+
+### W11. Imaging-quality panel, shown before material conclusions
+- Each acquisition covariate against its training range, with out-of-range flags and the drift flag.
+- Provides (v1): `acquisition`.
+- UI says: if drift is suspected, "check acquisition settings before interpreting the bet".
+
+### W12. Second-opinion panel (v1.2 only)
+- On low or medium tier: suggested alternative batch (or "none" / "reimage"), which rules fired, the evidence they
+  used, and the rule track record from LOIO.
+- Provides (v1.2 M5): `second_opinion`.
+- UI says: "Expert rule, not model output. The model's bet above is unchanged." Hidden entirely until the rules
+  pass independent review.
+
+### W13. Plain-English summary
+- Fixed sentence templates filled from the JSON (no free-text generation), covering bet, tier, why, drivers,
+  baseline flag, imaging flags, next action, caveats.
+- Provides (v1): all fields exist today; v1.1/v1.2 add sentences for masks, locations and second opinion.
+
+### W14. Expert notes and override
+- Free-text note and an optional "expert batch call" per image, stored separately from the model output with
+  author and time; never overwrites the model's bet.
+- Provides: none needed; wrapper-side storage.
+
+### W15. Report export
+- PDF/HTML per run and per image, CSV of measurements and objects, JSON as produced, overlay and mask PNGs; every
+  page carries the model version, config hash, provenance line and the sentence "Batch_1 and Batch_2 are variations
+  on the baseline, not better or worse."
+- Provides (v1, v1.1): JSON, PNGs, CSVs.
+
+### W16. Batch of images and lot view (gap)
+- Run many images and show them together.
+- Provides (v1): per-image results only. There is no validated rule for combining images into a lot-level
+  accept/reject; the UI should show per-image results and a count by predicted batch, and label any aggregate as
+  "not validated".
+
+## 3. Suggested priority
+
+1. W1-W4, W10, W11, W13, W15: possible on v1 today.
+2. W5-W9: need v1.1 (about 4.5 h model-side work plus review).
+3. W12: needs v1.2 (rules authored by the materials scientist, scored by LOIO, reviewed).
+4. W14, W16: wrapper-only; W16 aggregation rule is future model-side work.
+
+## 4. Things the software must never do
+
+- Hide or replace the model's bet with a rule, an override or an aggregate.
+- Show probabilities without the tier and track record.
+- Report lengths in nm or um before the pixel size is confirmed.
+- Name phases without the provenance line, or go beyond void / graphite / silicon.
+- Let users change model settings; settings are a locked recipe.
+- Treat tiles as independent samples in any statistic it computes itself.
