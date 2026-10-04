@@ -1,0 +1,643 @@
+{
+  "config_hash": "45629944e398",
+  "git_sha": "768cdb1",
+  "n_images": 31,
+  "exploratory": true,
+  "phase_identity": "stated by Polaron, not image-verified",
+  "review_status": "unreviewed",
+  "model": "v1 final model refit from committed parquet; max |coefficient diff| vs results/v1/final_model.csv = 9.71e-17",
+  "n_pcs": 29,
+  "n_variables": 32,
+  "variables_by_kind": {
+    "kpi": 13,
+    "measurement": 11,
+    "covariate": 8
+  },
+  "tag_rule": "material:<F-id> if |rho| >= 0.7 and BH p < 0.05 with a measurement and |rho| < 0.5 with every covariate; imaging:<covariate> if |rho| >= 0.5 with a covariate and that |rho| exceeds every measurement |rho|; otherwise 'unresolved image-texture component'. rho = Spearman over the 31 training images; p_perm = two-sided permutation p from 2000 label-free shuffles of the variable (seed 0), p = (1 + #{|rho_perm| >= |rho|}) / (1 + 2000); p_bh = Benjamini-Hochberg within each PC across all its variables.",
+  "thresholds": {
+    "material_min_abs_rho": 0.7,
+    "material_max_p_bh": 0.05,
+    "material_max_covariate_abs_rho": 0.5,
+    "imaging_min_abs_rho": 0.5,
+    "n_permutations": 2000,
+    "seed": 0
+  },
+  "caveat": "Tags are descriptive correlations over 31 training images; Phase B could not separate the embedding's batch signal from acquisition (BH p 0.75 / 0.96 after residualisation)",
+  "note": "Descriptive tags only; they do not change the model, the drivers or any verdict. The KPI block is reported for context and is not used by the tag rule.",
+  "tag_counts": {
+    "material": 0,
+    "imaging": 3,
+    "unresolved image-texture component": 26
+  },
+  "pcs": {
+    "embedding PC 1": {
+      "tag": "imaging:sharpness_BSE",
+      "explained_variance_ratio": 0.3707733737262398,
+      "lr_coef_abs_max": 0.582396641160881,
+      "top_measurement": {
+        "name": "F01_c0_area_fraction",
+        "rho": 0.6229838709677418,
+        "p_bh": 0.0079960019990005
+      },
+      "top_covariate": {
+        "name": "sharpness_BSE",
+        "rho": -0.6310483870967742,
+        "p_bh": 0.0079960019990005
+      },
+      "top_kpi": {
+        "name": "frac_c0",
+        "rho": 0.716532258064516,
+        "p_bh": 0.0079960019990005
+      },
+      "sentence": "PC1: image-texture component most correlated with BSE sharpness (rho -0.63); not separable from imaging conditions (Phase B)."
+    },
+    "embedding PC 2": {
+      "tag": "imaging:hstripe_score_BSE",
+      "explained_variance_ratio": 0.19637724527780667,
+      "lr_coef_abs_max": 0.47056197032399105,
+      "top_measurement": {
+        "name": "F11_c2_perimeter_fraction_adjacent_c0",
+        "rho": -0.48790322580645157,
+        "p_bh": 0.06853715999143285
+      },
+      "top_covariate": {
+        "name": "hstripe_score_BSE",
+        "rho": 0.6516129032258065,
+        "p_bh": 0.015992003998001
+      },
+      "top_kpi": {
+        "name": "c1_largest_component_frac",
+        "rho": 0.6120967741935485,
+        "p_bh": 0.0239880059970015
+      },
+      "sentence": "PC2: image-texture component most correlated with BSE horizontal-stripe score (rho 0.65); not separable from imaging conditions (Phase B)."
+    },
+    "embedding PC 3": {
+      "tag": "unresolved image-texture component",
+      "explained_variance_ratio": 0.10902806682209286,
+      "lr_coef_abs_max": 0.48355530540751257,
+      "top_measurement": {
+        "name": "F05_c2_count_density_per_Mpx",
+        "rho": 0.8104838709677419,
+        "p_bh": 0.001999000499750125
+      },
+      "top_covariate": {
+        "name": "curtaining_score_BSE",
+        "rho": 0.5241935483870968,
+        "p_bh": 0.008722911271636909
+      },
+      "top_kpi": {
+        "name": "c2_count_density_per_Mpx",
+        "rho": 0.8181451612903223,
+        "p_bh": 0.001999000499750125
+      },
+      "sentence": "PC3: unresolved image-texture component; strongest correlations are silicon particle count density F05 (rho 0.81) and BSE curtaining score (rho 0.52), a material tag is blocked because a covariate reaches |rho| >= 0.5; not separable from imaging conditions (Phase B)."
+    },
+    "embedding PC 4": {
+      "tag": "unresolved image-texture component",
+      "explained_variance_ratio": 0.05796750183264773,
+      "lr_coef_abs_max": 0.28714033935094074,
+      "top_measurement": {
+        "name": "F10_c0_fraction_iqr_512px",
+        "rho": 0.5056451612903226,
+        "p_bh": 0.191904047976012
+      },
+      "top_covariate": {
+        "name": "edge_charging_BSE",
+        "rho": -0.14395161290322578,
+        "p_bh": 0.9590043687833503
+      },
+      "top_kpi": {
+        "name": "frac_c0",
+        "rho": 0.25604838709677413,
+        "p_bh": 0.9590043687833503
+      },
+      "sentence": "PC4: unresolved image-texture component; strongest correlations are void fraction heterogeneity (IQR over 512 px windows) F10 (rho 0.51) and BSE edge charging (rho -0.14), neither meets the tag thresholds; not separable from imaging conditions (Phase B)."
+    },
+    "embedding PC 5": {
+      "tag": "unresolved image-texture component",
+      "explained_variance_ratio": 0.04414801787344467,
+      "lr_coef_abs_max": 0.6351970892560028,
+      "top_measurement": {
+        "name": "F11_c2_perimeter_fraction_adjacent_c0",
+        "rho": -0.40524193548387094,
+        "p_bh": 0.703648175912044
+      },
+      "top_covariate": {
+        "name": "sharpness_BSE",
+        "rho": 0.32822580645161287,
+        "p_bh": 0.703648175912044
+      },
+      "top_kpi": {
+        "name": "c1_flake_aspect_median",
+        "rho": -0.36290322580645157,
+        "p_bh": 0.703648175912044
+      },
+      "sentence": "PC5: unresolved image-texture component; strongest correlations are silicon perimeter touching void F11 (rho -0.41) and BSE sharpness (rho 0.33), neither meets the tag thresholds; not separable from imaging conditions (Phase B)."
+    },
+    "embedding PC 6": {
+      "tag": "imaging:nm_per_px_if_tag_true",
+      "explained_variance_ratio": 0.02897879907058243,
+      "lr_coef_abs_max": 0.20772187113898644,
+      "top_measurement": {
+        "name": "F03_c2_eqdiam_median_px",
+        "rho": 0.2577038649736119,
+        "p_bh": 0.9945027486256871
+      },
+      "top_covariate": {
+        "name": "nm_per_px_if_tag_true",
+        "rho": -0.7346745271287765,
+        "p_bh": 0.015992003998001
+      },
+      "top_kpi": {
+        "name": "c1_flake_aspect_median",
+        "rho": 0.3669354838709677,
+        "p_bh": 0.5837081459270365
+      },
+      "sentence": "PC6: image-texture component most correlated with pixel size (nm/px, if the file tag is true) (rho -0.73); not separable from imaging conditions (Phase B)."
+    },
+    "embedding PC 7": {
+      "tag": "unresolved image-texture component",
+      "explained_variance_ratio": 0.02868795984470952,
+      "lr_coef_abs_max": 0.2579500825843431,
+      "top_measurement": {
+        "name": "F09_c0_chord_anisotropy_h_over_v",
+        "rho": -0.5165322580645161,
+        "p_bh": 0.127936031984008
+      },
+      "top_covariate": {
+        "name": "hstripe_score_BSE",
+        "rho": -0.2786290322580645,
+        "p_bh": 0.9830084957521239
+      },
+      "top_kpi": {
+        "name": "c0_region_eqdiam_median_px",
+        "rho": 0.24798387096774194,
+        "p_bh": 0.9830084957521239
+      },
+      "sentence": "PC7: unresolved image-texture component; strongest correlations are void chord anisotropy F09 (rho -0.52) and BSE horizontal-stripe score (rho -0.28), neither meets the tag thresholds; not separable from imaging conditions (Phase B)."
+    },
+    "embedding PC 8": {
+      "tag": "unresolved image-texture component",
+      "explained_variance_ratio": 0.024228106584694365,
+      "lr_coef_abs_max": 0.2732608625294538,
+      "top_measurement": {
+        "name": "F09_c0_chord_anisotropy_h_over_v",
+        "rho": 0.3604838709677419,
+        "p_bh": 0.8755622188905547
+      },
+      "top_covariate": {
+        "name": "curtaining_score_BSE",
+        "rho": -0.25483870967741934,
+        "p_bh": 0.8755622188905547
+      },
+      "top_kpi": {
+        "name": "c2_eqdiam_median_px",
+        "rho": -0.3334677419354839,
+        "p_bh": 0.8755622188905547
+      },
+      "sentence": "PC8: unresolved image-texture component; strongest correlations are void chord anisotropy F09 (rho 0.36) and BSE curtaining score (rho -0.25), neither meets the tag thresholds; not separable from imaging conditions (Phase B)."
+    },
+    "embedding PC 9": {
+      "tag": "unresolved image-texture component",
+      "explained_variance_ratio": 0.018896285008697996,
+      "lr_coef_abs_max": 0.4812387789252976,
+      "top_measurement": {
+        "name": "F10_c0_fraction_iqr_512px",
+        "rho": 0.25685483870967746,
+        "p_bh": 0.6316841579210395
+      },
+      "top_covariate": {
+        "name": "height",
+        "rho": -0.29771521471251516,
+        "p_bh": 0.6316841579210395
+      },
+      "top_kpi": {
+        "name": "c2_eqdiam_p90_px",
+        "rho": -0.3419354838709677,
+        "p_bh": 0.6316841579210395
+      },
+      "sentence": "PC9: unresolved image-texture component; strongest correlations are void fraction heterogeneity (IQR over 512 px windows) F10 (rho 0.26) and image height (px) (rho -0.30), neither meets the tag thresholds; not separable from imaging conditions (Phase B)."
+    },
+    "embedding PC 10": {
+      "tag": "unresolved image-texture component",
+      "explained_variance_ratio": 0.015498256296312136,
+      "lr_coef_abs_max": 0.30502676235903575,
+      "top_measurement": {
+        "name": "F06_c2_clark_evans_R",
+        "rho": -0.13991935483870965,
+        "p_bh": 0.9765439860714804
+      },
+      "top_covariate": {
+        "name": "edge_charging_BSE",
+        "rho": 0.2508064516129032,
+        "p_bh": 0.9765439860714804
+      },
+      "top_kpi": {
+        "name": "c0_cracklike_frac",
+        "rho": -0.27338709677419354,
+        "p_bh": 0.9765439860714804
+      },
+      "sentence": "PC10: unresolved image-texture component; strongest correlations are silicon spatial regularity (Clark-Evans R) F06 (rho -0.14) and BSE edge charging (rho 0.25), neither meets the tag thresholds; not separable from imaging conditions (Phase B)."
+    },
+    "embedding PC 11": {
+      "tag": "unresolved image-texture component",
+      "explained_variance_ratio": 0.015364179546032317,
+      "lr_coef_abs_max": 0.13463293116413716,
+      "top_measurement": {
+        "name": "F04_c2_eqdiam_p90_px",
+        "rho": -0.3435483870967742,
+        "p_bh": 0.7896051974012993
+      },
+      "top_covariate": {
+        "name": "curtaining_score_BSE",
+        "rho": 0.23790322580645162,
+        "p_bh": 0.7896051974012993
+      },
+      "top_kpi": {
+        "name": "c2_eqdiam_median_px",
+        "rho": -0.34475806451612906,
+        "p_bh": 0.7896051974012993
+      },
+      "sentence": "PC11: unresolved image-texture component; strongest correlations are silicon particle size (p90 eq. diameter, px) F04 (rho -0.34) and BSE curtaining score (rho 0.24), neither meets the tag thresholds; not separable from imaging conditions (Phase B)."
+    },
+    "embedding PC 12": {
+      "tag": "unresolved image-texture component",
+      "explained_variance_ratio": 0.012565369697658927,
+      "lr_coef_abs_max": 0.6783655421509364,
+      "top_measurement": {
+        "name": "F02_c2_area_fraction",
+        "rho": -0.2024193548387097,
+        "p_bh": 0.991504247876062
+      },
+      "top_covariate": {
+        "name": "curtaining_score_BSE",
+        "rho": 0.2560483870967742,
+        "p_bh": 0.991504247876062
+      },
+      "top_kpi": {
+        "name": "c2_tpc_length_px",
+        "rho": 0.3201612903225806,
+        "p_bh": 0.991504247876062
+      },
+      "sentence": "PC12: unresolved image-texture component; strongest correlations are silicon area fraction F02 (rho -0.20) and BSE curtaining score (rho 0.26), neither meets the tag thresholds; not separable from imaging conditions (Phase B)."
+    },
+    "embedding PC 13": {
+      "tag": "unresolved image-texture component",
+      "explained_variance_ratio": 0.011506706836491598,
+      "lr_coef_abs_max": 0.15789525829506884,
+      "top_measurement": {
+        "name": "F08_c0_local_thickness_median_px",
+        "rho": 0.32888546202983526,
+        "p_bh": 0.9406205987915133
+      },
+      "top_covariate": {
+        "name": "curtaining_score_BSE",
+        "rho": -0.2862903225806452,
+        "p_bh": 0.9406205987915133
+      },
+      "top_kpi": {
+        "name": "c1_flake_aspect_median",
+        "rho": 0.22459677419354837,
+        "p_bh": 0.9406205987915133
+      },
+      "sentence": "PC13: unresolved image-texture component; strongest correlations are void local thickness (px) F08 (rho 0.33) and BSE curtaining score (rho -0.29), neither meets the tag thresholds; not separable from imaging conditions (Phase B)."
+    },
+    "embedding PC 14": {
+      "tag": "unresolved image-texture component",
+      "explained_variance_ratio": 0.008341035473198057,
+      "lr_coef_abs_max": 0.6540718048491662,
+      "top_measurement": {
+        "name": "F03_c2_eqdiam_median_px",
+        "rho": 0.23651714405878532,
+        "p_bh": 0.8817660135449517
+      },
+      "top_covariate": {
+        "name": "nm_per_px_if_tag_true",
+        "rho": -0.26594003544000333,
+        "p_bh": 0.8817660135449517
+      },
+      "top_kpi": {
+        "name": "c1_largest_component_frac",
+        "rho": -0.3975806451612903,
+        "p_bh": 0.8817660135449517
+      },
+      "sentence": "PC14: unresolved image-texture component; strongest correlations are silicon particle size (median eq. diameter, px) F03 (rho 0.24) and pixel size (nm/px, if the file tag is true) (rho -0.27), neither meets the tag thresholds; not separable from imaging conditions (Phase B)."
+    },
+    "embedding PC 15": {
+      "tag": "unresolved image-texture component",
+      "explained_variance_ratio": 0.007321194671611726,
+      "lr_coef_abs_max": 0.30353028484546907,
+      "top_measurement": {
+        "name": "F03_c2_eqdiam_median_px",
+        "rho": -0.3251346786544542,
+        "p_bh": 0.8540729635182409
+      },
+      "top_covariate": {
+        "name": "height",
+        "rho": 0.2078541981711442,
+        "p_bh": 0.8540729635182409
+      },
+      "top_kpi": {
+        "name": "c2_tpc_length_px",
+        "rho": 0.3766129032258064,
+        "p_bh": 0.8540729635182409
+      },
+      "sentence": "PC15: unresolved image-texture component; strongest correlations are silicon particle size (median eq. diameter, px) F03 (rho -0.33) and image height (px) (rho 0.21), neither meets the tag thresholds; not separable from imaging conditions (Phase B)."
+    },
+    "embedding PC 16": {
+      "tag": "unresolved image-texture component",
+      "explained_variance_ratio": 0.006677575083442845,
+      "lr_coef_abs_max": 0.046547793800967706,
+      "top_measurement": {
+        "name": "F11_c2_perimeter_fraction_adjacent_c0",
+        "rho": 0.3153225806451612,
+        "p_bh": 0.8699650174912543
+      },
+      "top_covariate": {
+        "name": "curtaining_score_BSE",
+        "rho": -0.20806451612903223,
+        "p_bh": 0.8699650174912543
+      },
+      "top_kpi": {
+        "name": "c0_region_eqdiam_median_px",
+        "rho": -0.297983870967742,
+        "p_bh": 0.8699650174912543
+      },
+      "sentence": "PC16: unresolved image-texture component; strongest correlations are silicon perimeter touching void F11 (rho 0.32) and BSE curtaining score (rho -0.21), neither meets the tag thresholds; not separable from imaging conditions (Phase B)."
+    },
+    "embedding PC 17": {
+      "tag": "unresolved image-texture component",
+      "explained_variance_ratio": 0.006370628052310953,
+      "lr_coef_abs_max": 0.18121437969389612,
+      "top_measurement": {
+        "name": "F10_c0_fraction_iqr_512px",
+        "rho": 0.29274193548387095,
+        "p_bh": 0.5517241379310345
+      },
+      "top_covariate": {
+        "name": "edge_charging_Inlens",
+        "rho": -0.39395161290322583,
+        "p_bh": 0.4264534399466933
+      },
+      "top_kpi": {
+        "name": "c0_cracklike_frac",
+        "rho": 0.37459677419354837,
+        "p_bh": 0.4264534399466933
+      },
+      "sentence": "PC17: unresolved image-texture component; strongest correlations are void fraction heterogeneity (IQR over 512 px windows) F10 (rho 0.29) and Inlens edge charging (rho -0.39), neither meets the tag thresholds; not separable from imaging conditions (Phase B)."
+    },
+    "embedding PC 18": {
+      "tag": "unresolved image-texture component",
+      "explained_variance_ratio": 0.0050958955766770425,
+      "lr_coef_abs_max": 0.13388797859548549,
+      "top_measurement": {
+        "name": "F02_c2_area_fraction",
+        "rho": 0.26572580645161287,
+        "p_bh": 0.9890054972513743
+      },
+      "top_covariate": {
+        "name": "height",
+        "rho": -0.19105585498886085,
+        "p_bh": 0.9890054972513743
+      },
+      "top_kpi": {
+        "name": "c2_tpc_length_px",
+        "rho": 0.28145161290322573,
+        "p_bh": 0.9890054972513743
+      },
+      "sentence": "PC18: unresolved image-texture component; strongest correlations are silicon area fraction F02 (rho 0.27) and image height (px) (rho -0.19), neither meets the tag thresholds; not separable from imaging conditions (Phase B)."
+    },
+    "embedding PC 19": {
+      "tag": "unresolved image-texture component",
+      "explained_variance_ratio": 0.004454016591112706,
+      "lr_coef_abs_max": 0.203738370362945,
+      "top_measurement": {
+        "name": "F01_c0_area_fraction",
+        "rho": 0.1471774193548387,
+        "p_bh": 0.9372456628828443
+      },
+      "top_covariate": {
+        "name": "edge_charging_Inlens",
+        "rho": -0.4060483870967742,
+        "p_bh": 0.655672163918041
+      },
+      "top_kpi": {
+        "name": "c2_tpc_length_px",
+        "rho": 0.2810483870967742,
+        "p_bh": 0.9372456628828443
+      },
+      "sentence": "PC19: unresolved image-texture component; strongest correlations are void area fraction F01 (rho 0.15) and Inlens edge charging (rho -0.41), neither meets the tag thresholds; not separable from imaging conditions (Phase B)."
+    },
+    "embedding PC 20": {
+      "tag": "unresolved image-texture component",
+      "explained_variance_ratio": 0.0036831879690581728,
+      "lr_coef_abs_max": 0.0436966480648724,
+      "top_measurement": {
+        "name": "F10_c0_fraction_iqr_512px",
+        "rho": -0.3641129032258065,
+        "p_bh": 0.8766525827995093
+      },
+      "top_covariate": {
+        "name": "hstripe_score_BSE",
+        "rho": 0.2508064516129032,
+        "p_bh": 0.8766525827995093
+      },
+      "top_kpi": {
+        "name": "c0_cracklike_frac",
+        "rho": 0.32620967741935486,
+        "p_bh": 0.8766525827995093
+      },
+      "sentence": "PC20: unresolved image-texture component; strongest correlations are void fraction heterogeneity (IQR over 512 px windows) F10 (rho -0.36) and BSE horizontal-stripe score (rho 0.25), neither meets the tag thresholds; not separable from imaging conditions (Phase B)."
+    },
+    "embedding PC 21": {
+      "tag": "unresolved image-texture component",
+      "explained_variance_ratio": 0.0036163211267543293,
+      "lr_coef_abs_max": 0.06604366604217243,
+      "top_measurement": {
+        "name": "F07_c2_solidity_area_weighted_median",
+        "rho": 0.34354838709677415,
+        "p_bh": 0.6836581709145427
+      },
+      "top_covariate": {
+        "name": "edge_charging_BSE",
+        "rho": 0.32379032258064516,
+        "p_bh": 0.6836581709145427
+      },
+      "top_kpi": {
+        "name": "frac_c2",
+        "rho": -0.3185483870967742,
+        "p_bh": 0.6836581709145427
+      },
+      "sentence": "PC21: unresolved image-texture component; strongest correlations are silicon particle solidity F07 (rho 0.34) and BSE edge charging (rho 0.32), neither meets the tag thresholds; not separable from imaging conditions (Phase B)."
+    },
+    "embedding PC 22": {
+      "tag": "unresolved image-texture component",
+      "explained_variance_ratio": 0.0033975169411209617,
+      "lr_coef_abs_max": 0.19692675840385918,
+      "top_measurement": {
+        "name": "F11_c2_perimeter_fraction_adjacent_c0",
+        "rho": 0.3120967741935484,
+        "p_bh": 0.9410679275746742
+      },
+      "top_covariate": {
+        "name": "nm_per_px_if_tag_true",
+        "rho": -0.08864667848000111,
+        "p_bh": 0.9410679275746742
+      },
+      "top_kpi": {
+        "name": "c1_largest_component_frac",
+        "rho": -0.21370967741935484,
+        "p_bh": 0.9410679275746742
+      },
+      "sentence": "PC22: unresolved image-texture component; strongest correlations are silicon perimeter touching void F11 (rho 0.31) and pixel size (nm/px, if the file tag is true) (rho -0.09), neither meets the tag thresholds; not separable from imaging conditions (Phase B)."
+    },
+    "embedding PC 23": {
+      "tag": "unresolved image-texture component",
+      "explained_variance_ratio": 0.003094174975469935,
+      "lr_coef_abs_max": 0.08530127729507261,
+      "top_measurement": {
+        "name": "F02_c2_area_fraction",
+        "rho": 0.22217741935483873,
+        "p_bh": 0.9225387306346826
+      },
+      "top_covariate": {
+        "name": "edge_charging_Inlens",
+        "rho": 0.18346774193548385,
+        "p_bh": 0.9225387306346826
+      },
+      "top_kpi": {
+        "name": "frac_c2",
+        "rho": 0.24032258064516132,
+        "p_bh": 0.9225387306346826
+      },
+      "sentence": "PC23: unresolved image-texture component; strongest correlations are silicon area fraction F02 (rho 0.22) and Inlens edge charging (rho 0.18), neither meets the tag thresholds; not separable from imaging conditions (Phase B)."
+    },
+    "embedding PC 24": {
+      "tag": "unresolved image-texture component",
+      "explained_variance_ratio": 0.0028742826891717875,
+      "lr_coef_abs_max": 0.061585339705023445,
+      "top_measurement": {
+        "name": "F04_c2_eqdiam_p90_px",
+        "rho": 0.2536290322580645,
+        "p_bh": 0.9096251874062969
+      },
+      "top_covariate": {
+        "name": "curtaining_score_BSE",
+        "rho": -0.17137096774193547,
+        "p_bh": 0.9096251874062969
+      },
+      "top_kpi": {
+        "name": "c1_flake_eqdiam_median_px",
+        "rho": 0.21733870967741936,
+        "p_bh": 0.9096251874062969
+      },
+      "sentence": "PC24: unresolved image-texture component; strongest correlations are silicon particle size (p90 eq. diameter, px) F04 (rho 0.25) and BSE curtaining score (rho -0.17), neither meets the tag thresholds; not separable from imaging conditions (Phase B)."
+    },
+    "embedding PC 25": {
+      "tag": "unresolved image-texture component",
+      "explained_variance_ratio": 0.0024394723679860694,
+      "lr_coef_abs_max": 0.11064909938980588,
+      "top_measurement": {
+        "name": "F03_c2_eqdiam_median_px",
+        "rho": -0.3528403906199967,
+        "p_bh": 0.703648175912044
+      },
+      "top_covariate": {
+        "name": "edge_charging_Inlens",
+        "rho": -0.16290322580645158,
+        "p_bh": 0.9512043978010994
+      },
+      "top_kpi": {
+        "name": "c2_eqdiam_median_px",
+        "rho": -0.3951612903225806,
+        "p_bh": 0.703648175912044
+      },
+      "sentence": "PC25: unresolved image-texture component; strongest correlations are silicon particle size (median eq. diameter, px) F03 (rho -0.35) and Inlens edge charging (rho -0.16), neither meets the tag thresholds; not separable from imaging conditions (Phase B)."
+    },
+    "embedding PC 26": {
+      "tag": "unresolved image-texture component",
+      "explained_variance_ratio": 0.0021001630711871373,
+      "lr_coef_abs_max": 0.10200415726971303,
+      "top_measurement": {
+        "name": "F10_c0_fraction_iqr_512px",
+        "rho": 0.28387096774193543,
+        "p_bh": 0.9900049975012494
+      },
+      "top_covariate": {
+        "name": "sharpness_BSE",
+        "rho": -0.05846774193548386,
+        "p_bh": 0.9900049975012494
+      },
+      "top_kpi": {
+        "name": "c1_flake_aspect_median",
+        "rho": 0.13346774193548386,
+        "p_bh": 0.9900049975012494
+      },
+      "sentence": "PC26: unresolved image-texture component; strongest correlations are void fraction heterogeneity (IQR over 512 px windows) F10 (rho 0.28) and BSE sharpness (rho -0.06), neither meets the tag thresholds; not separable from imaging conditions (Phase B)."
+    },
+    "embedding PC 27": {
+      "tag": "unresolved image-texture component",
+      "explained_variance_ratio": 0.0019473273500282401,
+      "lr_coef_abs_max": 0.18108584822610357,
+      "top_measurement": {
+        "name": "F04_c2_eqdiam_p90_px",
+        "rho": 0.3709677419354838,
+        "p_bh": 0.8355822088955522
+      },
+      "top_covariate": {
+        "name": "edge_charging_Inlens",
+        "rho": 0.30443548387096775,
+        "p_bh": 0.8355822088955522
+      },
+      "top_kpi": {
+        "name": "c2_eqdiam_median_px",
+        "rho": 0.29879032258064514,
+        "p_bh": 0.8355822088955522
+      },
+      "sentence": "PC27: unresolved image-texture component; strongest correlations are silicon particle size (p90 eq. diameter, px) F04 (rho 0.37) and Inlens edge charging (rho 0.30), neither meets the tag thresholds; not separable from imaging conditions (Phase B)."
+    },
+    "embedding PC 28": {
+      "tag": "unresolved image-texture component",
+      "explained_variance_ratio": 0.0016725107409493703,
+      "lr_coef_abs_max": 0.0843776418504417,
+      "top_measurement": {
+        "name": "F07_c2_solidity_area_weighted_median",
+        "rho": 0.14717741935483872,
+        "p_bh": 0.9895052473763118
+      },
+      "top_covariate": {
+        "name": "edge_charging_BSE",
+        "rho": -0.2604838709677419,
+        "p_bh": 0.9895052473763118
+      },
+      "top_kpi": {
+        "name": "c2_tpc_length_px",
+        "rho": 0.31008064516129036,
+        "p_bh": 0.9895052473763118
+      },
+      "sentence": "PC28: unresolved image-texture component; strongest correlations are silicon particle solidity F07 (rho 0.15) and BSE edge charging (rho -0.26), neither meets the tag thresholds; not separable from imaging conditions (Phase B)."
+    },
+    "embedding PC 29": {
+      "tag": "unresolved image-texture component",
+      "explained_variance_ratio": 0.0015136784264509632,
+      "lr_coef_abs_max": 0.07857164704678334,
+      "top_measurement": {
+        "name": "F04_c2_eqdiam_p90_px",
+        "rho": -0.2201612903225806,
+        "p_bh": 0.911544227886057
+      },
+      "top_covariate": {
+        "name": "edge_charging_BSE",
+        "rho": 0.2919354838709677,
+        "p_bh": 0.911544227886057
+      },
+      "top_kpi": {
+        "name": "c0_cracklike_frac",
+        "rho": 0.31895161290322577,
+        "p_bh": 0.911544227886057
+      },
+      "sentence": "PC29: unresolved image-texture component; strongest correlations are silicon particle size (p90 eq. diameter, px) F04 (rho -0.22) and BSE edge charging (rho 0.29), neither meets the tag thresholds; not separable from imaging conditions (Phase B)."
+    }
+  }
+}
