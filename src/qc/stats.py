@@ -300,8 +300,12 @@ def _plan_subset(
     excluded_ids: set[str] | None = None,
 ) -> tuple[list[str], np.ndarray]:
     excluded = excluded_ids or set()
-    kept_ids = [sample_id for sample_id in available_ids if sample_id not in excluded]
-    positions = [plan["ids"].index(sample_id) for sample_id in kept_ids]
+    positions_by_id = {sample_id: position for position, sample_id in enumerate(plan["ids"])}
+    kept_ids = [
+        sample_id for sample_id in available_ids
+        if sample_id in positions_by_id and sample_id not in excluded
+    ]
+    positions = [positions_by_id[sample_id] for sample_id in kept_ids]
     priorities = plan["priorities"][:, positions]
     return kept_ids, priorities
 

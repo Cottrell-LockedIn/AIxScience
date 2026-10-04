@@ -5,6 +5,7 @@ import pytest
 from qc.stats import (
     PAIR_ORDER,
     _make_distance_matrix,
+    _plan_subset,
     _pair_name,
     pairwise_distance_matrix,
     permutation_test_z,
@@ -73,6 +74,20 @@ def test_reported_distance_matrix_is_symmetric_with_zero_diagonal():
 
     np.testing.assert_allclose(values.to_numpy(), values.to_numpy().T)
     np.testing.assert_array_equal(np.diag(values), np.zeros(3))
+
+
+def test_pair_permutation_plan_uses_only_the_requested_pair_images():
+    plan = {
+        "ids": ["image_a", "image_b"],
+        "priorities": np.asarray([[0.2, 0.8]]),
+    }
+
+    ids, priorities = _plan_subset(
+        plan, ["image_a", "image_b", "image_c"]
+    )
+
+    assert ids == ["image_a", "image_b"]
+    np.testing.assert_array_equal(priorities, [[0.2, 0.8]])
 
 
 def test_duplicate_image_ids_are_rejected():
