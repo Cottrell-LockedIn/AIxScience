@@ -100,12 +100,19 @@ def _saved() -> dict[str, Any]:
 
 @lru_cache(maxsize=1)
 def _recorded_files() -> dict[str, tuple[str, str]]:
-    """Map source hash to (field id, channel), from the immutable saved run."""
+    """Map source hash to (field id, channel), from immutable saved runs."""
     entries: dict[str, tuple[str, str]] = {}
-    for original_path, digest in _saved()["run"].get("file_hashes", {}).items():
-        match = re.search(r"img_([^_]+)_([A-Za-z0-9]+)\.tiff?$", original_path, re.I)
-        if match:
-            entries[digest] = (match.group(1), match.group(2))
+    for saved_path in (HELDOUT, TEST_SET):
+        if not saved_path.is_file():
+            continue
+        saved = json.loads(saved_path.read_text(encoding="utf-8"))
+        for original_path, digest in saved.get("run", {}).get("file_hashes", {}).items():
+            match = re.search(r"img_([^_]+)_([A-Za-z0-9]+)\.tiff?$", original_path, re.I)
+            if match:
+                pair = (match.group(1), match.group(2))
+                previous = entries.setdefault(digest, pair)
+                if previous != pair:
+                    raise RuntimeError(f"Recorded source hash maps to multiple fields: {digest}")
     return entries
 
 
@@ -133,16 +140,27 @@ def _find_source(field_id: str, channel: str) -> Path | None:
     # Validation displays only come from this explicitly selected local dataset
     # root; never from an arbitrary matching TIFF elsewhere on disk.
     roots = [POLARON_DATASET] if field_id in validation_ids else _source_roots()
-    found: list[Path] = []
+    found: dict[Path, str] = {}
     for root in roots:
         for suffix in ("*.tif", "*.tiff", "*.TIF", "*.TIFF"):
             for candidate in root.rglob(suffix):
                 if pattern.fullmatch(candidate.name):
                     # Validation records identify their original by field/channel.
                     # Held-out records additionally require an exact recorded hash.
-                    if not expected or _sha256(candidate) in expected:
-                        found.append(candidate)
-    return found[0] if len(found) == 1 else None
+                    digest = _sha256(candidate)
+                    if not expected or digest in expected:
+                        # POLARON_DATASET is itself below one configured parent root.
+                        # Resolve before counting so that one local TIFF is never treated
+                        # as an ambiguous pair merely because both roots discover it.
+                        found[candidate.resolve()] = digest
+    if len(found) == 1:
+        return next(iter(found))
+    # Separate paths are acceptable only when they are byte-identical to the one
+    # recorded source. Prefer the stable lexical path; a different image can never
+    # pass this branch because every candidate was hash-verified above.
+    if found and len(set(found.values())) == 1 and next(iter(found.values())) in expected:
+        return sorted(found, key=str)[0]
+    return None
 
 
 def _file_channel(field_id: str, channel: str) -> dict[str, Any]:
