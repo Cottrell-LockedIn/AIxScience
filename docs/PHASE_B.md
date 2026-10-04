@@ -12,8 +12,8 @@ Rules were pre-registered in `docs/PHASE_B_PREREGISTRATION.md` and `configs/stat
 | Code exists | B1 `kpi`, B2 `features`, B3 `embed`, B4/B5 `stats`, B6 `register`/`charging`, B7 `verdict` |
 | Code ran | Yes. Full fresh-clone rerun of `qc run` plus the Modal tasks plus `stats`/`verdict` (README "Regenerate Phase B") |
 | Outputs match | Yes. Fresh clone of `7c43868` (`results/repro/fresh_clone_7c43868.csv`, 48 rows): stats CSVs and verdicts max abs diff 0; masks 1443/1443 byte-identical to the Phase-A reference; `emb_per_tile.npy` max abs diff 0; KPI sensitivity max abs diff 1.8e-15; inspection PNGs pixel-identical (metadata differs). Post-fix recheck of register/charging/stats/verdict at `d90cdea`: 16/16 identical (`results/repro/fresh_clone_post_fix_d90cdea.csv`) |
-| Tests | `python -m pytest -q`: 51 passed |
-| Independent review | CONDITIONAL PASS on `7c43868`; delta re-review of `7c43868..2241037` also CONDITIONAL PASS (all 7 first-round actions confirmed; labels/statuses unchanged). Its 6 remaining actions are addressed in `0b4087d`, `c502f46` and this report. Not yet re-reviewed, so results are not presented as validated |
+| Tests | `python -m pytest -q`: 53 passed |
+| Independent review | CONDITIONAL PASS on `7c43868`; delta re-review of `7c43868..2241037` also CONDITIONAL PASS (all 7 first-round actions confirmed; labels/statuses unchanged). Second delta re-review of `2241037..516f62d`: CONDITIONAL PASS (round-2 actions 1–4 and 6 done; registration test passed for the wrong reason). Remaining actions addressed in `55f6f2e`, `40e504d` and this report; not yet re-reviewed, so results are not presented as validated |
 | Phase C / held-back images | Not started / not touched |
 
 ## Results
@@ -37,7 +37,7 @@ Rules were pre-registered in `docs/PHASE_B_PREREGISTRATION.md` and `configs/stat
 | Batch_2–Batch_3 | MMD² | 0.117 / 0.012 / outside | −0.042 / 0.96 / within |
 | Batch_1–Batch_2 | energy | 0.0061 / 0.37 | — |
 
-On the aggregate feature/KPI rms_z, every pair is within the null band (BH p 0.67, raw).
+On the aggregate rms_z, Batch_1–Batch_3 and Batch_2–Batch_3 are within the null band for both KPIs and features (BH p 0.67 raw, 0.96 residualised). Batch_1–Batch_2 has no null band (the null is built from Batch_3 only); its BH p is 0.67.
 
 **Acquisition vs material.**
 - The raw BSE-embedding difference from Batch_3 is significant for both batches. It is absent after label-free residualisation on the 8 pre-registered acquisition covariates (BH p 0.75 and 0.96).
@@ -57,9 +57,10 @@ On the aggregate feature/KPI rms_z, every pair is within the null band (BH p 0.6
 **B6 registration.**
 - 30/31 stems pass the same-FOV thresholds; max |shift| is 0.3 px; rotation ranges from −0.06° to 0.05°.
 - `mgxahqnk` Inlens fails on scale (0.99732, deviation 0.0027 vs the 0.002 tolerance) even with the log-polar step refined to about 0.00012.
-- Scale resolution is coarser than the step suggests: on a synthetic binary texture the estimator's scale error was 0.0013–0.0018 (`tests/test_register.py`), close to the 0.002 tolerance. The `mgxahqnk` failure is therefore near the method's resolution and is not evidence of a different field of view.
+- The scale check is much less sensitive than its 0.002 tolerance. On a centre-scaled synthetic binary texture (`results/repro/registration_scale_sweep.csv`, `scripts/registration_scale_sweep.py`), estimates shrink towards 1 and never inflate (identity gives exactly 1.0). The smallest flagged applied deviation was 0.5 % (scale 1.005); 0.4 % and smaller passed.
+- So "30/31 pass" means no detector scale difference of about 0.5 % or more was detected, not that the views match within 0.2 %. `mgxahqnk` Inlens's estimated 0.27 % deviation is an **unconfirmed** scale difference: given the shrinkage, the true difference may be larger. No label uses registration; it only flags the charging sensitivity row.
 - Its charging row is flagged `registration_same_fov=False`. Charging stays a sensitivity column; baseline F02 is unchanged.
-- The registration refinement changed `glow_frac_of_c2` in 29/31 images (max |Δ| 0.169; `results/repro/charging_change_7c43868_to_d90cdea.csv`). Example: `xgj4xftb` went 0 → 0.169 for a scale change of 0.00037, because its aligned Inlens 95th percentile sits at the 255 saturation level and moves to 254.19 after interpolation (`docs/INSPECTION.md`). `glow_frac_of_c2` is therefore unstable where Inlens saturates; no label uses it.
+- The registration refinement changed `glow_frac_of_c2` in 29/31 images (max |Δ| 0.169; `results/repro/charging_change_7c43868_to_d90cdea.csv`). Examples: `xgj4xftb` went 0 → 0.169 for a scale change of 0.00037 and `hawkfj64` 0 → 0.156 for 0.00049. For `xgj4xftb`, because its aligned Inlens 95th percentile sits at the 255 saturation level and moves to 254.19 after interpolation (`docs/INSPECTION.md`). `glow_frac_of_c2` is therefore unstable where Inlens saturates; no label uses it.
 
 **Compute.** Modal cost: $0.70 in the committed run log (`results/MODAL_RUNS.csv`, development and post-fix determinism runs) plus $0.26 for the fresh-clone verification (`results/repro/fresh_clone_modal_runs.csv`), about $0.95 in total.
 - Embeddings: about 56–127 s on an L4, versus 658 s on local CPU. Determinism: local vs Modal max abs diff 3.5e-5 (tolerance 1e-4), remote repeat diff 0 (logged in `MODAL_RUNS.csv`; the fresh-clone run did not log these columns).
@@ -79,7 +80,7 @@ The criterion is to say what is different about each batch and to assign held-ba
 
 ## Remaining before held-out / Batch_N use
 
-1. Second delta re-review of `c502f46..HEAD` (round-2 actions), then owner decision on Phase C (needs explicit approval).
+1. Third delta re-review of `516f62d..HEAD` (round-3 actions), then owner decision on Phase C (needs explicit approval).
 2. Ask Polaron whether acquisition settings (dwell, current, detector gain) differed between batches. That is the only way to separate acquisition from material.
 3. Segmentation robustness (v2 candidate): per-image or global thresholds instead of per-tile multi-Otsu, and a continuous-radius F08. These are exploratory, and only allowed before freezing.
 4. Freeze (`git tag v1-frozen`) before any held-back image is processed.
