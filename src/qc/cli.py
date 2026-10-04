@@ -12,8 +12,15 @@ import typer
 from qc import config as _config
 
 app = typer.Typer(no_args_is_help=True, add_completion=False)
-STAGES = ["audit", "tiles", "artefacts", "segment", "kpi", "features", "stats", "classify",
-          "verdict", "robustness", "heldout"]
+STAGES = [
+    "audit", "tiles", "artefacts", "segment", "kpi", "features",
+    "embed", "register", "charging", "stats", "classify", "verdict",
+    "robustness", "heldout",
+]
+PIPELINE_STAGES = [
+    "audit", "tiles", "artefacts", "segment", "kpi", "features",
+    "embed", "register", "charging",
+]
 
 
 def _run(stage: str, cfg_path: str) -> None:
@@ -34,8 +41,8 @@ for _s in STAGES:
 
 @app.command()
 def run(config: str = typer.Option("configs/v1.yaml", "--config", "-c")) -> None:
-    """Run all stages S1-S8 in order (not robustness or heldout)."""
-    for s in STAGES[:9]:
+    """Run data preparation, KPI, feature, registration and charging stages."""
+    for s in PIPELINE_STAGES:
         _run(s, config)
 
 
