@@ -73,7 +73,8 @@ OOD_RULE = (
     "R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each "
     "Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if "
     "band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag "
-    "never replaces pred_batch."
+    "never replaces pred_batch. The null has only 16-17 values, so band99 interpolates between the two "
+    "largest null values; rank_p = (1 + #{null >= E1}) / (1 + n_null) is reported, minimum about 1/18."
 )
 COVARIATE_RULE = (
     "Flag an image covariate when it is strictly outside the 5th-95th percentile of the training images "
@@ -195,11 +196,12 @@ def ood(x_unit: np.ndarray, train_units: np.ndarray, train_batches: np.ndarray) 
     band95, band99, null_vals = reference_band(ref)
     label = "within_bounds" if value <= band95 else ("investigate" if value <= band99 else "outside_bounds")
     dist = {b: e1(x_unit, train_units[train_batches == b]) for b in BATCHES}
+    rank_p = float((1 + np.sum(null_vals >= value)) / (1 + len(null_vals)))
     return {
         "e1_to_batch3": value, "band95": band95, "band99": band99, "n_reference": int(len(ref)),
         "null_max": float(null_vals.max()), "label": label, "matches_known_batch": bool(value <= band99),
         "distance_to_each_batch": dist, "nearest_batch": min(dist, key=dist.get),
-        "margin_to_band99": float(band99 - value),
+        "margin_to_band99": float(band99 - value), "rank_p": rank_p, "n_null": int(len(null_vals)),
     }
 
 
@@ -227,9 +229,10 @@ def drivers(model: Model, z: np.ndarray, raw_f: np.ndarray, pred: str,
         is_f = j < len(F_COLS)
         out.append({
             "name": name,
-            "units": ("px-based image feature (standardised)" if is_f else "PC score (embedding units)"),
+            "units": ("px-based image feature; model_input is the fold-standardised value" if is_f
+                      else "model_input is the raw PC score (not standardised; embedding units)"),
             "value": float(raw_f[j]) if is_f else float(z[j]),
-            "standardised_value": float(z[j]),
+            "model_input": float(z[j]),
             "coefficient": float(model.lr.coef_[k, j]),
             "effect_size": float(contrib[j]),
             "direction": "higher" if z[j] >= 0 else "lower",
@@ -275,6 +278,25 @@ def wilson(k: int, n: int, z: float = 1.959963984540054) -> tuple[float, float]:
     return centre - half, centre + half
 
 
+RELIABILITY_RULE = (
+    "Reported, not a rule change: precision of the frozen model's LOIO bets on the same predicted batch "
+    "(and within the same tier), from results/v1/loio_predictions.csv, excluding this image."
+)
+
+
+def loio_reliability(pred_batch: str, tier_name: str, exclude: str | None) -> dict[str, Any]:
+    t = pd.read_csv(_config.ROOT / OUT_DIR / "loio_predictions.csv")
+    t = t[t["sample_id"] != exclude]
+    same = t[t["pred_batch"] == pred_batch]
+    same_tier = same[same["tier"] == tier_name]
+    return {
+        "pred_batch_correct": int(same["correct"].sum()), "pred_batch_n": int(len(same)),
+        "pred_batch_tier_correct": int(same_tier["correct"].sum()), "pred_batch_tier_n": int(len(same_tier)),
+        "selector_pred_batch": f"pred_batch == '{pred_batch}' and sample_id != '{exclude}'",
+        "selector_pred_batch_tier": f"pred_batch == '{pred_batch}' and tier == '{tier_name}' and sample_id != '{exclude}'",
+    }
+
+
 def predict_one(model: Model, xf: np.ndarray, xe: np.ndarray, status: dict[str, str]) -> dict[str, Any]:
     z = transform(model.scaler, model.pca, xf, xe)[0]
     proba = model.lr.predict_proba(z[None, :])[0]
@@ -295,6 +317,7 @@ def image_document(
     exploratory: bool, git_tag: str | None, kind_note: str,
 ) -> dict[str, Any]:
     t, t_reason = tier(pred["confidence"], perm_p, ood_res["label"])
+    rel = loio_reliability(pred["pred_batch"], t, sample_id)
     ev_row = [{"file": evidence_file, "selector": selector}]
     model_ev = [{"file": "results/v1/loio_summary.json", "selector": "loio_accuracy, permutation_p"},
                 {"file": "results/v1/final_model.csv", "selector": "all rows"},
@@ -307,6 +330,9 @@ def image_document(
     reason = (
         f"Bet {pred['pred_batch']} with p={pred['confidence']:.3f} (runner-up {pred['runner_up']} "
         f"p={probs[pred['runner_up']]:.3f}, margin {pred['margin']:.3f}); tier {t} because {t_reason}. "
+        f"In LOIO (this image excluded), bets on {pred['pred_batch']} were right "
+        f"{rel['pred_batch_correct']}/{rel['pred_batch_n']}, and {rel['pred_batch_tier_correct']}/"
+        f"{rel['pred_batch_tier_n']} at tier {t}. "
         f"Top drivers: {driver_txt}."
         + (" Most top drivers are embedding components, whose batch signal could not be separated from "
            "acquisition in Phase B; the bet stands." if mainly_acq else "")
@@ -316,11 +342,11 @@ def image_document(
         + (f" Acquisition covariates outside the training 5-95 % range: {', '.join(acq_flags)}." if acq_flags else "")
     )
     if ood_res["label"] == "outside_bounds":
-        stakeholder, route = "materials_expert_review", "BSE embedding outside the Batch_3 99 % band"
+        stakeholder, route = "materials_expert_review", "BSE embedding above the Batch_3 upper band (band99)"
     elif acq_flags:
         stakeholder, route = "microscopy_team", f"acquisition covariates out of training range: {', '.join(acq_flags)}"
     else:
-        stakeholder, route = "none", "inside the Batch_3 99 % band and no acquisition covariate flagged"
+        stakeholder, route = "none", "at or below the Batch_3 upper band (band99) and no acquisition covariate flagged"
     next_action = {
         "materials_expert_review": "Review this image against Batch_3 before accepting the material; "
                                    "check acquisition settings first.",
@@ -341,8 +367,12 @@ def image_document(
                     "rule": f"{BET_RULE} Tier: {TIER_RULE} Model: {MODEL_RULE}",
                     "numbers": {**probs, "margin": pred["margin"], "tier_reason": t_reason,
                                 "loio_accuracy": f"{loio_k}/{loio_n}", "loio_permutation_p": perm_p,
-                                "chance_majority": "17/31", "ood_label": ood_res["label"]},
-                    "evidence": ev_row + model_ev},
+                                "chance_majority": "17/31", "ood_label": ood_res["label"],
+                                "loio_reliability": {k: v for k, v in rel.items() if not k.startswith("selector")}},
+                    "evidence": ev_row + model_ev + [
+                        {"file": "results/v1/loio_predictions.csv", "selector": rel["selector_pred_batch"],
+                         "rule": RELIABILITY_RULE},
+                        {"file": "results/v1/loio_predictions.csv", "selector": rel["selector_pred_batch_tier"]}]},
             },
             "open_set": {
                 "nearest_batch": ood_res["nearest_batch"],
@@ -351,7 +381,8 @@ def image_document(
                 "matches_known_batch": ood_res["matches_known_batch"],
                 "justification": {"rule": OOD_RULE,
                                   "numbers": {k: ood_res[k] for k in ("e1_to_batch3", "band95", "band99",
-                                                                     "n_reference", "null_max")},
+                                                                     "n_reference", "null_max", "rank_p",
+                                                                     "n_null")},
                                   "evidence": ev_row + [{"file": "results/emb_per_image.parquet",
                                                          "selector": "channel == 'BSE'"}]},
             },
@@ -373,7 +404,7 @@ def image_document(
         "evidence": {
             "drivers": [{**d, "justification": {"rule": DRIVER_RULE,
                                                 "numbers": {"coefficient": d["coefficient"],
-                                                            "standardised_value": d["standardised_value"],
+                                                            "model_input": d["model_input"],
                                                             "contribution": d["effect_size"]},
                                                 "evidence": ev_row + model_ev[1:2]}} for d in top],
             "embedding": {"backbone": "dinov2_vits14", "energy_distance": ood_res["e1_to_batch3"]},
@@ -471,11 +502,12 @@ def run(cfg: dict[str, Any]) -> None:
         raise AssertionError("fast LOIO path disagrees with the full LOIO")
     perm_p, perm_accs = permutation_p(designs, y, observed)
 
-    tiers = []
+    tiers = [tier(pred["confidence"], perm_p, o["label"])[0] for pred, o, _ in preds]
+    table["tier"] = tiers
+    table = _config.stamp(table, cfg)
+    table.to_csv(out / "loio_predictions.csv", index=False)
     for i, sid in enumerate(ids):
         pred, o, train = preds[i]
-        t, _ = tier(pred["confidence"], perm_p, o["label"])
-        tiers.append(t)
         cov_block = covariate_block(cov.loc[sid].to_dict(), cov.loc[[ids[j] for j in train]], cov_names,
                                     [{"file": "results/artefacts_per_image.parquet", "selector": f"sample_id == '{sid}'"},
                                      {"file": "results/audit/images.csv", "selector": f"sample_id == '{sid}'"}])
@@ -488,9 +520,6 @@ def run(cfg: dict[str, Any]) -> None:
         )
         validate(doc)
         (out / "loio_images" / f"{sid}.json").write_text(json.dumps(doc, indent=2) + "\n")
-    table["tier"] = tiers
-    table = _config.stamp(table, cfg)
-    table.to_csv(out / "loio_predictions.csv", index=False)
 
     cm = pd.crosstab(pd.Categorical(table["true_batch"], BATCHES), pd.Categorical(table["pred_batch"], BATCHES),
                      rownames=["true"], colnames=["pred"], dropna=False)
@@ -507,6 +536,11 @@ def run(cfg: dict[str, Any]) -> None:
         "permutation_acc_median": float(np.median(perm_accs)), "permutation_acc_p95": float(np.quantile(perm_accs, 0.95)),
         "confusion_matrix": {"rows_true_cols_pred": BATCHES, "values": cm.to_numpy().tolist()},
         "tier_counts": pd.Series(tiers).value_counts().to_dict(),
+        "precision_by_pred_batch": {b: f"{int(table[table.pred_batch == b].correct.sum())}/{int((table.pred_batch == b).sum())}"
+                                    for b in BATCHES},
+        "precision_by_pred_batch_tier": {f"{b}|{t}": f"{int(g.correct.sum())}/{len(g)}"
+                                         for (b, t), g in table.groupby(["pred_batch", "tier"])},
+        "accuracy_by_tier": {t: f"{int(g.correct.sum())}/{len(g)}" for t, g in table.groupby("tier")},
         "ood_label_counts": table["ood_label"].value_counts().to_dict(),
         "model": MODEL_RULE, "n_pcs": N_PCS, "frozen_choices": LOG_PATH,
         "config_hash": cfg["_hash"], "git_sha": _config.git_sha(),

@@ -9,8 +9,8 @@
   },
   "verdict": {
     "label": "within_bounds",
-    "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch.",
-    "reason": "Bet Batch_2 with p=0.830 (runner-up Batch_3 p=0.124, margin 0.706); tier high because p_max=0.830 >= 0.75 and LOIO permutation p=0.0350 < 0.05. Top drivers: embedding PC 3 (+0.75), embedding PC 12 (+0.55), embedding PC 7 (+0.34). Most top drivers are embedding components, whose batch signal could not be separated from acquisition in Phase B; the bet stands. Batch_3 embedding check: E1=0.1763 vs band95 0.2267 / band99 0.2480 -> within_bounds.",
+    "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch. The null has only 16-17 values, so band99 interpolates between the two largest null values; rank_p = (1 + #{null >= E1}) / (1 + n_null) is reported, minimum about 1/18.",
+    "reason": "Bet Batch_2 with p=0.830 (runner-up Batch_3 p=0.124, margin 0.706); tier high because p_max=0.830 >= 0.75 and LOIO permutation p=0.0350 < 0.05. In LOIO (this image excluded), bets on Batch_2 were right 2/8, and 1/2 at tier high. Top drivers: embedding PC 3 (+0.75), embedding PC 12 (+0.55), embedding PC 7 (+0.34). Most top drivers are embedding components, whose batch signal could not be separated from acquisition in Phase B; the bet stands. Batch_3 embedding check: E1=0.1763 vs band95 0.2267 / band99 0.2480 -> within_bounds.",
     "closed_set": {
       "predicted_batch": "Batch_2",
       "confidence": 0.8302718981346421,
@@ -34,7 +34,13 @@
           "loio_accuracy": "18/31",
           "loio_permutation_p": 0.03496503496503497,
           "chance_majority": "17/31",
-          "ood_label": "within_bounds"
+          "ood_label": "within_bounds",
+          "loio_reliability": {
+            "pred_batch_correct": 2,
+            "pred_batch_n": 8,
+            "pred_batch_tier_correct": 1,
+            "pred_batch_tier_n": 2
+          }
         },
         "evidence": [
           {
@@ -52,6 +58,15 @@
           {
             "file": "docs/Log/2026-10-04_phase_c.md",
             "selector": "Frozen choices"
+          },
+          {
+            "file": "results/v1/loio_predictions.csv",
+            "selector": "pred_batch == 'Batch_2' and sample_id != 'vc2whyaq'",
+            "rule": "Reported, not a rule change: precision of the frozen model's LOIO bets on the same predicted batch (and within the same tier), from results/v1/loio_predictions.csv, excluding this image."
+          },
+          {
+            "file": "results/v1/loio_predictions.csv",
+            "selector": "pred_batch == 'Batch_2' and tier == 'high' and sample_id != 'vc2whyaq'"
           }
         ]
       }
@@ -67,13 +82,15 @@
       "null_band_99": 0.248026218438715,
       "matches_known_batch": true,
       "justification": {
-        "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch.",
+        "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch. The null has only 16-17 values, so band99 interpolates between the two largest null values; rank_p = (1 + #{null >= E1}) / (1 + n_null) is reported, minimum about 1/18.",
         "numbers": {
           "e1_to_batch3": 0.17628254763188064,
           "band95": 0.22674019025324793,
           "band99": 0.248026218438715,
           "n_reference": 16,
-          "null_max": 0.2533477254850818
+          "null_max": 0.2533477254850818,
+          "rank_p": 0.5294117647058824,
+          "n_null": 16
         },
         "evidence": [
           {
@@ -88,7 +105,7 @@
       }
     },
     "justification": {
-      "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch.",
+      "rule": "E1(x, R) = 2*mean_r||x - r|| - mean_{r != r'}||r - r'|| on L2-normalised BSE embeddings, R = Batch_3 training images other than x; band = 95/99 % quantiles (numpy linear) of E1 for each Batch_3 image against the other Batch_3 images in R. within_bounds if E1 <= band95, investigate if band95 < E1 <= band99, outside_bounds if E1 > band99; matches_known_batch = E1 <= band99. The flag never replaces pred_batch. The null has only 16-17 values, so band99 interpolates between the two largest null values; rank_p = (1 + #{null >= E1}) / (1 + n_null) is reported, minimum about 1/18.",
       "numbers": {
         "e1_to_batch3": 0.17628254763188064,
         "band95": 0.22674019025324793,
@@ -103,11 +120,11 @@
     }
   },
   "pipeline": {
-    "git_sha": "af87cd9",
+    "git_sha": "e593c3e",
     "git_tag": null,
     "config_path": "configs/v1.yaml",
     "config_hash": "45629944e398",
-    "timestamp_utc": "2026-10-04T02:22:11.233150+00:00",
+    "timestamp_utc": "2026-10-04T02:52:31.759298+00:00",
     "frozen": false,
     "exploratory": false,
     "model_revisions": {
@@ -340,9 +357,9 @@
     "drivers": [
       {
         "name": "embedding PC 3",
-        "units": "PC score (embedding units)",
+        "units": "model_input is the raw PC score (not standardised; embedding units)",
         "value": -1.7460548796682591,
-        "standardised_value": -1.7460548796682591,
+        "model_input": -1.7460548796682591,
         "coefficient": -0.42883644574441854,
         "effect_size": 0.7487719686716346,
         "direction": "lower",
@@ -351,7 +368,7 @@
           "rule": "contribution_k = coef[pred_batch, k] x x_k (x_k = standardised F value or embedding PC score); top 3 by signed contribution, i.e. the largest support for the bet.",
           "numbers": {
             "coefficient": -0.42883644574441854,
-            "standardised_value": -1.7460548796682591,
+            "model_input": -1.7460548796682591,
             "contribution": 0.7487719686716346
           },
           "evidence": [
@@ -368,9 +385,9 @@
       },
       {
         "name": "embedding PC 12",
-        "units": "PC score (embedding units)",
+        "units": "model_input is the raw PC score (not standardised; embedding units)",
         "value": -0.8136032493020033,
-        "standardised_value": -0.8136032493020033,
+        "model_input": -0.8136032493020033,
         "coefficient": -0.6738000516106637,
         "effect_size": 0.5482059113702935,
         "direction": "lower",
@@ -379,7 +396,7 @@
           "rule": "contribution_k = coef[pred_batch, k] x x_k (x_k = standardised F value or embedding PC score); top 3 by signed contribution, i.e. the largest support for the bet.",
           "numbers": {
             "coefficient": -0.6738000516106637,
-            "standardised_value": -0.8136032493020033,
+            "model_input": -0.8136032493020033,
             "contribution": 0.5482059113702935
           },
           "evidence": [
@@ -396,9 +413,9 @@
       },
       {
         "name": "embedding PC 7",
-        "units": "PC score (embedding units)",
+        "units": "model_input is the raw PC score (not standardised; embedding units)",
         "value": 1.296313483773666,
-        "standardised_value": 1.296313483773666,
+        "model_input": 1.296313483773666,
         "coefficient": 0.2638914472303678,
         "effect_size": 0.3420860412972726,
         "direction": "higher",
@@ -407,7 +424,7 @@
           "rule": "contribution_k = coef[pred_batch, k] x x_k (x_k = standardised F value or embedding PC score); top 3 by signed contribution, i.e. the largest support for the bet.",
           "numbers": {
             "coefficient": 0.2638914472303678,
-            "standardised_value": 1.296313483773666,
+            "model_input": 1.296313483773666,
             "contribution": 0.3420860412972726
           },
           "evidence": [
@@ -435,7 +452,7 @@
   },
   "routing": {
     "stakeholder": "none",
-    "reason": "inside the Batch_3 99 % band and no acquisition covariate flagged"
+    "reason": "at or below the Batch_3 upper band (band99) and no acquisition covariate flagged"
   },
   "next_action": "No action beyond recording the bet.",
   "caveats": [

@@ -48,6 +48,27 @@
     "low": 8,
     "medium": 5
   },
+  "precision_by_pred_batch": {
+    "Batch_1": "2/6",
+    "Batch_2": "2/9",
+    "Batch_3": "14/16"
+  },
+  "precision_by_pred_batch_tier": {
+    "Batch_1|high": "0/1",
+    "Batch_1|low": "2/4",
+    "Batch_1|medium": "0/1",
+    "Batch_2|high": "1/3",
+    "Batch_2|low": "0/3",
+    "Batch_2|medium": "1/3",
+    "Batch_3|high": "13/14",
+    "Batch_3|low": "1/1",
+    "Batch_3|medium": "0/1"
+  },
+  "accuracy_by_tier": {
+    "high": "14/18",
+    "low": "3/8",
+    "medium": "1/5"
+  },
   "ood_label_counts": {
     "within_bounds": 23,
     "outside_bounds": 8
@@ -56,5 +77,5 @@
   "n_pcs": 29,
   "frozen_choices": "docs/Log/2026-10-04_phase_c.md",
   "config_hash": "45629944e398",
-  "git_sha": "af87cd9"
+  "git_sha": "e593c3e"
 }
