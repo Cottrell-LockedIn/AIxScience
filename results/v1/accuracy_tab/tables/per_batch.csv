@@ -1,0 +1,4 @@
+batch,true_images,predicted_as,recall,precision,f1,auroc_one_vs_rest
+Batch_1,7,6,2/7,2/6,0.308,0.839
+Batch_2,7,9,2/7,2/9,0.25,0.69
+Batch_3,17,16,14/17,14/16,0.848,0.937

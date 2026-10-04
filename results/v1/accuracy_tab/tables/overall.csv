@@ -1,0 +1,13 @@
+metric,value,note
+"Images (training, leave-one-image-out)",31,
+Accuracy,18/31,58.1%; Wilson 95 % CI 41%-74%
+Majority baseline (always Batch 3),17/31,54.8%
+Permutation test vs chance,p = 0.035,1000 label shuffles; permuted median 38.7%
+Balanced accuracy,0.465,mean per-batch recall; chance 0.333
+Macro F1,0.469,
+Cohen's kappa,0.310,agreement beyond chance; 0 = chance
+Matthews correlation,0.312,"0 = chance, 1 = perfect"
+Macro one-vs-rest ROC AUC,0.822,0.5 = chance
+Log loss,0.756,lower is better; 1.099 = uniform 1/3
+Brier score (multiclass),0.484,lower is better; 0.667 = uniform 1/3
+Tier calibration gap,0.216,mean |reported probability - observed accuracy| over tiers

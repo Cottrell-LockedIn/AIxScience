@@ -69,8 +69,10 @@ Example: `results/v1/heldout.json`.
 ### 5.1 Batch bet (`verdict.closed_set`)
 - `predicted_batch` (always one of the three), `probabilities` for all three, `confidence` (= top probability),
   `runner_up`, `margin`.
-- `tier`: `high` if p_max >= 0.75 and model permutation p < 0.05; `medium` if 0.5 <= p_max < 0.75; `low` if
-  p_max < 0.5 or the image is `outside_bounds` (out-of-baseline caps the tier at low).
+- `tier`: two levels. `high` if p_max >= 0.75, model permutation p < 0.05 and the image is `within_bounds`;
+  otherwise `low` (p_max < 0.75, or `outside_bounds`, which caps the tier at low). v1.1 presentation change:
+  the v1 `medium` band (0.5 <= p_max < 0.75; 1/5 correct in LOIO) is reported as `low`; score-neutral under the
+  judging rule, bets and probabilities unchanged, no image in the official or test runs was medium.
 - `loio_reliability`: how often bets on the same predicted batch (and same tier) were right in validation,
   excluding this image, e.g. "Batch_1 bets right 2/6".
 
@@ -91,9 +93,12 @@ Example: `results/v1/heldout.json`.
   covariate and that |rho| exceeds every measurement |rho|; otherwise `unresolved image-texture component`.
   Result for the PCs that appear as drivers in LOIO (`loio_predictions.csv`) or in the official held-out run:
   PC1 `imaging:sharpness_BSE` (rho -0.63, BH p 0.008; the sentence names the near tie with void fraction F01, rho
-  0.62, BH p 0.008; read PC1 as a BSE noise/sharpness component, since sharpness_BSE and noise_sigma_BSE have rho
+  0.62, BH p 0.008, and the equivalent KPI frac_c0, rho 0.72; read PC1 as a BSE noise/sharpness component, since sharpness_BSE and noise_sigma_BSE have rho
   0.99 across the 31 images, that also carries void fraction largely independently: partial rho -0.62 / 0.61);
-  PC2 `imaging:hstripe_score_BSE` (rho 0.65, BH p 0.016); PC3 unresolved (silicon count density F05 rho 0.81,
+  PC2 `imaging:hstripe_score_BSE` (rho 0.65, BH p 0.016; the sentence names the near tie with the Phase B KPI
+  graphite largest-component fraction `c1_largest_component_frac`, rho 0.61, BH p 0.024, which the stripe score
+  does not explain (rho 0.13 between them), so PC2 carries an imaging and a material-structure signal that
+  n = 31 cannot separate); PC3 unresolved (silicon count density F05 rho 0.81,
   BH p 0.002, but BSE curtaining rho 0.52 blocks a material tag); PC4, PC5, PC7, PC8, PC9, PC11, PC12, PC13
   unresolved (strongest |rho| 0.14-0.52, none significant after BH). No PC received a `material` tag; PC6
   (not a driver) is `imaging:nm_per_px_if_tag_true`. Tags are descriptive correlations over 31 training images;
@@ -215,7 +220,7 @@ What the masks do and don't explain:
 
 - Accuracy 18/31 (Wilson 95 % CI 0.41-0.74). Always guessing Batch_3 = 17/31. Permutation p = 0.035.
 - Confusion (rows true, cols predicted B1/B2/B3): B1 2/4/1, B2 4/2/1, B3 0/3/14.
-- Bets right: Batch_3 14/16, Batch_2 2/9, Batch_1 2/6. By tier: high 14/18, medium 1/5, low 3/8;
+- Bets right: Batch_3 14/16, Batch_2 2/9, Batch_1 2/6. By tier: high 14/18, low 4/13 (of which the former medium band 1/5);
   high-tier Batch_1/2 bets 1/4.
 - Practical reading: "Batch_3 vs not Batch_3" is fairly reliable (26/31); Batch_1 vs Batch_2 is near chance.
 
@@ -224,7 +229,8 @@ What the masks do and don't explain:
 - 73 of 93 top-driver slots in validation were embedding PCs (not physical). In Phase B the embedding batch signal
   vanished after regressing out acquisition covariates, so it may reflect imaging rather than material.
   The exploratory PC profiles (`results/v1/pc_tags.json`) agree: the two most used driver PCs correlate most with
-  BSE noise/sharpness (PC1, near tie with void fraction F01) and horizontal-stripe score (PC2); no PC earned a
+  BSE noise/sharpness (PC1, near tie with void fraction F01) and horizontal-stripe score (PC2, near tie with
+  graphite-matrix connectedness); no PC earned a
   material tag.
 - 31 training images only; new instruments or settings are outside what it has seen.
 - Silicon features F02-F07, F11 are not independently validated; 7 of 11 features are threshold-sensitive.

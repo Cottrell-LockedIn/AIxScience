@@ -18,7 +18,7 @@ def test_e1_matches_hand_computed_two_point_reference():
         (0.49, 0.01, "within_bounds", "low"),
         (0.90, 0.05, "within_bounds", "low"),
         (0.90, 0.01, "outside_bounds", "low"),
-        (0.70, 0.01, "within_bounds", "medium"),
+        (0.70, 0.01, "within_bounds", "low"),
         (0.75, 0.01, "within_bounds", "high"),
     ],
 )

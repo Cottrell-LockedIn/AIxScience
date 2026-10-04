@@ -73,6 +73,15 @@ KPI_COLS = [
     "c0_region_eqdiam_median_px", "c0_region_area_mean_px", "c1_flake_eqdiam_median_px",
     "c1_flake_aspect_median", "c1_largest_component_frac", "c0_cracklike_frac", "c2_tpc_length_px",
 ]
+KPI_PLAIN_NAMES = {
+    "frac_c0": "void area fraction (KPI)", "frac_c1": "graphite area fraction (KPI)", "frac_c2": "silicon area fraction (KPI)",
+    "c2_count_density_per_Mpx": "silicon count density (KPI)", "c2_eqdiam_median_px": "silicon median size (KPI)",
+    "c2_eqdiam_p90_px": "silicon p90 size (KPI)", "c2_nn_dist_median_px": "silicon nearest-neighbour distance (KPI)",
+    "c2_clark_evans_R": "silicon Clark-Evans R (KPI)", "c2_solidity_median": "silicon solidity (KPI)",
+    "c2_tpc_length_px": "silicon two-point-correlation length (KPI)", "c0_region_eqdiam_median_px": "void region size (KPI)",
+    "c0_local_thickness_median_px": "void local thickness (KPI)", "c0_cracklike_frac": "crack-like void fraction (KPI)",
+    "c1_flake_aspect_median": "graphite flake aspect (KPI)", "c1_largest_component_frac": "graphite largest-component fraction (KPI)",
+}
 PLAIN_NAMES = {
     "F01_c0_area_fraction": "void area fraction",
     "F02_c2_area_fraction": "silicon area fraction",
@@ -146,7 +155,8 @@ def tag_pc(measurements: dict[str, tuple[float, float]],
     return UNRESOLVED_TAG
 
 
-def sentence(k: int, tag: str, top_m: dict[str, Any], top_c: dict[str, Any]) -> str:
+def sentence(k: int, tag: str, top_m: dict[str, Any], top_c: dict[str, Any],
+             top_k: dict[str, Any] | None = None) -> str:
     name_m = PLAIN_NAMES.get(top_m["name"], top_m["name"])
     name_c = PLAIN_NAMES.get(top_c["name"], top_c["name"])
     if tag.startswith("material:"):
@@ -155,8 +165,14 @@ def sentence(k: int, tag: str, top_m: dict[str, Any], top_c: dict[str, Any]) -> 
         tie = ""
         if abs(top_c["rho"]) - abs(top_m["rho"]) <= NEAR_TIE_ABS_RHO:
             tie = f", near tie with {name_m} {top_m['name'][:3]} (rho {top_m['rho']:.2f})"
+        if top_k is not None and abs(top_c["rho"]) - abs(top_k["rho"]) <= NEAR_TIE_ABS_RHO:
+            name_k = KPI_PLAIN_NAMES.get(top_k["name"], PLAIN_NAMES.get(top_k["name"], top_k["name"]))
+            tie += (f"; the Phase B KPI {name_k} correlates as strongly (rho {top_k['rho']:.2f}; a material-structure "
+                    f"descriptor outside the tag rule)")
+        kind = "imaging and material signals not separable" if top_k is not None and \
+            abs(top_c["rho"]) - abs(top_k["rho"]) <= NEAR_TIE_ABS_RHO else "not separable from imaging conditions"
         return (f"PC{k}: image-texture component most correlated with {name_c} (rho {top_c['rho']:.2f}){tie}; "
-                f"not separable from imaging conditions (Phase B).")
+                f"{kind} (Phase B).")
     blocked = (abs(top_m["rho"]) >= MATERIAL_MIN_ABS_RHO and top_m["p_bh"] < MATERIAL_MAX_P_BH
                and abs(top_c["rho"]) >= MATERIAL_MAX_COVARIATE_ABS_RHO)
     why = ("a material tag is blocked because a covariate reaches |rho| >= "
@@ -234,7 +250,7 @@ def compute(frame: pd.DataFrame, model: classify.Model) -> tuple[pd.DataFrame, d
             "top_measurement": top_m,
             "top_covariate": top_c,
             "top_kpi": top_k,
-            "sentence": sentence(j + 1, tag, top_m, top_c),
+            "sentence": sentence(j + 1, tag, top_m, top_c, top_k),
         }
     return table, pcs
 
