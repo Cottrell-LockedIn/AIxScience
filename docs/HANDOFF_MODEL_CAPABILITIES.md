@@ -122,16 +122,35 @@ means those masks outlined different objects (whole particles, ~110 px) than our
 
 The output includes, next to the JSON, the segmentation the measurements were computed from. A scientist can then
 check by eye what the model counted as void, graphite and silicon before trusting any number.
-(Mask saving and rendering are being built in parallel to this handoff; the content below is what they show.)
+Available in exploratory runs since commit `f51fb9b`. Run
+`python -m qc heldout --exploratory --input-dir data/heldout --out results/v1_1/heldout_exploratory.json`.
+The frozen official JSON and the prediction recipe are unchanged; this adds evidence only.
 
 - **Label mask**: the stitched per-image mask that F01-F11 were computed from. One 8-bit label per pixel:
   0 = dark (void/pore), 1 = mid (graphite), 2 = bright (silicon). It is the same size as the analysed BSE area
   (the input BSE with an 8 px border removed), so it overlays pixel for pixel.
   `phase_identity: stated by Polaron, not image-verified`.
-- **Overlay image**: the analysed BSE with the three classes colour-coded at partial opacity, plus a legend and
-  the image id. It is a PNG, which suits reports.
+- **Overlay image**: the analysed BSE, downscaled by 4 with area averaging, blended at alpha 0.45 with the
+  nearest-neighbour label preview: void blue (31,119,180), graphite unshaded, silicon orange (255,127,14).
+  The legend is in JSON, not painted into the PNG. Both outputs are exploratory, not ground truth.
 - **Link to the JSON**: the mask is the exact array passed to `features.extract_features`, so every F value in
   `inputs.<id>` can be recomputed from it.
+
+Wrapper contract: `images[i].evidence.segmentation_mask` contains:
+
+- `kind: segmentation_mask`, `exploratory: true`;
+- `mask_path`, `overlay_path`: `masks/<id>_mask.png` and `masks/<id>_overlay.png`, relative to the output JSON;
+- `mask_sha256`: SHA-256 of the encoded label PNG bytes; `mask_shape`: `[height, width]` in pixels;
+- `mask_offset_px: [8, 8]`: mask pixel `(y, x)` is TIFF pixel `(y + 8, x + 8)`;
+- `class_values: {"0": "void", "1": "graphite", "2": "silicon"}`;
+- `overlay_downscale: 4`, `overlay_alpha: 0.45`, `legend`: class colours and unshaded graphite;
+- `phase_identity: stated by Polaron, not image-verified`;
+- `note: one fixed threshold segmentation, not ground truth; 7/11 measurements move under +-10 % threshold shifts`.
+
+Preview dimensions are `max(1, width // 4)` by `max(1, height // 4)`; use `mask_shape` for full-resolution
+alignment. The overlay PNG also carries exploratory/phase-identity text metadata. Labels remain uint8 0/1/2
+at full cropped resolution. Existing different PNGs are never silently overwritten: use a fresh output directory
+for another image with the same id. The JSON overwrite guard also remains in place, including the canonical file.
 
 How each measurement reads off the mask (what the viewer can highlight):
 
