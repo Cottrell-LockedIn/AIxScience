@@ -29,18 +29,26 @@ What the panels show:
 resolution-limited. A continuous-radius local-thickness measurement is a v2 candidate;
 the v1 F08 definition is unchanged.
 
-After increasing the log-polar registration upsample factor to 100, `mgxahqnk` Inlens
-still fails the same-FOV check: estimated scale 0.997323 (absolute deviation 0.002677
-from 1.0), with rotation −0.03°. The reported registration resolution is 0.01° and
-0.000122 in scale for this image.
+On the seeded, centre-scaled synthetic texture, the smallest sampled positive scale
+deviation flagged by the current registration gates is 0.5% (applied scale 1.005);
+1.004 passes, while the first sampled negative-side failure is 0.6% (0.994). This is
+an effective scale-detection limit of about 0.5% on this texture and sweep, not a
+general calibration. The estimator shrinks small applied deviations toward 1 and
+returns exactly 1.0 for the identity image. `mgxahqnk` Inlens has estimated scale
+0.997323059300627, an absolute deviation of about 0.27% from 1.0, with rotation −0.03°;
+that is an unconfirmed scale difference, neither ruled out nor confirmed. The reported
+registration resolution for this image is 0.01° and 0.000122 in scale.
 
 Comparing the 31 images from 7c43868 to d90cdea, `glow_frac_of_c2` changed in 29/31
-(maximum absolute change 0.169405); `xgj4xftb` rose from 0 to 0.169405 as scale moved
-from 1.000000 to 1.000366, while `F02_glow_excluded` changed from 0.136803 to 0.113628.
-For `xgj4xftb`, the 95th-percentile threshold on aligned Inlens moved from 255.0 to
-254.189728; all 1,524,868 class-2 pixels remained valid, and applying the old cutoff
-to the new aligned intensities still yielded zero glow, while the new cutoff yielded
-258,320 glow pixels (`src/qc/charging.py:30-40`). This change comes from the percentile
-cutoff after order-1 interpolation, which moved intensities around the threshold; the
-valid class-2 count did not change, so an edge band does not explain this example, and
-`align_image` has no `scale == 1` shortcut (`src/qc/register.py:215-247`).
+(maximum absolute change 0.16940548296639446). For `xgj4xftb`, scale changed from
+1.0 to 1.0003655936465718, glow fraction from 0 to 0.16940548296639446, and
+`F02_glow_excluded` from 0.13680284617615057 to 0.11362769394850242. For `hawkfj64`,
+scale changed from 1.0 to 1.000487487894953, glow fraction from 0 to
+0.15635487194278472, and `F02_glow_excluded` from 0.09150235344225056 to
+0.07719551468732405. For `xgj4xftb`, the 95th-percentile threshold on aligned Inlens
+moved from 255.0 to 254.189728; all 1,524,868 class-2 pixels remained valid, and
+applying the old cutoff to the new aligned intensities still yielded zero glow, while
+the new cutoff yielded 258,320 glow pixels (`src/qc/charging.py:30-40`). The 0.000366
+scale change therefore shifts interpolated intensities across the percentile cutoff;
+the valid class-2 count did not change, so an edge band does not explain this example,
+and `align_image` has no `scale == 1` shortcut (`src/qc/register.py:215-247`).
