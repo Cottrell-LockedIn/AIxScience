@@ -4,9 +4,9 @@ import './ReviewImage.css';
 
 export type Region = { x:number; y:number; width:number; height:number; evidence?:unknown };
 type Suggestion = { id:string; roi:Region; title:string; reason:string; score?:number; scoreLabel?:string };
-type Props = { runId?:string|null; field:any; channel:any; savedMicrographPreviewUrl?:string; savedOverlayUrl?:string; roi:Region|null; onSelect:(roi:Region|null)=>void };
+type Props = { runId?:string|null; dataset?:string; field:any; channel:any; savedMicrographPreviewUrl?:string; savedOverlayUrl?:string; roi:Region|null; onSelect:(roi:Region|null)=>void };
 const clamp = (v:number,lo:number,hi:number)=>Math.max(lo,Math.min(hi,v));
-export default function ReviewImage({runId,field,channel,savedMicrographPreviewUrl,savedOverlayUrl,roi,onSelect}:Props){
+export default function ReviewImage({runId,dataset,field,channel,savedMicrographPreviewUrl,savedOverlayUrl,roi,onSelect}:Props){
  const [diagnostic,setDiagnostic]=useState<any>(null);
  const [pending,setPending]=useState(false);
  const [message,setMessage]=useState('');
@@ -22,7 +22,7 @@ export default function ReviewImage({runId,field,channel,savedMicrographPreviewU
  const viewport={x:Math.round(clamp(centre.x*W-vw/2,0,W-vw)),y:Math.round(clamp(centre.y*H-vh/2,0,H-vh)),width:vw,height:vh};
  const regions:Suggestion[]=diagnostic?.regions||[];
  const selected=regions.find(r=>roi&&r.roi.x===roi.x&&r.roi.y===roi.y&&r.roi.width===roi.width&&r.roi.height===roi.height);
- const cropUrl=(r:Region)=>`${runId?`/api/runs/${encodeURIComponent(runId)}/crop`:'/api/crop'}/${encodeURIComponent(field.id)}/${encodeURIComponent(channel.name)}?${new URLSearchParams({x:String(r.x),y:String(r.y),width:String(r.width),height:String(r.height)})}`;
+ const cropUrl=(r:Region)=>`${runId?`/api/runs/${encodeURIComponent(runId)}/crop`:'/api/crop'}/${encodeURIComponent(field.id)}/${encodeURIComponent(channel.name)}?${new URLSearchParams({x:String(r.x),y:String(r.y),width:String(r.width),height:String(r.height),...(runId||!dataset?{}:{dataset})})}`;
  function select(r:Suggestion){onSelect({...r.roi,evidence:{diagnosticId:diagnostic.id,diagnosticHash:diagnostic.diagnosticHash,regionId:r.id,method:diagnostic.method,version:diagnostic.version,sourceHash:diagnostic.sourceHash,maskHash:diagnostic.maskHash,reason:r.reason}});setCentre({x:(r.roi.x+r.roi.width/2)/W,y:(r.roi.y+r.roi.height/2)/H});setZoom(clamp(fitWidth/Math.max(r.roi.width*1.6,r.roi.height*aspect*1.6),1,8));setManual(false);}
  useEffect(()=>{const node=canvas.current;if(!node)return;const observer=new ResizeObserver(([entry])=>setAspect(entry.contentRect.width/entry.contentRect.height));observer.observe(node);return()=>observer.disconnect();},[]);
  useEffect(()=>{
