@@ -68,7 +68,7 @@ def test_registration_scale_threshold_passes_0015_and_fails_0025(monkeypatch):
     assert passing["scale_step"] > 0
 
 
-def test_registration_real_scale_transform_passes_0015_and_fails_0025():
+def test_registration_real_scale_transform_outcomes_and_scale_error_bound():
     rng = np.random.default_rng(6413)
     reference = np.zeros((1024, 1024), dtype=np.float32)
     for _ in range(750):
@@ -101,5 +101,8 @@ def test_registration_real_scale_transform_passes_0015_and_fails_0025():
         result = estimate_registration(reference, moving, limits)
         same_fov.append(result["same_fov"])
         assert result["same_fov"] is expected
+        # Measured scale-estimate error on this texture is ~1.3e-3 to 1.8e-3,
+        # close to max_scale_dev; the 1.0025 case fails via its shift, not scale.
+        assert abs(result["scale"] - 1.0 / scale) < limits["max_scale_dev"]
 
     assert same_fov == [True, False]

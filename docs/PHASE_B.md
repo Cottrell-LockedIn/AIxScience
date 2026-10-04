@@ -1,6 +1,6 @@
 # Phase B gate report (exploratory, not frozen)
 
-Branch `devin/1791064782-phase-b`, outputs at `d90cdea`, config hash `45629944e398`, stats config hash `e718e5866dea`.
+Branch `devin/1791064782-phase-b`, statistics/verdict outputs at `d90cdea`, config hash `45629944e398`, stats config hash `e718e5866dea`.
 Reference = Batch_3 (Polaron's supplier-promised baseline). Batch_1 and Batch_2 are described as different or not different from it, never as better or worse.
 Unit = image (n = 31: 7 / 7 / 17). Phase names are stated by Polaron and not image-verified. All lengths are in pixels.
 Rules were pre-registered in `docs/PHASE_B_PREREGISTRATION.md` and `configs/stats_v1.yaml` (`c55e1ae`) before any contrast was computed. Every later choice is listed in `docs/PHASE_B_DEVIATIONS.md`.
@@ -11,9 +11,9 @@ Rules were pre-registered in `docs/PHASE_B_PREREGISTRATION.md` and `configs/stat
 |---|---|
 | Code exists | B1 `kpi`, B2 `features`, B3 `embed`, B4/B5 `stats`, B6 `register`/`charging`, B7 `verdict` |
 | Code ran | Yes. Full fresh-clone rerun of `qc run` plus the Modal tasks plus `stats`/`verdict` (README "Regenerate Phase B") |
-| Outputs match | Yes. Stats CSVs and verdicts: max abs diff 0. Masks: 1443/1443 byte-identical. Embeddings: max abs diff 0. KPI sensitivity: max abs diff 1.8e-15. Inspection PNGs: pixel-identical (metadata only) |
-| Tests | `pytest`: 49 passed |
-| Independent review | CONDITIONAL PASS on `7c43868`. Corrective actions 1–7 were applied in `0559a35`…`d90cdea`; a re-review of those changes is pending |
+| Outputs match | Yes. Fresh clone of `7c43868` (`results/repro/fresh_clone_7c43868.csv`, 48 rows): stats CSVs and verdicts max abs diff 0; masks 1443/1443 byte-identical to the Phase-A reference; `emb_per_tile.npy` max abs diff 0; KPI sensitivity max abs diff 1.8e-15; inspection PNGs pixel-identical (metadata differs). Post-fix recheck of register/charging/stats/verdict at `d90cdea`: 16/16 identical (`results/repro/fresh_clone_post_fix_d90cdea.csv`) |
+| Tests | `python -m pytest -q`: 51 passed |
+| Independent review | CONDITIONAL PASS on `7c43868`; delta re-review of `7c43868..2241037` also CONDITIONAL PASS (all 7 first-round actions confirmed; labels/statuses unchanged). Its 6 remaining actions are addressed in `0b4087d`, `c502f46` and this report. Not yet re-reviewed, so results are not presented as validated |
 | Phase C / held-back images | Not started / not touched |
 
 ## Results
@@ -40,27 +40,29 @@ Rules were pre-registered in `docs/PHASE_B_PREREGISTRATION.md` and `configs/stat
 On the aggregate feature/KPI rms_z, every pair is within the null band (BH p 0.67, raw).
 
 **Acquisition vs material.**
-- The BSE-embedding difference from Batch_3 is significant for both batches, but it disappears after label-free residualisation on the 8 pre-registered acquisition covariates.
-- No single covariate passes the pre-registered drift test (all BH p ≥ 0.249), so G2 does not fire.
-- The post-hoc probe (`results/stats/exploratory_confound_probe.csv`, exploratory, not used by any gate) shows:
-  - Residualising on `noise_sigma_BSE` alone (p 0.26) or `sharpness_BSE` alone (p 0.35) removes the Batch_1 difference. The other six covariates do not (p ≤ 0.015).
-  - Eight random covariates leave a median energy of 0.055, so the effect is not from overfitting.
-  - The covariates predict the batch label with R² 0.67 (p 0.018) for Batch_1 and 0.71 (p 0.0075) for Batch_2.
-- Noise σ and sharpness are higher in Batch_1/2 than in Batch_3. Either acquisition or finer microstructure could produce that, so **acquisition and material contributions cannot be separated with these data**.
+- The raw BSE-embedding difference from Batch_3 is significant for both batches. It is absent after label-free residualisation on the 8 pre-registered acquisition covariates (BH p 0.75 and 0.96).
+- No single covariate differs significantly from Batch_3 (all BH p ≥ 0.249), so G2 does not fire. Medians of BSE noise σ (46.3 / 44.4 vs 37.7) and sharpness (2349 / 2187 vs 1640) are higher in Batch_1 / Batch_2 than in Batch_3, but not significantly.
+- Post-hoc probe (`results/stats/exploratory_confound_probe.csv`, exploratory, not used by any gate or label):
+  - Batch_1: residualising on `noise_sigma_BSE` alone (p 0.26) or `sharpness_BSE` alone (p 0.35) removes the difference; each of the other six leaves it (p ≤ 0.015). Eight random Gaussian covariates leave median energy 0.055 (5th pct 0.023), so for Batch_1 the removal is not explained by fitting 8 columns to 24 images.
+  - Batch_2: four single covariates each remove the difference (`noise_sigma_BSE` p 0.69, `sharpness_BSE` 0.66, `hstripe_score_BSE` 0.16, `edge_charging_Inlens` 0.17). Eight random covariates already reduce its energy from 0.040 to a median 0.024 (5th pct 0.004), against a 95 % band of 0.022, so for Batch_2 the residualised result is weak evidence either way.
+  - The 8 covariates predict the batch label with R² 0.67 (p 0.018) for Batch_1 and 0.71 (p 0.0075) for Batch_2.
+- Either acquisition or a real microstructure difference that also changes noise/sharpness could produce this, so **acquisition and material contributions cannot be separated with these data**.
 
 **Batch_3 reference check.**
 - 3/17 images are leave-one-out outliers in ≥ 2 families.
-- Every qualifying image involves a `drop`-status feature. Excluding drop features leaves 0 images, so the reference label rests on unreliable measurements.
+- Every qualifying image involves a feature that failed the gates (status `drop`). Excluding drop features leaves 0 qualifying images, so the Batch_3 `investigate` label rests on drop-status features.
 
 **Consistency** (`consistency.csv`): no pair is separable on C_feat or C_emb.
 
 **B6 registration.**
 - 30/31 stems pass the same-FOV thresholds; max |shift| is 0.3 px; rotation ranges from −0.06° to 0.05°.
-- `mgxahqnk` Inlens fails on scale (0.99732, versus the 0.002 tolerance) even with the log-polar step refined to about 0.00012.
+- `mgxahqnk` Inlens fails on scale (0.99732, deviation 0.0027 vs the 0.002 tolerance) even with the log-polar step refined to about 0.00012.
+- Scale resolution is coarser than the step suggests: on a synthetic binary texture the estimator's scale error was 0.0013–0.0018 (`tests/test_register.py`), close to the 0.002 tolerance. The `mgxahqnk` failure is therefore near the method's resolution and is not evidence of a different field of view.
 - Its charging row is flagged `registration_same_fov=False`. Charging stays a sensitivity column; baseline F02 is unchanged.
+- The registration refinement changed `glow_frac_of_c2` in 29/31 images (max |Δ| 0.169; `results/repro/charging_change_7c43868_to_d90cdea.csv`). Example: `xgj4xftb` went 0 → 0.169 for a scale change of 0.00037, because its aligned Inlens 95th percentile sits at the 255 saturation level and moves to 254.19 after interpolation (`docs/INSPECTION.md`). `glow_frac_of_c2` is therefore unstable where Inlens saturates; no label uses it.
 
-**Compute.** Total Modal cost $0.70 for all runs, including the fresh-clone repeat (`results/MODAL_RUNS.csv`).
-- Embeddings: about 56–127 s on an L4, versus 658 s on local CPU.
+**Compute.** Modal cost: $0.70 in the committed run log (`results/MODAL_RUNS.csv`, development and post-fix determinism runs) plus $0.26 for the fresh-clone verification (`results/repro/fresh_clone_modal_runs.csv`), about $0.95 in total.
+- Embeddings: about 56–127 s on an L4, versus 658 s on local CPU. Determinism: local vs Modal max abs diff 3.5e-5 (tolerance 1e-4), remote repeat diff 0 (logged in `MODAL_RUNS.csv`; the fresh-clone run did not log these columns).
 - KPI sensitivity: 74–93 s on Modal, versus 256 s locally.
 - Feature sensitivity: 147 s on Modal, versus 331 s locally.
 
@@ -68,16 +70,16 @@ On the aggregate feature/KPI rms_z, every pair is within the null band (BH p 0.6
 
 The criterion is to say what is different about each batch and to assign held-back images to Batch_1/2/3.
 
-- **Supported:** at the image-distribution level, Batch_1 and Batch_2 each differ from Batch_3 in frozen BSE embeddings.
+- **Supported:** in raw frozen BSE embeddings, Batch_1 and Batch_2 each differ from Batch_3 at the image-distribution level. The difference is absent after acquisition-covariate residualisation.
 - **Not supported:**
-  - No interpretable measurement explains the difference under the pre-registered gates.
-  - Batch_1 and Batch_2 are not distinguishable from each other by any Phase-B statistic (energy p 0.37).
+  - No interpretable measurement explains the difference under the pre-registered gates (0 keep).
+  - No difference between Batch_1 and Batch_2 was detected by any Phase-B statistic (lowest BH p 0.264, 7 vs 7 images). This is absence of evidence at this sample size, not evidence that they are the same.
   - The embedding difference is collinear with BSE noise and sharpness.
-- **Implication for Phase C:** a closed-set classifier will probably separate Batch_3 from {Batch_1, Batch_2} using embedding/acquisition-correlated signal, and will be weak between Batch_1 and Batch_2. Its explanations would have to say that the signal may be acquisition. Phase C, under the PR #9 contract, must report confidence honestly. It must also test leave-one-image-out accuracy with and without covariate residualisation, so the "in what way" claim is not overstated.
+- **Untested hypothesis for Phase C:** a closed-set classifier may separate Batch_3 from {Batch_1, Batch_2} using embedding/acquisition-correlated signal and be weak between Batch_1 and Batch_2. Phase C, under the PR #9 contract, must report confidence honestly and should test leave-one-image-out accuracy with and without covariate residualisation, so the "in what way" claim is not overstated.
 
 ## Remaining before held-out / Batch_N use
 
-1. Re-review of corrective actions 1–7, then owner decision on Phase C (needs explicit approval).
+1. Second delta re-review of `c502f46..HEAD` (round-2 actions), then owner decision on Phase C (needs explicit approval).
 2. Ask Polaron whether acquisition settings (dwell, current, detector gain) differed between batches. That is the only way to separate acquisition from material.
 3. Segmentation robustness (v2 candidate): per-image or global thresholds instead of per-tile multi-Otsu, and a continuous-radius F08. These are exploratory, and only allowed before freezing.
 4. Freeze (`git tag v1-frozen`) before any held-back image is processed.
