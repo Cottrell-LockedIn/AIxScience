@@ -827,9 +827,15 @@ def _save_reviews() -> None:
 
 
 def _known_field(field_id: str) -> bool:
-    if field_id in {item["subject"]["id"] for item in _saved()["images"]} or field_id in {
-        item[0]["subject"]["id"] for item in _validation_records()
-    }:
+    saved_ids: set[str] = {item["subject"]["id"] for item in _saved()["images"]}
+    if TEST_SET.is_file():
+        try:
+            saved_ids.update(item["subject"]["id"] for item in json.loads(TEST_SET.read_text(encoding="utf-8"))["images"])
+        except (OSError, json.JSONDecodeError, KeyError, TypeError):
+            # The test-set report is optional. Its absence or corruption must not
+            # make validation/run-backed review records unavailable.
+            pass
+    if field_id in saved_ids or field_id in {item[0]["subject"]["id"] for item in _validation_records()}:
         return True
     if jobs.RUNS.is_dir():
         for path in jobs.RUNS.iterdir():
