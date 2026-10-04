@@ -32,9 +32,10 @@ export type Review = { tag?: string; note?: string; roi?: unknown; skipped?: boo
 
 type Props = { data: ResultsData; criteria?: Criterion[]; review?: Review; onNew?: () => void }
 type View = 'overview' | 'investigate' | 'material' | 'model'
+const materialViews: View[] = ['model', 'material']
 
 const views: { id: View; label: string }[] = [
-  { id: 'overview', label: 'Overview' }, { id: 'investigate', label: 'Investigate' }, { id: 'material', label: 'Material details' }, { id: 'model', label: 'Model output' },
+  { id: 'overview', label: 'Overview' }, { id: 'model', label: 'Model output' }, { id: 'material', label: 'Material details' }, { id: 'investigate', label: 'Investigate' },
 ]
 const routeName: Record<string, string> = {
   materials_expert_review: 'Materials expert', microscopy_team: 'Microscopy team', none: 'No model escalation',
@@ -123,20 +124,20 @@ export default function Results({ data, criteria = [], review, onNew }: Props) {
       <span className="result-tabs__line" />
     </nav>
 
-    <section id="top" className={`results__content ${view === 'model' ? 'results__content--model' : ''}`} aria-live="polite">
+    <section id="top" className="results__content" aria-live="polite">
       <div className="results__copy">
         {view === 'overview' && <Overview field={field} measured={measured} selectedCriterion={selectedCriterion} setSelectedCriterion={setSelectedCriterion} verdictReason={verdictReason} outside={outside} unavailable={unavailable} topProbability={topProbability} probabilities={probabilities} criteriaVersion="v1 local controls" />}
         {view === 'investigate' && <Investigate issues={issueBands} field={field} criteria={criteria} />}
         {view === 'material' && <MaterialDetails field={field} metadata={data.metadata} detailsOpen={detailsOpen} setDetailsOpen={setDetailsOpen} />}
         {view === 'model' && <ModelOutput field={field} run={run} />}
       </div>
-      {view !== 'model' && <aside className="results__visual" aria-label="Evidence visual">
-        <div className="visual-topline"><span>{view === 'material' ? 'Separated analysis layers' : view === 'investigate' ? 'Evidence path' : 'Evidence lens'}</span><button onClick={() => setExpanded(!expanded)} aria-pressed={expanded}><Expand size={16} />{expanded ? 'Restore view' : 'Expand visual'}</button></div>
-        {view === 'material' ? (field.mask?.originalCroppedPreviewUrl || preview) ? <Suspense fallback={<div className="visual-unavailable"><p>Preparing material view…</p></div>}><MaterialScene imageUrl={field.mask?.originalCroppedPreviewUrl || preview!} fieldId={field.id} layers={field.mask?.layers || []} /></Suspense> : <UnavailableImage channel={imageChannel} /> : view === 'investigate' ? <EvidenceTree issues={issueBands} field={field} /> : <EvidenceLens imageUrl={preview} channel={imageChannel} criterion={measured.find((item) => item.criterion.id === selectedCriterion)?.criterion} field={field} />}
-      </aside>}
+      <aside className="results__visual" aria-label="Evidence visual">
+        <div className="visual-topline"><span>{materialViews.includes(view) ? 'Material perspective · separated analysis layers' : view === 'investigate' ? 'Evidence path' : 'Evidence lens'}</span><button onClick={() => setExpanded(!expanded)} aria-pressed={expanded}><Expand size={16} />{expanded ? 'Restore view' : 'Expand visual'}</button></div>
+        {materialViews.includes(view) ? (field.mask?.originalCroppedPreviewUrl || preview) ? <Suspense fallback={<div className="visual-unavailable"><p>Preparing material view…</p></div>}><MaterialScene imageUrl={field.mask?.originalCroppedPreviewUrl || preview!} fieldId={field.id} layers={field.mask?.layers || []} /></Suspense> : <UnavailableImage channel={imageChannel} /> : view === 'investigate' ? <EvidenceTree issues={issueBands} field={field} /> : <EvidenceLens imageUrl={preview} channel={imageChannel} criterion={measured.find((item) => item.criterion.id === selectedCriterion)?.criterion} field={field} />}
+      </aside>
     </section>
 
-    <footer className="results__footer"><span>Image-level screening · model output is not a probability of future material failure.</span><div>{view !== 'overview' && <button onClick={() => selectView(views[views.findIndex((item) => item.id === view) - 1].id)}><ArrowLeft size={17} /> Previous</button>}{view !== 'model' && <button className="next-view" onClick={() => selectView(views[views.findIndex((item) => item.id === view) + 1].id)}>Next: {views[views.findIndex((item) => item.id === view) + 1].label}<ArrowRight size={17} /></button>}</div></footer>
+    <footer className="results__footer"><span>Image-level screening · model output is not a probability of future material failure.</span><div>{view !== 'overview' && <button onClick={() => selectView(views[views.findIndex((item) => item.id === view) - 1].id)}><ArrowLeft size={17} /> Previous</button>}{view !== views[views.length - 1].id && <button className="next-view" onClick={() => selectView(views[views.findIndex((item) => item.id === view) + 1].id)}>Next: {views[views.findIndex((item) => item.id === view) + 1].label}<ArrowRight size={17} /></button>}</div></footer>
   </div>
 }
 
